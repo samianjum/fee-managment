@@ -9,7 +9,8 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = ['localhost', '.localhost', '127.0.0.1']
+ALLOWED_HOSTS_STR = env('ALLOWED_HOSTS', default='localhost,.localhost,127.0.0.1,fee-managment.up.railway.app')
+ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS_STR.split(',')]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -112,9 +113,10 @@ DATABASE_ROUTERS = (
 # Security
 SESSION_COOKIE_DOMAIN = None
 CSRF_COOKIE_DOMAIN = None
-SESSION_ENGINE = 'django.contrib.sessions.backends.file'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_SAVE_EVERY_REQUEST = False
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://*.localhost:8000']
+CSRF_TRUSTED_ORIGINS_STR = env('CSRF_TRUSTED_ORIGINS', default='http://localhost:8000,http://127.0.0.1:8000,http://*.localhost:8000,https://fee-managment.up.railway.app')
+CSRF_TRUSTED_ORIGINS = [h.strip() for h in CSRF_TRUSTED_ORIGINS_STR.split(',')]
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 CSRF_USE_SESSIONS = False
@@ -124,3 +126,16 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 SESSION_COOKIE_PATH = '/'
 SESSION_FILE_PATH = '/tmp/django_sessions/'
+
+# ==============================================================================
+# PRODUCTION SECURITY SETTINGS
+# ==============================================================================
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
