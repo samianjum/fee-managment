@@ -507,10 +507,24 @@
                 </a>
                 {% endif %}
                 {% if tenant|has_feature:'fee_structure' %}
-                <a href="{% url 'fee_structure' schema_name=tenant.schema_name %}" class="nav-item">
-                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                    <span>Fee Structure</span>
-                </a>
+                                <div class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="toggleFeeMenu()">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-6-6h12"/></svg>
+                        <span class="nav-label">Fee Management</span>
+                        <svg width="12" height="12" style="margin-left:auto;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </a>
+                    <div class="dropdown-menu" id="feeDropdown">
+                        <a href="{% url 'fee_structure' schema_name=tenant.schema_name %}">📊 Fee Structure</a>
+                        <a href="{% url 'fee_generate' schema_name=tenant.schema_name %}">⚙️ Generate Fees</a>
+                        <a href="{% url 'pending_fees' schema_name=tenant.schema_name %}">⏳ Pending Fees</a>
+                        <a href="{% url 'payment_history' schema_name=tenant.schema_name %}">📜 Payment History</a>
+                        <a href="{% url 'family_payment' schema_name=tenant.schema_name %}">👨‍👩‍👧 Family Payment</a>
+                        <a href="{% url 'fee_settings' schema_name=tenant.schema_name %}">⚙️ Settings</a>
+                    </div>
+                </div>
                 {% endif %}
                 {% endif %}
                 {% if tenant.tenant_type == 'gym' %}

@@ -164,40 +164,26 @@ def tenant_root_redirect(request, schema_name):
 
 
 urlpatterns = [
-    path('portal/<slug:schema_name>/api/student/<int:student_id>/current-fee-status/', student_current_fee_status_api_view, name='student_current_fee_status'),
-    # ===== GYM ROUTES (FIXED ORDER) =====
-    path('portal/<slug:schema_name>/gym/customers/<int:customer_id>/generate-subscription/', portal_wrapper(login_required_for_schema(gym_generate_subscription)), name='gym_generate_subscription'),
-    path('portal/<slug:schema_name>/gym/subscriptions/<int:subscription_id>/cancel/', portal_wrapper(login_required_for_schema(gym_cancel_subscription)), name='gym_cancel_subscription'),
-    path('portal/<slug:schema_name>/gym/subscriptions/<int:subscription_id>/update/', portal_wrapper(login_required_for_schema(gym_update_subscription)), name='gym_update_subscription'),
-    path('portal/<slug:schema_name>/gym/attendance/<int:attendance_id>/edit/', portal_wrapper(login_required_for_schema(gym_edit_attendance)), name='gym_edit_attendance'),
-    # Gym subscription & cancellation routes
-    path('api/debug-payments/', debug_payments_api, name='debug_payments_api'),
-    path('', saas_homepage),
-    path('admin/', admin.site.urls),
     path('api/fee-status/', fee_status_api, name='fee_status_api'),
     path('api/manual-generate/', manual_generate_api, name='manual_generate_api'),
-    path('api/manual-generate-single/', manual_generate_single_api, name='manual_generate_single_api'),
-    
-    # Auth
-    path('portal/<slug:schema_name>/login/', school_login, name='school_login'),
-    path('portal/<slug:schema_name>/login/', school_login, name='tenant_login'),
-    path('portal/<slug:schema_name>/logout/', school_logout, name='school_logout'),
-    path('portal/<slug:schema_name>/logout/', school_logout, name='tenant_logout'),
-    
-    # Core - using the wrapped views
-    
-    path('portal/<slug:schema_name>/dashboard/mobile/more/', mobile_more_view, name='mobile_more'),
-    path('portal/<slug:schema_name>/dashboard/mobile/', mobile_dashboard_view, name='mobile_dashboard'),
-    path('portal/<slug:schema_name>/students/mobile/', mobile_student_list_view, name='mobile_student_list'),
-    path('portal/<slug:schema_name>/students/mobile/<int:student_id>/', mobile_student_profile_view, name='mobile_student_profile'),
-    path('portal/<slug:schema_name>/dashboard/', dashboard_view, name='dashboard'),
-    path('portal/<slug:schema_name>/students/', student_list_view, name='student_list'),
-    path('portal/<slug:schema_name>/students/add/', add_student_view, name='add_student'),
-    path('portal/<slug:schema_name>/students/edit/<int:student_id>/', edit_student_view, name='edit_student'),
-    path('portal/<slug:schema_name>/students/<int:student_id>/', student_profile_view, name='student_profile'),
-    
-    # Fee collection
-        re_path(r'^portal/(?P<schema_name>[a-zA-Z0-9_-]+)/fee/collection/(?:(?P<student_id>\d+)/)?$', fee_collection_view, name='fee_collection'),
+    path('portal/<slug:schema_name>/dashboard/', dashboard, name='fee_dashboard'),
+    path('portal/<slug:schema_name>/students/', student_list, name='student_list'),
+    path('portal/<slug:schema_name>/students/<int:student_id>/', student_profile, name='student_profile'),
+    path('portal/<slug:schema_name>/fee/collection/', fee_collection, name='fee_collection'),
+    path('portal/<slug:schema_name>/fee/collection/<int:student_id>/', fee_collection, name='fee_collection'),
+    path('portal/<slug:schema_name>/fee/receipt/<int:receipt_id>/', fee_receipt, name='fee_receipt'),
+    path('portal/<slug:schema_name>/defaulters/', defaulters, name='defaulters'),
+    path('portal/<slug:schema_name>/reports/', reports, name='reports'),
+    path('portal/<slug:schema_name>/api/student-search/', student_search_api, name='student_search_api'),
+    # Keep old student management routes (add student, etc.)
+    path('portal/<slug:schema_name>/students/add/', school_add_student, name='school_add_student'),
+    path('portal/<slug:schema_name>/', school_dashboard, name='school_portal'),
+    path('portal/<slug:schema_name>/login/', school_login, name='school_portal_login'),
+    path('portal/<slug:schema_name>/logout/', school_logout, name='school_portal_logout'),
+    path('portal/<slug:schema_name>/settings/', school_settings, name='school_portal_settings'),
+    path('', saas_homepage),
+    path('admin/', admin.site.urls),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) if settings.DEBUG else []+)/fee/collection/(?:(?P<student_id>\d+)/)?$', fee_collection_view, name='fee_collection'),
     path('portal/<slug:schema_name>/fee/receipt/<int:receipt_id>/', fee_receipt_view, name='fee_receipt'),
     path('portal/<slug:schema_name>/defaulters/', defaulters_view, name='defaulters'),
     path('portal/<slug:schema_name>/reports/', reports_view, name='reports'),
