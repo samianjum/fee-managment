@@ -141,6 +141,12 @@ gym_payment_view = portal_wrapper(login_required_for_schema(gym_payment))
 gym_reports_view = portal_wrapper(login_required_for_schema(gym_reports))
 gym_settings_view = portal_wrapper(login_required_for_schema(gym_settings))
 
+# Compatibility aliases for older route references
+school_dashboard = dashboard
+school_add_student = add_student
+school_settings = settings
+student_list_view = portal_wrapper(login_required_for_schema(student_list))
+student_profile_view = portal_wrapper(login_required_for_schema(student_profile))
 
 
 def api_gym_edit_attendance(request, attendance_id):
@@ -164,26 +170,30 @@ def tenant_root_redirect(request, schema_name):
 
 
 urlpatterns = [
+    path('', saas_homepage, name='saas_homepage'),
+    path('admin/', admin.site.urls),
     path('api/fee-status/', fee_status_api, name='fee_status_api'),
     path('api/manual-generate/', manual_generate_api, name='manual_generate_api'),
-    path('portal/<slug:schema_name>/dashboard/', dashboard, name='fee_dashboard'),
-    path('portal/<slug:schema_name>/students/', student_list, name='student_list'),
-    path('portal/<slug:schema_name>/students/<int:student_id>/', student_profile, name='student_profile'),
-    path('portal/<slug:schema_name>/fee/collection/', fee_collection, name='fee_collection'),
-    path('portal/<slug:schema_name>/fee/collection/<int:student_id>/', fee_collection, name='fee_collection'),
-    path('portal/<slug:schema_name>/fee/receipt/<int:receipt_id>/', fee_receipt, name='fee_receipt'),
-    path('portal/<slug:schema_name>/defaulters/', defaulters, name='defaulters'),
-    path('portal/<slug:schema_name>/reports/', reports, name='reports'),
-    path('portal/<slug:schema_name>/api/student-search/', student_search_api, name='student_search_api'),
-    # Keep old student management routes (add student, etc.)
-    path('portal/<slug:schema_name>/students/add/', school_add_student, name='school_add_student'),
-    path('portal/<slug:schema_name>/', school_dashboard, name='school_portal'),
-    path('portal/<slug:schema_name>/login/', school_login, name='school_portal_login'),
-    path('portal/<slug:schema_name>/logout/', school_logout, name='school_portal_logout'),
-    path('portal/<slug:schema_name>/settings/', school_settings, name='school_portal_settings'),
-    path('', saas_homepage),
-    path('admin/', admin.site.urls),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) if settings.DEBUG else []+)/fee/collection/(?:(?P<student_id>\d+)/)?$', fee_collection_view, name='fee_collection'),
+    path('api/manual-generate-single/', manual_generate_single_api, name='manual_generate_single_api'),
+    path('api/debug-payments/', debug_payments_api, name='debug_payments_api'),
+
+    # Auth
+    path('portal/<slug:schema_name>/login/', school_login, name='school_login'),
+    path('portal/<slug:schema_name>/logout/', school_logout, name='school_logout'),
+
+    # Core portal routes
+    path('portal/<slug:schema_name>/dashboard/', dashboard_view, name='dashboard'),
+    path('portal/<slug:schema_name>/dashboard/mobile/', mobile_dashboard_view, name='mobile_dashboard'),
+    path('portal/<slug:schema_name>/students/', student_list_view, name='student_list'),
+    path('portal/<slug:schema_name>/students/mobile/', mobile_student_list_view, name='mobile_student_list'),
+    path('portal/<slug:schema_name>/students/add/', add_student_view, name='add_student'),
+    path('portal/<slug:schema_name>/students/edit/<int:student_id>/', edit_student_view, name='edit_student'),
+    path('portal/<slug:schema_name>/students/<int:student_id>/', student_profile_view, name='student_profile'),
+    path('portal/<slug:schema_name>/students/mobile/<int:student_id>/', mobile_student_profile_view, name='mobile_student_profile'),
+    path('portal/<slug:schema_name>/more/mobile/', mobile_more_view, name='mobile_more'),
+
+    # Fee routes
+    re_path(r'^portal/(?P<schema_name>[a-zA-Z0-9_-]+)/fee/collection/(?:(?P<student_id>\d+)/)?$', fee_collection_view, name='fee_collection'),
     path('portal/<slug:schema_name>/fee/receipt/<int:receipt_id>/', fee_receipt_view, name='fee_receipt'),
     path('portal/<slug:schema_name>/defaulters/', defaulters_view, name='defaulters'),
     path('portal/<slug:schema_name>/reports/', reports_view, name='reports'),
@@ -194,7 +204,8 @@ urlpatterns = [
     path('portal/<slug:schema_name>/api/student-search/', student_search_api_view, name='student_search_api'),
     path('portal/<slug:schema_name>/api/student/<int:student_id>/fee-records/', student_fee_records_api_view, name='student_fee_records_api'),
     path('portal/<slug:schema_name>/api/student/<int:student_id>/payments/', student_payments_api_view, name='student_payments_api'),
-    
+    path('portal/<slug:schema_name>/api/student/<int:student_id>/current-fee-status/', student_current_fee_status_api_view, name='student_current_fee_status'),
+
     # Gym API
     path('api/gym/checkin/', gym_checkin_api, name='gym_checkin_api'),
     path('api/gym/checkout/', gym_checkout_api, name='gym_checkout_api'),
@@ -210,28 +221,24 @@ urlpatterns = [
     path('portal/<slug:schema_name>/gym/payments/', gym_payment_view, name='gym_payment'),
     path('portal/<slug:schema_name>/gym/payments/<int:customer_id>/', gym_payment_view, name='gym_payment'),
     path('portal/<slug:schema_name>/gym/reports/', gym_reports_view, name='gym_reports'),
-    
-    # Gym Reports API endpoints
+    path('portal/<slug:schema_name>/gym/settings/', gym_settings_view, name='gym_settings'),
+
+    # Gym reports API endpoints
     path('api/gym/revenue-stats/<slug:schema_name>/', gym_revenue_stats_api, name='gym_revenue_stats_api'),
     path('api/gym/attendance-stats/<slug:schema_name>/', gym_attendance_stats_api, name='gym_attendance_stats_api'),
     path('api/gym/customers-list/<slug:schema_name>/', gym_customers_list_api, name='gym_customers_list_api'),
     path('api/gym/customer-detail/<slug:schema_name>/<int:customer_id>/', gym_customer_detail_api, name='gym_customer_detail_api'),
     path('api/gym/subscription-status/<slug:schema_name>/', gym_subscription_status_api, name='gym_subscription_status_api'),
-    
-    path('portal/<slug:schema_name>/gym/settings/', gym_settings_view, name='gym_settings'),
-
     path('api/gym/attendance-data/<slug:schema_name>/', gym_attendance_data_api, name='gym_attendance_data_api'),
-
     path('api/gym/eligible-customers/<slug:schema_name>/', gym_eligible_customers_api, name='gym_eligible_customers_api'),
-
     path('api/gym/search-customer/<slug:schema_name>/', gym_search_customer_api, name='gym_search_customer_api'),
-
     path('api/gym/export-attendance/<slug:schema_name>/', gym_export_attendance_api, name='gym_export_attendance_api'),
-
     path('api/gym/attendance/<int:attendance_id>/edit/', api_gym_edit_attendance, name='gym_edit_attendance_api'),
+
+    # Tenant root redirect
     path('portal/<slug:schema_name>/', tenant_root_redirect, name='tenant_root'),
 
-    # ===== STOCK MANAGEMENT ROUTES =====
+    # Stock management routes
     path('portal/<slug:schema_name>/stock/', portal_wrapper(login_required_for_schema(stock_management)), name='stock_management'),
     path('portal/<slug:schema_name>/stock/product/<int:product_id>/', portal_wrapper(login_required_for_schema(product_detail)), name='product_detail'),
     path('portal/<slug:schema_name>/stock/category/add/', portal_wrapper(login_required_for_schema(add_category)), name='add_category'),
@@ -239,8 +246,11 @@ urlpatterns = [
     path('portal/<slug:schema_name>/stock/product/add/', portal_wrapper(login_required_for_schema(add_product)), name='add_product'),
     path('portal/<slug:schema_name>/stock/product/delete/<int:product_id>/', portal_wrapper(login_required_for_schema(delete_product)), name='delete_product'),
 
-    # ===== SELL SEPARATELY (standalone student search) =====
+    # Sell separately routes
     path('portal/<slug:schema_name>/sell/', portal_wrapper(login_required_for_schema(sell_separately)), name='sell_separately'),
     path('sw.js', service_worker, name='service_worker'),
     path('portal/<slug:schema_name>/manifest.json', manifest, name='pwa_manifest'),
 ]
+
+if django_settings.DEBUG:
+    urlpatterns += static(django_settings.MEDIA_URL, document_root=django_settings.MEDIA_ROOT)
