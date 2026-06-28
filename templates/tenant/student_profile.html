@@ -133,22 +133,7 @@
 </div>
 
 
-<!-- Custom Fee Modal (inside body block) -->
 
-        <h3 id="modalTitle">Generate Current Month Fee</h3>
-        <p><strong>Student:</strong> {{ student.name }}</p>
-        <p><strong>Default Fee (from class):</strong> <span id="defaultFeeDisplay">₹0</span></p>
-        <div>
-            <label>Custom Amount (₹) - leave empty to use default</label>
-            <input type="number" id="customFeeAmount" step="0.01" placeholder="Enter custom amount">
-        </div>
-        <p style="font-size:0.8rem; color:var(--muted);">Note: Custom amount applies only to <strong>{{ current_month }}/{{ current_year }}</strong>. Future months will use the class fee structure.</p>
-        <div class="modal-actions">
-            <button id="cancelFeeModalBtn" class="btn-secondary">Cancel</button>
-            <button id="confirmFeeModalBtn" class="btn-primary">Generate</button>
-        </div>
-    </div>
-</div>
 
 <style>
 .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
