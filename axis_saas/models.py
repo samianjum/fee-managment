@@ -86,6 +86,7 @@ class Student(models.Model):
     custom_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     enrolled_on = models.DateTimeField(auto_now_add=True)
     default_extra_charges = models.JSONField(default=list, blank=True, null=True)
+    automation_enabled = models.BooleanField(default=False, help_text="Enable monthly auto‑generation of fees")
 
     def save(self, *args, **kwargs):
         if not self.roll_number:
@@ -199,6 +200,7 @@ class SchoolFeeSettings(models.Model):
     due_date_offset = models.PositiveSmallIntegerField(default=15, help_text="Days after generation when fee is due")
     late_fee_penalty = models.DecimalField(max_digits=5, decimal_places=2, default=0.00, help_text="Penalty %")
     default_extra_charges = models.JSONField(default=list, blank=True, null=True, help_text="Common charges used for future vouchers")
+    automation_enabled = models.BooleanField(default=False, help_text="Enable monthly auto‑generation of fees")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

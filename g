@@ -1,139 +1,88 @@
 #!/usr/bin/env python3
 """
-Fix for PWA Install Button on Mobile
-- Moves install script to top of body for early event capture
-- Hides button when app is already installed
-- Replaces fallback modal with a simple toast notification
+AXIS Tenant Schema Fixer
+- Runs all pending tenant migrations (migrate_schemas)
+- Explicitly adds missing columns to Student and SchoolFeeSettings
+- Idempotent (safe to run multiple times)
 """
 
-import re
 import os
+import sys
+import django
 
-MOBILE_BASE = "templates/mobile/base.html"
+# Setup Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'axis_saas.settings')
+django.setup()
 
-# New install script block (to be placed at top of body)
-NEW_SCRIPT = """
-<script>
-    (function() {
-        let deferredPrompt = null;
-        const installBtn = document.getElementById('installAppBtn');
-        const container = document.getElementById('pwaInstallContainer');
+from django.core.management import call_command
+from django.db import connection
+from django_tenants.utils import schema_context
+from axis_saas.models import SchoolClient
 
-        // Hide button if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            if (container) container.style.display = 'none';
-            return;
-        }
 
-        // Listen for beforeinstallprompt as early as possible
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            console.log('Install prompt captured');
-            // Show the button (in case it was hidden)
-            if (container) container.style.display = 'flex';
-        });
+def ensure_column(schema_name, table, column, column_def):
+    """Add column if it does not exist in the given schema."""
+    with schema_context(schema_name):
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = %s
+                  AND table_name = %s
+                  AND column_name = %s
+            """, [schema_name, table, column])
+            exists = cursor.fetchone()
 
-        // Also listen for appinstalled to hide button
-        window.addEventListener('appinstalled', () => {
-            if (container) container.style.display = 'none';
-            deferredPrompt = null;
-        });
+            if not exists:
+                try:
+                    cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}")
+                    print(f"✅ Added {column} to {table} in {schema_name}")
+                except Exception as e:
+                    print(f"❌ Failed to add {column} to {table} in {schema_name}: {e}")
+            else:
+                print(f"ℹ️ {column} already exists in {table} in {schema_name}")
 
-        // Click handler
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
-                        if (container) container.style.display = 'none';
-                    } else {
-                        console.log('User dismissed install');
-                    }
-                    deferredPrompt = null;
-                } else {
-                    // No native prompt – show a brief toast instead of a modal
-                    showToast('Installation is not supported in this browser or already installed.');
-                }
-            });
-        }
 
-        // Simple toast function
-        function showToast(msg) {
-            const existing = document.getElementById('installToast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'installToast';
-            toast.style.cssText = `
-                position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                background: #333; color: white; padding: 12px 24px;
-                border-radius: 30px; font-size: 14px; z-index: 9999;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                max-width: 90%; text-align: center;
-                transition: opacity 0.3s;
-            `;
-            toast.textContent = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
-        }
-    })();
-</script>
-"""
+def main():
+    print("🔧 AXIS TENANT SCHEMA FIXER")
+    print("=" * 50)
 
-# Remove the old install script from the bottom and replace with the new one at the top
-def patch_mobile_base():
-    if not os.path.exists(MOBILE_BASE):
-        print(f"❌ Error: {MOBILE_BASE} not found.")
+    # 1. Run all pending tenant migrations (the proper way)
+    print("\n📦 Applying pending tenant migrations...")
+    try:
+        call_command('migrate_schemas', interactive=False, verbosity=1)
+        print("✅ Migrations applied successfully.")
+    except Exception as e:
+        print(f"⚠️ migrate_schemas failed: {e}")
+        print("   Will fallback to explicit column addition.")
+
+    # 2. Explicitly ensure critical columns exist in all tenant schemas
+    tenants = SchoolClient.objects.exclude(schema_name='public')
+    if not tenants:
+        print("⚠️ No tenant schemas found. Nothing to fix.")
         return
 
-    with open(MOBILE_BASE, "r", encoding="utf-8") as f:
-        content = f.read()
+    print("\n🔍 Verifying critical columns in each tenant schema...")
 
-    # 1. Remove existing install scripts from the bottom (we'll replace with new one)
-    # We'll remove the old <script> block that contains the old install logic
-    # and also remove the fallback modal if present.
-    # But we want to keep the fallback modal? No, we'll remove it and use toast.
-    # However, the fallback modal might be used elsewhere, but it's only for install.
+    for tenant in tenants:
+        schema = tenant.schema_name
+        print(f"\n--- {schema} ---")
 
-    # Remove the old install script block (between <script> and </script> that contains beforeinstallprompt)
-    # We'll use a regex to find the old script block.
-    # The old script block starts with: (function() { ... })();
-    # We'll remove everything from the old script start to the closing </script>.
-    # But we need to be careful not to remove other scripts.
+        # Student.automation_enabled
+        ensure_column(schema, 'axis_saas_student', 'automation_enabled', 'boolean DEFAULT false')
 
-    # The pattern: look for a script that contains "beforeinstallprompt" and "deferredPrompt"
-    pattern = r'<script>\s*\(function\(\)\s*\{[\s\S]*?deferredPrompt[\s\S]*?\}\);\s*</script>'
-    content = re.sub(pattern, '', content)
+        # Student.default_extra_charges (JSON field)
+        ensure_column(schema, 'axis_saas_student', 'default_extra_charges', 'jsonb DEFAULT \'[]\'::jsonb')
 
-    # Also remove the fallback modal div (id="installFallbackModal")
-    pattern_modal = r'<div id="installFallbackModal"[\s\S]*?</div>'
-    content = re.sub(pattern_modal, '', content)
+        # SchoolFeeSettings.automation_enabled (if it exists)
+        ensure_column(schema, 'axis_saas_schoolfeesettings', 'automation_enabled', 'boolean DEFAULT false')
 
-    # Also remove any leftover closeFallbackModal references
-    content = re.sub(r'closeFallbackModal', '', content)
+        # SchoolFeeSettings.default_extra_charges (if missing)
+        ensure_column(schema, 'axis_saas_schoolfeesettings', 'default_extra_charges', 'jsonb DEFAULT \'[]\'::jsonb')
 
-    # 2. Insert the new script right after <body> tag
-    body_match = re.search(r'<body[^>]*>', content)
-    if body_match:
-        insert_pos = body_match.end()
-        # Insert the new script right after the opening body tag
-        content = content[:insert_pos] + "\n" + NEW_SCRIPT + "\n" + content[insert_pos:]
-        print("✅ Inserted new install script at top of body.")
-    else:
-        print("❌ Could not find <body> tag.")
-        return
+    print("\n✅ All tenant schemas are now up to date.")
+    print("   Restart your server: python manage.py runserver")
 
-    # 3. Write back
-    with open(MOBILE_BASE, "w", encoding="utf-8") as f:
-        f.write(content)
 
-    print("✅ Patched mobile/base.html successfully.")
-    print("🔧 Install button will now show native prompt if available, or a brief toast if not.")
-
-if __name__ == "__main__":
-    patch_mobile_base()
+if __name__ == '__main__':
+    main()

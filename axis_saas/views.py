@@ -1020,24 +1020,58 @@ def mobile_fee_structure(request, schema_name):
 @require_tenant_type(['school'])
 @require_school_feature('fee_settings')
 def fee_settings(request, schema_name, force_mobile=False):
+    """Fee settings page with automation controls and extra charges."""
     tenant = get_tenant(request, schema_name)
     with schema_context(schema_name):
-        settings_obj, created = SchoolFeeSettings.objects.get_or_create(pk=1)
+        settings, created = SchoolFeeSettings.objects.get_or_create(pk=1)
+
+        # Handle POST (save settings or toggle automation)
         if request.method == 'POST':
-            form = FeeSettingsForm(request.POST, instance=settings_obj)
+            # Check if this is a toggle action
+            if 'toggle_automation' in request.POST:
+                settings.automation_enabled = not settings.automation_enabled
+                settings.save(update_fields=['automation_enabled'])
+                messages.success(request, f"Automation {'enabled' if settings.automation_enabled else 'disabled'}.")
+                return redirect('fee_settings', schema_name=schema_name)
+
+            # Otherwise, save settings form
+            form = FeeSettingsForm(request.POST, instance=settings)
             if form.is_valid():
+                # Save the form (includes fee_generation_day, due_date_offset, late_fee_penalty)
                 form.save()
-                messages.success(request, "Fee settings updated.")
+
+                # Handle extra charges (JSON)
+                extra_charges_json = request.POST.get('extra_charges_json', '[]')
+                try:
+                    import json
+                    extra_charges = json.loads(extra_charges_json)
+                    if isinstance(extra_charges, list):
+                        settings.default_extra_charges = extra_charges
+                        settings.save(update_fields=['default_extra_charges'])
+                except Exception as e:
+                    messages.error(request, f"Error saving extra charges: {e}")
+
+                messages.success(request, "Fee settings updated successfully.")
                 return redirect('fee_settings', schema_name=schema_name)
         else:
-            form = FeeSettingsForm(instance=settings_obj)
-    context = {'tenant': tenant, 'form': form, 'logo_url': tenant.school_logo.url if tenant.school_logo else None}
-    template = 'mobile/fee_settings.html' if force_mobile else 'tenant/fee_settings.html'
-    return render(request, template, context)
+            form = FeeSettingsForm(instance=settings)
 
-# ------------------- Family Payment -------------------
-@require_tenant_type(['school'])
-@require_school_feature('family_payment')
+        # Compute total extra charges for display
+        extra_charges = settings.default_extra_charges or []
+        total_extra = sum((ch.get('amount', 0) for ch in extra_charges), 0)
+
+        context = {
+            'tenant': tenant,
+            'form': form,
+            'settings': settings,
+            'extra_charges': extra_charges,
+            'total_extra': total_extra,
+            'automation_enabled': settings.automation_enabled,
+            'logo_url': tenant.school_logo.url if tenant.school_logo else None,
+        }
+        template = 'mobile/fee_settings.html' if force_mobile else 'tenant/fee_settings.html'
+        return render(request, template, context)
+
 def family_payment(request, schema_name):
     tenant = get_tenant(request, schema_name)
     with schema_context(schema_name):
@@ -1216,6 +1250,7 @@ def fee_status_api(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def manual_generate_api(request):
+    """Generate fee records for all active students with extra charges."""
     if not request.session.get("school_admin_authenticated"):
         return JsonResponse({"error": "Unauthorized"}, status=401)
     schema_name = request.session.get("school_admin_schema")
@@ -1225,6 +1260,7 @@ def manual_generate_api(request):
         tenant = SchoolClient.objects.get(schema_name=schema_name)
     except SchoolClient.DoesNotExist:
         return JsonResponse({"error": "Tenant not found"}, status=404)
+
     with schema_context(schema_name):
         settings, _ = SchoolFeeSettings.objects.get_or_create(pk=1)
         today = timezone.localdate()
@@ -1233,16 +1269,24 @@ def manual_generate_api(request):
         students = Student.objects.filter(status="active")
         if not students.exists():
             return JsonResponse({"message": "No active students found."})
+
         due_date = today + timedelta(days=settings.due_date_offset)
+
+        # Compute extra charges sum
+        extra_charges = settings.default_extra_charges or []
+        total_extra = sum((ch.get('amount', 0) for ch in extra_charges), 0)
+
         created = 0
         skipped_existing = 0
         skipped_no_fee = 0
+
         for student in students:
             # Check if already has fee record for this month
             existing = FeeRecord.objects.filter(student=student, month=month, year=year).first()
             if existing:
                 skipped_existing += 1
                 continue
+
             base_fee = student.custom_fee if student.custom_fee > 0 else 0
             if base_fee == 0:
                 fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
@@ -1250,23 +1294,24 @@ def manual_generate_api(request):
                     base_fee = fee_struct.monthly_fee
                     student.custom_fee = base_fee
                     student.save(update_fields=["custom_fee"])
+
             if base_fee > 0:
-                FeeRecord.objects.create(
+                total_fee = base_fee + total_extra
+                fee_record = FeeRecord.objects.create(
                     student=student, month=month, year=year,
-                    amount=base_fee, due_date=due_date, status="pending"
+                    amount=total_fee, due_date=due_date, status='pending',
+                    extra_charges=extra_charges  # store extra charges on the record
                 )
                 created += 1
             else:
                 skipped_no_fee += 1
+
         message = f"Generated {created} fee records for {month}/{year}."
         if skipped_existing > 0:
             message += f" Skipped {skipped_existing} students because they already have a fee record."
         if skipped_no_fee > 0:
             message += f" Skipped {skipped_no_fee} students because no fee structure defined for their grade."
         return JsonResponse({"message": message, "created": created, "skipped_existing": skipped_existing, "skipped_no_fee": skipped_no_fee})
-@csrf_exempt
-@require_http_methods(["POST"])
-
 
 def manual_generate_single_api(request):
     if not request.session.get("school_admin_authenticated"):
