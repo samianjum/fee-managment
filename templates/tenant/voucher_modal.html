@@ -262,6 +262,66 @@
 </style>
 
 <script>
+
+// Ensure the modal element exists; if not, inject it
+(function() {
+    if (!document.getElementById('voucherModal')) {
+        console.warn('voucherModal not found in DOM – injecting dynamically.');
+        // Create a container div and insert the modal HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = `<!-- Voucher Modal – Single Card with Direct Buttons -->
+<div id="voucherModal" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 820px;">
+        <!-- Close button -->
+        <button class="close-modal" onclick="closeVoucherModal()">&times;</button>
+        <!-- Voucher body -->
+        <div id="voucherModalBody">
+            <!-- Content loaded via JS -->
+        </div>
+        <!-- Action Buttons (visible only when voucher is shown) -->
+        <div class="modal-footer" id="modalFooter">
+            <button class="btn-action" id="printVoucherBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><path d="M6 9V3h12v6"/><rect x="6" y="15" width="12" height="6" rx="2"/></svg>
+                Print
+            </button>
+            <button class="btn-action" id="downloadVoucherBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7l7 7 7-7"/></svg>
+                Save
+            </button>
+            <button class="btn-action" id="editVoucherBtn" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg>
+                Edit
+            </button>
+        </div>
+    </div>
+</div>`;
+        // Move the modal element to the body
+        const modalElement = tempDiv.firstElementChild;
+        if (modalElement) {
+            document.body.appendChild(modalElement);
+            console.log('✅ Voucher modal injected dynamically.');
+        } else {
+            console.error('Failed to inject voucher modal.');
+        }
+    } else {
+        console.log('✅ Voucher modal found in DOM.');
+    }
+})();
+
+let isLoading = false;
+
+
+// Additional safety: ensure the modal opens on data-open-voucher clicks
+document.addEventListener('DOMContentLoaded', function() {
+    const voucherButtons = document.querySelectorAll('[data-open-voucher]');
+    if (voucherButtons.length === 0) {
+        console.warn('No voucher buttons found with data-open-voucher');
+    } else {
+        console.log('Found ' + voucherButtons.length + ' voucher buttons');
+    }
+});
+
+console.log('Voucher modal script loaded');
 // Voucher JS – direct buttons, no dropdown, with footer toggle
 function getCsrfToken() {
     let name = 'csrftoken';
@@ -295,11 +355,26 @@ document.addEventListener('click', function(event) {
 });
 
 function openVoucherModal(studentId, schema) {
+    console.log('openVoucherModal called with', studentId, schema);
+    if (isLoading) {
+        console.warn('Already loading voucher, ignoring duplicate call');
+        return;
+    }
+    isLoading = true;
     currentStudentId = studentId;
     currentSchema = schema;
     const modal = document.getElementById('voucherModal');
-    if (!modal) return;
+    console.log('Modal element:', modal);
+    if (!modal) {
+        console.error('Modal element #voucherModal not found!');
+        alert('Voucher modal not found. Please check the page.');
+        isLoading = false;
+        return;
+    }
+    console.log('Modal current display:', modal.style.display);
     modal.style.display = 'flex';
+    modal.classList.add('show'); // in case CSS uses .show
+    console.log('Modal display set to flex');
     loadVoucherStatus(studentId, schema);
 }
 
@@ -308,16 +383,24 @@ function closeVoucherModal() {
 }
 
 function loadVoucherStatus(studentId, schema) {
+    console.log('loadVoucherStatus called for', studentId, schema);
     const body = document.getElementById('voucherModalBody');
     body.innerHTML = '<p style="text-align:center; padding:1rem; color:#6b7280;">Loading...</p>';
     // Hide footer while loading
     const footer = document.getElementById('modalFooter');
     if (footer) footer.style.display = 'none';
-    fetch(`/portal/${schema}/api/student/${studentId}/voucher-status/`)
-        .then(res => res.json())
+    const url = `/portal/${schema}/api/student/${studentId}/voucher-status/`;
+    console.log('Fetching:', url);
+    fetch(url)
+        .then(res => {
+            console.log('Response status:', res.status);
+            return res.json();
+        })
         .then(data => {
+            console.log('Received data:', data);
             if (data.error) {
                 body.innerHTML = '<p style="color:#ef4444;">Error: ' + data.error + '</p>';
+                isLoading = false;  // allow retry
                 return;
             }
             currentFeeStatus = data;
@@ -341,9 +424,12 @@ function loadVoucherStatus(studentId, schema) {
                 document.getElementById('editVoucherBtn').style.display = 'none';
                 if (footer) footer.style.display = 'none';
             }
+            isLoading = false;
         })
         .catch(err => {
+            console.error('Fetch error:', err);
             body.innerHTML = '<p style="color:#ef4444;">Error loading status: ' + err.message + '</p>';
+            isLoading = false;
         });
 }
 

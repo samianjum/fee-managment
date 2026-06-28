@@ -5,16 +5,27 @@
     <div>
         <h1 class="page-title">{{ student.name }}</h1>
         <p class="page-desc">Roll No: {{ student.roll_number }} • {{ student.grade }} - {{ student.section }}</p>
+    
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: flex-end;">
+    <button class="btn-primary" id="voucherBtnDesktop" onclick="openVoucherModal({{ student.id }}, '{{ tenant.schema_name }}')" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 500; font-size: 0.85rem; background: var(--primary); color: white; border: none; cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg>
+        Voucher
+    </button>
+</div>
+<div style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; justify-content: flex-end;">
+    <button class="btn-primary" id="voucherBtnDesktop" onclick="openVoucherModal({{ student.id }}, '{{ tenant.schema_name }}')" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 500; font-size: 0.85rem; background: var(--primary); color: white; border: none; cursor: pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg>
+        Voucher
+    </button>
+</div>
+
+
     </div>
     <div class="header-actions">
-                    <button class="btn-primary" type="button" data-open-voucher data-student-id="{{ student.id }}" data-schema-name="{{ tenant.schema_name }}">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg>
-                        Voucher
-                    </button>
+                    
                 
         <a href="{% url 'edit_student' schema_name=tenant.schema_name student_id=student.id %}" class="btn-secondary"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg> Edit</a>
         <a href="{% url 'fee_collection' schema_name=tenant.schema_name student_id=student.id %}" class="btn-primary"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M8 10h8"/></svg> Collect Pending</a>
-        <button id="genFeeBtn" class="btn-primary"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Generate Current Month Fee</button>
         <a href="{% url 'student_list' schema_name=tenant.schema_name %}" class="btn-secondary"><svg class="inline-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 18l-6-6 6-6"/></svg> Back</a>
     </div>
 </div>
@@ -52,7 +63,7 @@
                     <td>{% if r.payments.exists %}{% for rc in r.payments.all %}<a href="/portal/{{ tenant.schema_name }}/fee/receipt/{{ rc.id }}/" class="receipt-link">{{ rc.receipt_number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}—{% endif %}</td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="5" class="empty-row">No fee records found. Click "Generate Current Month Fee" to create.</td></tr>
+                <tr><td colspan="5" class="empty-row">No fee records found. Use the "Voucher" or "Collect Pending" buttons above to manage fees.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -123,9 +134,7 @@
 
 
 <!-- Custom Fee Modal (inside body block) -->
-<div id="customFeeModal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <div id="modalMessage"></div>
+
         <h3 id="modalTitle">Generate Current Month Fee</h3>
         <p><strong>Student:</strong> {{ student.name }}</p>
         <p><strong>Default Fee (from class):</strong> <span id="defaultFeeDisplay">₹0</span></p>
@@ -212,7 +221,7 @@ async function loadFeeRecords() {
         const data = await resp.json();
         const tbody = document.getElementById('feeTableBody');
         if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No fee records found. Click "Generate Current Month Fee" to create.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="empty-row">No fee records found. Use the "Voucher" or "Collect Pending" buttons above to manage fees.</td></tr>';
             document.getElementById('totalFee').innerText = '₹0';
             document.getElementById('totalPaid').innerText = '₹0';
             document.getElementById('pendingTotal').innerText = '₹0';
