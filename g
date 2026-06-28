@@ -1,93 +1,57 @@
 #!/usr/bin/env python3
 """
-AXIS Migration Patcher – replaces AddField with idempotent RunSQL.
-Run this ONCE locally, then commit and push.
+AXIS Railway Deployment Patcher
+Ensures a default tenant exists before migrations.
+Run this once, then push to Railway.
 """
 
 import os
 import re
 
-MIGRATION_DIR = "axis_saas/migrations"
-FILES = {
-    "0015_feerecord_due_date_offset.py": {
-        "field": "due_date_offset",
-        "sql": "ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS due_date_offset integer DEFAULT 15 NOT NULL;"
-    },
-    "0016_feerecord_late_fee_per_day.py": {
-        "field": "late_fee_per_day",
-        "sql": "ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS late_fee_per_day numeric(6,2) DEFAULT 0.00 NOT NULL;"
-    }
-}
+START_SH = "start.sh"
+TENANT_SCHEMA = "sh"          # change if you want a different schema name
+TENANT_NAME = "School"
+ADMIN_USER = "admin"
+ADMIN_PASS = "admin123"
 
-def replace_addfield_with_runsql(filepath, field_name, sql):
-    with open(filepath, "r") as f:
+def patch_start_sh():
+    if not os.path.exists(START_SH):
+        print(f"❌ {START_SH} not found. Are you in the project root?")
+        return
+
+    with open(START_SH, "r") as f:
         content = f.read()
 
-    # Find the AddField block that contains the field name.
-    # We'll locate the start of migrations.AddField(
-    start_pattern = r"migrations\.AddField\s*\("
-    start_match = re.search(start_pattern, content)
-    if not start_match:
-        print(f"❌ Could not find 'migrations.AddField(' in {filepath}")
-        return False
+    # Already patched?
+    if "get_or_create(schema_name=" in content:
+        print("✅ start.sh already has tenant creation.")
+        return
 
-    # From the start, find the matching closing parenthesis and the following comma.
-    start_pos = start_match.start()
-    # We'll search forward, counting parentheses.
-    paren_count = 0
-    end_pos = start_pos
-    in_string = False
-    for i in range(start_pos, len(content)):
-        ch = content[i]
-        if ch == '"' or ch == "'":
-            # Toggle in_string (simple, not handling escaped quotes)
-            in_string = not in_string
-        if not in_string:
-            if ch == '(':
-                paren_count += 1
-            elif ch == ')':
-                paren_count -= 1
-                if paren_count == 0:
-                    # Found the closing parenthesis of AddField
-                    # Now find the trailing comma (if any) and newline
-                    end_pos = i + 1
-                    # Skip whitespace and check for comma
-                    while end_pos < len(content) and content[end_pos] in ' \t\n\r':
-                        end_pos += 1
-                    if end_pos < len(content) and content[end_pos] == ',':
-                        end_pos += 1
-                    break
-    if paren_count != 0:
-        print(f"❌ Mismatched parentheses in {filepath}")
-        return False
+    # Find the migrate command and insert tenant creation before it
+    if "python manage.py migrate" not in content:
+        print("⚠️ Could not find 'python manage.py migrate' in start.sh. Please add the creation line manually.")
+        return
 
-    # Now we have the block to replace: content[start_pos:end_pos]
-    # Replace it with the RunSQL operation.
-    replacement = f"    migrations.RunSQL('{sql}', reverse_sql=''),"
-    new_content = content[:start_pos] + replacement + content[end_pos:]
+    # Build the creation command
+    create_cmd = (
+        f'python manage.py shell -c "from axis_saas.models import SchoolClient; '
+        f'SchoolClient.objects.get_or_create(schema_name=\'{TENANT_SCHEMA}\', '
+        f"defaults={{'name':'{TENANT_NAME}', 'admin_username':'{ADMIN_USER}', 'admin_password':'{ADMIN_PASS}'}})\""
+    )
 
-    with open(filepath, "w") as f:
+    # Insert before the migrate line
+    new_content = content.replace(
+        "python manage.py migrate",
+        f"{create_cmd}\npython manage.py migrate"
+    )
+
+    with open(START_SH, "w") as f:
         f.write(new_content)
-    print(f"✅ Patched {os.path.basename(filepath)}")
-    return True
 
-def main():
-    print("🚀 AXIS Migration Patcher – adding IF NOT EXISTS")
-    success = True
-    for filename, info in FILES.items():
-        filepath = os.path.join(MIGRATION_DIR, filename)
-        if not os.path.exists(filepath):
-            print(f"❌ File not found: {filepath}")
-            success = False
-            continue
-        if not replace_addfield_with_runsql(filepath, info["field"], info["sql"]):
-            success = False
-
-    if success:
-        print("\n✅ All migrations patched successfully.")
-        print("   Now commit and push to Railway.")
-    else:
-        print("\n❌ Some patches failed. Please check the migration files manually.")
+    print("✅ Patched start.sh:")
+    print(f"   - Will create tenant '{TENANT_SCHEMA}' (if missing) before migrations.")
+    print("   - Then runs migrations for all schemas (including the new tenant).")
+    print("\nNow push your code to Railway and restart the deployment.")
 
 if __name__ == "__main__":
-    main()
+    patch_start_sh()
