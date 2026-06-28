@@ -170,7 +170,19 @@
     </div>
 
     <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
+    
+    <!-- Floating Install Button (mobile) -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
+        <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
+            </svg>
+            Install App
+        </button>
+    </div>
+
+
+<nav class="bottom-nav">
         <a href="{% url 'mobile_dashboard' schema_name=tenant.schema_name %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'mobile_dashboard' %}active{% endif %}">
             <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             <span>Home</span>
@@ -199,5 +211,75 @@
     </script>
     {% block scripts %}{% endblock %}
     {% include "tenant/voucher_modal.html" %}
+
+<!-- Fallback Install Modal -->
+<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <h3 style="margin-top:0;">Install App</h3>
+        <p>To install this app on your device:</p>
+        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
+            <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
+            <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
+            <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
+        </ul>
+        <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
+    </div>
+</div>
+
+
+<script>
+    (function() {
+        let deferredPrompt;
+        const floatingBtn = document.getElementById('installAppBtn');
+        const fallbackModal = document.getElementById('installFallbackModal');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('beforeinstallprompt fired');
+        });
+
+        async function triggerInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    console.log('User accepted install');
+                    const container = document.getElementById('pwaInstallContainer');
+                    if (container) container.style.display = 'none';
+                } else {
+                    console.log('User dismissed install');
+                }
+                deferredPrompt = null;
+            } else {
+                // No native prompt – show fallback modal
+                if (fallbackModal) fallbackModal.style.display = 'flex';
+            }
+        }
+
+        if (floatingBtn) {
+            floatingBtn.addEventListener('click', triggerInstall);
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('App installed');
+            const container = document.getElementById('pwaInstallContainer');
+            if (container) container.style.display = 'none';
+        });
+
+        const closeFallback = document.getElementById('closeFallbackModal');
+        if (closeFallback) {
+            closeFallback.addEventListener('click', () => {
+                if (fallbackModal) fallbackModal.style.display = 'none';
+            });
+        }
+        if (fallbackModal) {
+            fallbackModal.addEventListener('click', (e) => {
+                if (e.target === fallbackModal) fallbackModal.style.display = 'none';
+            });
+        }
+    })();
+</script>
+
 </body>
 </html>
