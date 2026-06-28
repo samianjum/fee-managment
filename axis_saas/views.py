@@ -3223,20 +3223,25 @@ def voucher_html_api(request, schema_name, student_id):
 
 
 
+
 # ==================== VOUCHERS LIST (Central page) ====================
 
 @require_tenant_type(['school'])
 def vouchers_list(request, schema_name):
-    """List all fee vouchers (fee records) with filters and actions."""
+    """List all fee vouchers (fee records) with filters, search, and missing detection."""
     tenant = get_tenant(request, schema_name)
     with schema_context(schema_name):
-        # Filter by month/year
         today = timezone.localdate()
         current_month = today.month
         current_year = today.year
 
+        # Get filter params
         month = request.GET.get('month')
         year = request.GET.get('year')
+        status = request.GET.get('status')
+        search = request.GET.get('search', '').strip()
+        page_number = request.GET.get('page', 1)
+
         if month:
             try:
                 month = int(month)
@@ -3255,22 +3260,91 @@ def vouchers_list(request, schema_name):
         else:
             year = current_year
 
-        # Fetch fee records for the selected month/year
-        fee_records = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
+        # Fetch fee records for selected month/year
+        fee_records_qs = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
+        
+        # Apply search
+        if search:
+            fee_records_qs = fee_records_qs.filter(
+                Q(student__name__icontains=search) |
+                Q(student__roll_number__icontains=search) |
+                Q(student__father_name__icontains=search) |
+                Q(student__grade__icontains=search) |
+                Q(student__section__icontains=search)
+            )
+
+        # Separate records by status
+        paid_records = fee_records_qs.filter(status='paid')
+        pending_records = fee_records_qs.filter(status='pending')
+        partial_records = fee_records_qs.filter(status='partial')
+        # The rest are overdue or other statuses, but we'll treat them as 'pending' for grouping? 
+        # For simplicity, we'll group all non-paid, non-partial as 'pending' (overdue also considered pending)
+        # But we have explicit status filter.
+        
+        # Missing students: active students with no fee record for this month
+        all_active_students = Student.objects.filter(status='active')
+        existing_student_ids = fee_records_qs.values_list('student_id', flat=True)
+        missing_students = all_active_students.exclude(id__in=existing_student_ids)
+
+        # Build a list of all items to display, with a type flag
+        items = []
+
+        # Add fee records
+        for fr in fee_records_qs:
+            items.append({
+                'type': 'record',
+                'record': fr,
+                'student': fr.student,
+                'status': fr.status,
+                'amount': fr.amount,
+                'paid': fr.paid_amount,
+                'due_date': fr.due_date,
+                'month': fr.month,
+                'year': fr.year,
+            })
+
+        # Add missing students
+        for student in missing_students:
+            reason = "No fee structure" 
+            if student.custom_fee > 0:
+                reason = "Custom fee not set"
+            else:
+                fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
+                if fee_struct:
+                    reason = "Fee structure exists but not generated"
+            items.append({
+                'type': 'missing',
+                'student': student,
+                'reason': reason,
+                'status': 'missing',
+                'amount': 0,
+                'paid': 0,
+                'due_date': None,
+                'month': month,
+                'year': year,
+            })
+
+        # Apply status filter
+        if status and status != 'all':
+            if status == 'missing':
+                items = [item for item in items if item['type'] == 'missing']
+            else:
+                items = [item for item in items if item['type'] == 'record' and item['record'].status == status]
 
         # Pagination
-        paginator = Paginator(fee_records, 20)
-        page_number = request.GET.get('page')
+        paginator = Paginator(items, 20)
         page_obj = paginator.get_page(page_number)
 
-        # Build context
         context = {
             'tenant': tenant,
-            'fee_records': page_obj,
+            'items': page_obj,
             'month': month,
             'year': year,
             'months': list(range(1, 13)),
             'years': list(range(current_year - 5, current_year + 2)),
+            'selected_status': status,
+            'search_query': search,
+            'is_current_month': (month == current_month and year == current_year),
             'logo_url': tenant.school_logo.url if tenant.school_logo else None,
         }
         return render(request, 'tenant/vouchers.html', context)
@@ -3287,6 +3361,10 @@ def mobile_vouchers_list(request, schema_name):
 
         month = request.GET.get('month')
         year = request.GET.get('year')
+        status = request.GET.get('status')
+        search = request.GET.get('search', '').strip()
+        page_number = request.GET.get('page', 1)
+
         if month:
             try:
                 month = int(month)
@@ -3305,18 +3383,72 @@ def mobile_vouchers_list(request, schema_name):
         else:
             year = current_year
 
-        fee_records = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
-        paginator = Paginator(fee_records, 15)
-        page_number = request.GET.get('page')
+        fee_records_qs = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
+        if search:
+            fee_records_qs = fee_records_qs.filter(
+                Q(student__name__icontains=search) |
+                Q(student__roll_number__icontains=search) |
+                Q(student__father_name__icontains=search) |
+                Q(student__grade__icontains=search) |
+                Q(student__section__icontains=search)
+            )
+
+        all_active_students = Student.objects.filter(status='active')
+        existing_student_ids = fee_records_qs.values_list('student_id', flat=True)
+        missing_students = all_active_students.exclude(id__in=existing_student_ids)
+
+        items = []
+        for fr in fee_records_qs:
+            items.append({
+                'type': 'record',
+                'record': fr,
+                'student': fr.student,
+                'status': fr.status,
+                'amount': fr.amount,
+                'paid': fr.paid_amount,
+                'due_date': fr.due_date,
+                'month': fr.month,
+                'year': fr.year,
+            })
+        for student in missing_students:
+            reason = "No fee structure"
+            if student.custom_fee > 0:
+                reason = "Custom fee not set"
+            else:
+                fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
+                if fee_struct:
+                    reason = "Not generated"
+            items.append({
+                'type': 'missing',
+                'student': student,
+                'reason': reason,
+                'status': 'missing',
+                'amount': 0,
+                'paid': 0,
+                'due_date': None,
+                'month': month,
+                'year': year,
+            })
+
+        if status and status != 'all':
+            if status == 'missing':
+                items = [item for item in items if item['type'] == 'missing']
+            else:
+                items = [item for item in items if item['type'] == 'record' and item['record'].status == status]
+
+        paginator = Paginator(items, 15)
         page_obj = paginator.get_page(page_number)
 
         context = {
             'tenant': tenant,
-            'fee_records': page_obj,
+            'items': page_obj,
             'month': month,
             'year': year,
             'months': list(range(1, 13)),
             'years': list(range(current_year - 5, current_year + 2)),
+            'selected_status': status,
+            'search_query': search,
+            'is_current_month': (month == current_month and year == current_year),
             'logo_url': tenant.school_logo.url if tenant.school_logo else None,
         }
         return render(request, 'mobile/vouchers.html', context)

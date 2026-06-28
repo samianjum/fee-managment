@@ -4,10 +4,11 @@
 
 {% block extra_head %}
 <style>
+    /* ----- Filters & Search ----- */
     .filter-bar {
         display: flex;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.75rem;
         align-items: flex-end;
         margin-bottom: 1.5rem;
         padding: 1rem 1.25rem;
@@ -20,7 +21,8 @@
         display: flex;
         flex-direction: column;
         gap: 0.2rem;
-        flex: 0 0 auto;
+        flex: 1;
+        min-width: 120px;
     }
     .filter-group label {
         font-size: 0.7rem;
@@ -29,42 +31,41 @@
         font-weight: 600;
         letter-spacing: 0.3px;
     }
-    .filter-group select {
+    .filter-group input, .filter-group select {
         padding: 0.4rem 0.6rem;
         border-radius: 0.5rem;
         border: 1px solid var(--border);
         background: var(--surface-alt);
         color: var(--text);
+        font-size: 0.85rem;
     }
-    .btn-filter {
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .btn-filter, .btn-reset {
         padding: 0.4rem 1rem;
         border-radius: 2rem;
-        background: var(--primary);
-        color: white;
+        font-weight: 600;
         border: none;
         cursor: pointer;
-        font-weight: 600;
     }
-    .btn-filter:hover {
-        background: var(--primary-dark);
-    }
-    .btn-reset {
-        padding: 0.4rem 1rem;
-        border-radius: 2rem;
-        background: var(--surface-alt);
-        color: var(--text);
-        border: 1px solid var(--border);
-        cursor: pointer;
-    }
+    .btn-filter { background: var(--primary); color: white; }
+    .btn-filter:hover { background: var(--primary-dark); }
+    .btn-reset { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); }
+
+    /* ----- Table ----- */
     .voucher-table {
         width: 100%;
         border-collapse: collapse;
+        font-size: 0.85rem;
     }
     .voucher-table th, .voucher-table td {
-        padding: 0.75rem 0.5rem;
+        padding: 0.65rem 0.5rem;
         text-align: left;
         border-bottom: 1px solid var(--border);
-        font-size: 0.85rem;
+        vertical-align: middle;
     }
     .voucher-table th {
         background: var(--surface-alt);
@@ -72,6 +73,7 @@
         color: var(--muted);
         text-transform: uppercase;
         font-size: 0.7rem;
+        white-space: nowrap;
     }
     .status-badge {
         display: inline-block;
@@ -84,6 +86,7 @@
     .status-partial { background: #dbeafe; color: #1e40af; }
     .status-paid { background: #d1fae5; color: #065f46; }
     .status-overdue { background: #fee2e2; color: #991b1b; }
+    .status-missing { background: #e5e7eb; color: #374151; }
     .action-btns {
         display: flex;
         gap: 0.3rem;
@@ -102,18 +105,15 @@
         cursor: pointer;
         transition: 0.2s;
     }
-    .btn-sm:hover {
-        background: var(--primary-dark);
-    }
-    .btn-sm.outline {
-        background: transparent;
-        color: var(--primary);
-        border: 1px solid var(--primary);
-    }
-    .btn-sm.outline:hover {
-        background: var(--primary);
-        color: white;
-    }
+    .btn-sm:hover { background: var(--primary-dark); }
+    .btn-sm.outline { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-sm.outline:hover { background: var(--primary); color: white; }
+    .btn-sm.warning { background: #f59e0b; color: white; }
+    .btn-sm.warning:hover { background: #d97706; }
+
+    .empty-row { text-align: center; padding: 2rem; color: var(--muted); }
+
+    /* ----- Pagination ----- */
     .pagination {
         display: flex;
         justify-content: center;
@@ -130,28 +130,20 @@
         color: var(--text);
         font-size: 0.8rem;
     }
-    .page-link:hover {
-        background: var(--primary);
-        color: white;
-    }
-    .page-link.active {
-        background: var(--primary);
-        color: white;
-    }
-    .empty-row {
-        text-align: center;
-        padding: 2rem;
+    .page-link:hover { background: var(--primary); color: white; }
+    .page-link.active { background: var(--primary); color: white; }
+    .page-link.disabled { opacity: 0.4; pointer-events: none; }
+
+    .missing-reason {
+        font-size: 0.7rem;
         color: var(--muted);
+        margin-top: 0.1rem;
     }
+
     @media (max-width: 768px) {
-        .filter-bar {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        .voucher-table th, .voucher-table td {
-            padding: 0.4rem 0.3rem;
-            font-size: 0.75rem;
-        }
+        .filter-bar { flex-direction: column; align-items: stretch; }
+        .voucher-table th, .voucher-table td { padding: 0.4rem 0.3rem; font-size: 0.75rem; }
+        .action-btns .btn-sm { font-size: 0.65rem; }
     }
 </style>
 {% endblock %}
@@ -160,13 +152,19 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">Fee Vouchers</h1>
-        <p class="page-desc">View all generated fee vouchers for students</p>
+        <p class="page-desc">View all fee records and missing students for a month</p>
+    </div>
+    <div>
+        <a href="{% url 'fee_settings' schema_name=tenant.schema_name %}" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Generate All Fees
+        </a>
     </div>
 </div>
 
 <!-- Filter Bar -->
 <div class="filter-bar">
-    <form method="get" class="filter-form" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; width: 100%;">
+    <form method="get" class="filter-form" style="display: flex; flex-wrap: wrap; gap: 0.75rem; width: 100%; align-items: flex-end;">
         <div class="filter-group">
             <label>Month</label>
             <select name="month">
@@ -184,10 +182,22 @@
             </select>
         </div>
         <div class="filter-group">
-            <button type="submit" class="btn-filter">Apply</button>
+            <label>Status</label>
+            <select name="status">
+                <option value="all" {% if selected_status == 'all' or not selected_status %}selected{% endif %}>All</option>
+                <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+                <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+                <option value="missing" {% if selected_status == 'missing' %}selected{% endif %}>Missing</option>
+            </select>
         </div>
-        <div class="filter-group">
-            <a href="{% url 'vouchers_list' schema_name=tenant.schema_name %}" class="btn-reset">Reset to Current</a>
+        <div class="filter-group" style="flex: 2; min-width: 180px;">
+            <label>Search</label>
+            <input type="text" name="search" value="{{ search_query }}" placeholder="Name, Roll, Father, Grade, Section">
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="btn-filter">Apply</button>
+            <a href="{% url 'vouchers_list' schema_name=tenant.schema_name %}" class="btn-reset">Reset</a>
         </div>
     </form>
 </div>
@@ -199,7 +209,7 @@
             <tr>
                 <th>Student</th>
                 <th>Roll No</th>
-                <th>Grade</th>
+                <th>Grade/Section</th>
                 <th>Month/Year</th>
                 <th>Amount</th>
                 <th>Paid</th>
@@ -209,39 +219,56 @@
             </tr>
         </thead>
         <tbody>
-            {% for fr in fee_records %}
+            {% for item in items %}
             <tr>
-                <td><strong>{{ fr.student.name }}</strong></td>
-                <td>{{ fr.student.roll_number }}</td>
-                <td>{{ fr.student.grade }} - {{ fr.student.section }}</td>
-                <td>{{ fr.month }}/{{ fr.year }}</td>
-                <td>₹{{ fr.amount|floatformat:2 }}</td>
-                <td>₹{{ fr.paid_amount|floatformat:2 }}</td>
-                <td>{{ fr.due_date|date:"Y-m-d" }}</td>
-                <td><span class="status-badge status-{{ fr.status }}">{{ fr.get_status_display }}</span></td>
+                <td><strong>{{ item.student.name }}</strong></td>
+                <td>{{ item.student.roll_number }}</td>
+                <td>{{ item.student.grade }} - {{ item.student.section }}</td>
+                <td>{{ item.month }}/{{ item.year }}</td>
+                <td>{% if item.type == 'missing' %}—{% else %}₹{{ item.amount|floatformat:2 }}{% endif %}</td>
+                <td>{% if item.type == 'missing' %}—{% else %}₹{{ item.paid|floatformat:2 }}{% endif %}</td>
+                <td>{% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
+                <td>
+                    <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:"Missing" }}</span>
+                    {% if item.type == 'missing' %}
+                    <div class="missing-reason">{{ item.reason }}</div>
+                    {% endif %}
+                </td>
                 <td class="action-btns">
-                    <button class="btn-sm" data-open-voucher data-student-id="{{ fr.student.id }}" data-schema-name="{{ tenant.schema_name }}">View</button>
-                    <a href="{% url 'fee_collection' schema_name=tenant.schema_name student_id=fr.student.id %}" class="btn-sm outline">Collect</a>
+                    <!-- View Profile (always) -->
+                    <a href="{% url 'student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-sm outline" title="Profile">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    </a>
+
+                    <!-- Collect (only if not paid and not missing) -->
+                    {% if item.type == 'record' and item.status != 'paid' %}
+                    <a href="{% url 'fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-sm">Collect</a>
+                    {% endif %}
+
+                    <!-- Generate (only for missing current month) -->
+                    {% if item.type == 'missing' and is_current_month %}
+                    <a href="{% url 'student_profile' schema_name=tenant.schema_name student_id=item.student.id %}?open_voucher=1" class="btn-sm warning">Generate</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="9" class="empty-row">No fee records found for this month.</td></tr>
+            <tr><td colspan="9" class="empty-row">No records found for this month.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
 <!-- Pagination -->
-{% if fee_records.has_other_pages %}
+{% if items.has_other_pages %}
 <div class="pagination">
-    {% if fee_records.has_previous %}
-        <a href="?page=1&month={{ month }}&year={{ year }}" class="page-link">&laquo; First</a>
-        <a href="?page={{ fee_records.previous_page_number }}&month={{ month }}&year={{ year }}" class="page-link">Previous</a>
+    {% if items.has_previous %}
+        <a href="?page=1&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&laquo; First</a>
+        <a href="?page={{ items.previous_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">Previous</a>
     {% endif %}
-    <span class="page-link active">{{ fee_records.number }}</span>
-    {% if fee_records.has_next %}
-        <a href="?page={{ fee_records.next_page_number }}&month={{ month }}&year={{ year }}" class="page-link">Next</a>
-        <a href="?page={{ fee_records.paginator.num_pages }}&month={{ month }}&year={{ year }}" class="page-link">Last &raquo;</a>
+    <span class="page-link active">{{ items.number }}</span>
+    {% if items.has_next %}
+        <a href="?page={{ items.next_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">Next</a>
+        <a href="?page={{ items.paginator.num_pages }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">Last &raquo;</a>
     {% endif %}
 </div>
 {% endif %}

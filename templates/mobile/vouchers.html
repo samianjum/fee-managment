@@ -15,13 +15,14 @@
         margin-bottom: 1rem;
         border: 1px solid var(--border);
     }
-    .filter-bar select {
+    .filter-bar select, .filter-bar input {
         flex: 1;
         padding: 0.4rem 0.6rem;
         border-radius: 2rem;
         border: 1px solid var(--border);
         background: var(--surface-alt);
         font-size: 0.8rem;
+        min-width: 60px;
     }
     .filter-bar button {
         padding: 0.4rem 1rem;
@@ -38,6 +39,7 @@
         text-decoration: none;
         font-size: 0.8rem;
     }
+
     .voucher-card {
         background: var(--surface);
         border-radius: 1.25rem;
@@ -63,7 +65,7 @@
         font-weight: 700;
         color: var(--primary);
     }
-    .voucher-card .status-badge {
+    .status-badge {
         display: inline-block;
         padding: 0.2rem 0.6rem;
         border-radius: 2rem;
@@ -74,13 +76,14 @@
     .status-partial { background: #dbeafe; color: #1e40af; }
     .status-paid { background: #d1fae5; color: #065f46; }
     .status-overdue { background: #fee2e2; color: #991b1b; }
+    .status-missing { background: #e5e7eb; color: #374151; }
     .voucher-card .actions {
         display: flex;
         gap: 0.5rem;
         margin-top: 0.5rem;
-        justify-content: flex-end;
+        flex-wrap: wrap;
     }
-    .voucher-card .actions button, .voucher-card .actions a {
+    .voucher-card .actions a, .voucher-card .actions button {
         padding: 0.2rem 0.8rem;
         border-radius: 2rem;
         font-size: 0.7rem;
@@ -89,15 +92,11 @@
         border: none;
         cursor: pointer;
     }
-    .btn-view {
-        background: var(--primary);
-        color: white;
-    }
-    .btn-collect {
-        background: transparent;
-        color: var(--primary);
-        border: 1px solid var(--primary);
-    }
+    .btn-view { background: var(--primary); color: white; }
+    .btn-collect { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-generate { background: #f59e0b; color: white; }
+    .missing-reason { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+
     .pagination {
         display: flex;
         justify-content: center;
@@ -113,14 +112,22 @@
         color: var(--text);
         font-size: 0.7rem;
     }
-    .page-link.active {
+    .page-link.active { background: var(--primary); color: white; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+
+    .mobile-header-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .mobile-header-actions a {
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
         background: var(--primary);
         color: white;
-    }
-    .empty-state {
-        text-align: center;
-        padding: 2rem 1rem;
-        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 600;
     }
 </style>
 {% endblock %}
@@ -131,9 +138,13 @@
     <p class="page-desc">All generated vouchers</p>
 </div>
 
+<div class="mobile-header-actions">
+    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}">⚙️ Generate All</a>
+</div>
+
 <!-- Filter -->
 <div class="filter-bar">
-    <form method="get" style="display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%; align-items: center;">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 0.4rem; width: 100%; align-items: center;">
         <select name="month">
             {% for m in months %}
             <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
@@ -144,6 +155,14 @@
             <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
             {% endfor %}
         </select>
+        <select name="status">
+            <option value="all" {% if selected_status == 'all' or not selected_status %}selected{% endif %}>All</option>
+            <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+            <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+            <option value="missing" {% if selected_status == 'missing' %}selected{% endif %}>Missing</option>
+        </select>
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search...">
         <button type="submit">Apply</button>
         <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="reset-link">Reset</a>
     </form>
@@ -151,28 +170,36 @@
 
 <!-- Voucher Cards -->
 <div class="voucher-list">
-    {% for fr in fee_records %}
+    {% for item in items %}
     <div class="voucher-card">
         <div class="top-row">
             <div>
-                <div class="student-name">{{ fr.student.name }}</div>
-                <div class="student-meta">{{ fr.student.roll_number }} • {{ fr.student.grade }} - {{ fr.student.section }}</div>
+                <div class="student-name">{{ item.student.name }}</div>
+                <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
             </div>
             <div>
-                <span class="status-badge status-{{ fr.status }}">{{ fr.get_status_display }}</span>
+                <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:"Missing" }}</span>
             </div>
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
-            <span>{{ fr.month }}/{{ fr.year }}</span>
-            <span class="amount">₹{{ fr.amount|floatformat:2 }}</span>
+            <span>{{ item.month }}/{{ item.year }}</span>
+            <span class="amount">{% if item.type == 'missing' %}—{% else %}₹{{ item.amount|floatformat:2 }}{% endif %}</span>
         </div>
         <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
-            <span>Paid: ₹{{ fr.paid_amount|floatformat:2 }}</span>
-            <span>Due: {{ fr.due_date|date:"Y-m-d" }}</span>
+            <span>Paid: {% if item.type == 'missing' %}—{% else %}₹{{ item.paid|floatformat:2 }}{% endif %}</span>
+            <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
         </div>
+        {% if item.type == 'missing' %}
+        <div class="missing-reason">{{ item.reason }}</div>
+        {% endif %}
         <div class="actions">
-            <button class="btn-view" data-open-voucher data-student-id="{{ fr.student.id }}" data-schema-name="{{ tenant.schema_name }}">View</button>
-            <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=fr.student.id %}" class="btn-collect">Collect</a>
+            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+            {% if item.type == 'record' and item.status != 'paid' %}
+            <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
+            {% endif %}
+            {% if item.type == 'missing' and is_current_month %}
+            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}?open_voucher=1" class="btn-generate">Generate</a>
+            {% endif %}
         </div>
     </div>
     {% empty %}
@@ -181,16 +208,16 @@
 </div>
 
 <!-- Pagination -->
-{% if fee_records.has_other_pages %}
+{% if items.has_other_pages %}
 <div class="pagination">
-    {% if fee_records.has_previous %}
-        <a href="?page=1&month={{ month }}&year={{ year }}" class="page-link">&laquo;</a>
-        <a href="?page={{ fee_records.previous_page_number }}&month={{ month }}&year={{ year }}" class="page-link">‹</a>
+    {% if items.has_previous %}
+        <a href="?page=1&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&laquo;</a>
+        <a href="?page={{ items.previous_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">‹</a>
     {% endif %}
-    <span class="page-link active">{{ fee_records.number }}</span>
-    {% if fee_records.has_next %}
-        <a href="?page={{ fee_records.next_page_number }}&month={{ month }}&year={{ year }}" class="page-link">›</a>
-        <a href="?page={{ fee_records.paginator.num_pages }}&month={{ month }}&year={{ year }}" class="page-link">&raquo;</a>
+    <span class="page-link active">{{ items.number }}</span>
+    {% if items.has_next %}
+        <a href="?page={{ items.next_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">›</a>
+        <a href="?page={{ items.paginator.num_pages }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&raquo;</a>
     {% endif %}
 </div>
 {% endif %}
