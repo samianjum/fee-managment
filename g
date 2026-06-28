@@ -1,145 +1,139 @@
 #!/usr/bin/env python3
 """
-Mobile Install Button Patcher for AXIS School System
-Adds the PWA install button and logic to mobile/base.html
-Run: python3 mobile_install_patcher.py
+Fix for PWA Install Button on Mobile
+- Moves install script to top of body for early event capture
+- Hides button when app is already installed
+- Replaces fallback modal with a simple toast notification
 """
 
-import os
 import re
+import os
 
 MOBILE_BASE = "templates/mobile/base.html"
-FLOATING_BTN_HTML = '''
-    <!-- Floating Install Button (mobile) -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
-        <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
-            </svg>
-            Install App
-        </button>
-    </div>
-'''
 
-FALLBACK_MODAL_HTML = '''
-<!-- Fallback Install Modal -->
-<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-        <h3 style="margin-top:0;">Install App</h3>
-        <p>To install this app on your device:</p>
-        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
-            <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
-            <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
-            <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
-        </ul>
-        <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
-    </div>
-</div>
-'''
-
-INSTALL_SCRIPT = '''
+# New install script block (to be placed at top of body)
+NEW_SCRIPT = """
 <script>
     (function() {
-        let deferredPrompt;
-        const floatingBtn = document.getElementById('installAppBtn');
-        const fallbackModal = document.getElementById('installFallbackModal');
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+        const container = document.getElementById('pwaInstallContainer');
 
+        // Hide button if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (container) container.style.display = 'none';
+            return;
+        }
+
+        // Listen for beforeinstallprompt as early as possible
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredPrompt = e;
-            console.log('beforeinstallprompt fired');
+            console.log('Install prompt captured');
+            // Show the button (in case it was hidden)
+            if (container) container.style.display = 'flex';
         });
 
-        async function triggerInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    console.log('User accepted install');
-                    const container = document.getElementById('pwaInstallContainer');
-                    if (container) container.style.display = 'none';
-                } else {
-                    console.log('User dismissed install');
-                }
-                deferredPrompt = null;
-            } else {
-                // No native prompt – show fallback modal
-                if (fallbackModal) fallbackModal.style.display = 'flex';
-            }
-        }
-
-        if (floatingBtn) {
-            floatingBtn.addEventListener('click', triggerInstall);
-        }
-
+        // Also listen for appinstalled to hide button
         window.addEventListener('appinstalled', () => {
-            console.log('App installed');
-            const container = document.getElementById('pwaInstallContainer');
             if (container) container.style.display = 'none';
+            deferredPrompt = null;
         });
 
-        const closeFallback = document.getElementById('closeFallbackModal');
-        if (closeFallback) {
-            closeFallback.addEventListener('click', () => {
-                if (fallbackModal) fallbackModal.style.display = 'none';
+        // Click handler
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('User accepted install');
+                        if (container) container.style.display = 'none';
+                    } else {
+                        console.log('User dismissed install');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    // No native prompt – show a brief toast instead of a modal
+                    showToast('Installation is not supported in this browser or already installed.');
+                }
             });
         }
-        if (fallbackModal) {
-            fallbackModal.addEventListener('click', (e) => {
-                if (e.target === fallbackModal) fallbackModal.style.display = 'none';
-            });
+
+        // Simple toast function
+        function showToast(msg) {
+            const existing = document.getElementById('installToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'installToast';
+            toast.style.cssText = `
+                position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                background: #333; color: white; padding: 12px 24px;
+                border-radius: 30px; font-size: 14px; z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                max-width: 90%; text-align: center;
+                transition: opacity 0.3s;
+            `;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
         }
     })();
 </script>
-'''
+"""
 
+# Remove the old install script from the bottom and replace with the new one at the top
 def patch_mobile_base():
     if not os.path.exists(MOBILE_BASE):
-        print(f"❌ Error: {MOBILE_BASE} not found. Are you in the project root?")
+        print(f"❌ Error: {MOBILE_BASE} not found.")
         return
 
     with open(MOBILE_BASE, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Check if already patched
-    if 'pwaInstallContainer' in content:
-        print("✅ Mobile base already contains install button. No changes needed.")
+    # 1. Remove existing install scripts from the bottom (we'll replace with new one)
+    # We'll remove the old <script> block that contains the old install logic
+    # and also remove the fallback modal if present.
+    # But we want to keep the fallback modal? No, we'll remove it and use toast.
+    # However, the fallback modal might be used elsewhere, but it's only for install.
+
+    # Remove the old install script block (between <script> and </script> that contains beforeinstallprompt)
+    # We'll use a regex to find the old script block.
+    # The old script block starts with: (function() { ... })();
+    # We'll remove everything from the old script start to the closing </script>.
+    # But we need to be careful not to remove other scripts.
+
+    # The pattern: look for a script that contains "beforeinstallprompt" and "deferredPrompt"
+    pattern = r'<script>\s*\(function\(\)\s*\{[\s\S]*?deferredPrompt[\s\S]*?\}\);\s*</script>'
+    content = re.sub(pattern, '', content)
+
+    # Also remove the fallback modal div (id="installFallbackModal")
+    pattern_modal = r'<div id="installFallbackModal"[\s\S]*?</div>'
+    content = re.sub(pattern_modal, '', content)
+
+    # Also remove any leftover closeFallbackModal references
+    content = re.sub(r'closeFallbackModal', '', content)
+
+    # 2. Insert the new script right after <body> tag
+    body_match = re.search(r'<body[^>]*>', content)
+    if body_match:
+        insert_pos = body_match.end()
+        # Insert the new script right after the opening body tag
+        content = content[:insert_pos] + "\n" + NEW_SCRIPT + "\n" + content[insert_pos:]
+        print("✅ Inserted new install script at top of body.")
+    else:
+        print("❌ Could not find <body> tag.")
         return
 
-    # Insert floating button before the bottom nav (or before closing body)
-    # Locate the bottom nav div or the closing body tag
-    bottom_nav_match = re.search(r'<nav class="bottom-nav">', content)
-    if bottom_nav_match:
-        insert_pos = bottom_nav_match.start()
-        # Insert the floating button just before the bottom nav
-        content = content[:insert_pos] + FLOATING_BTN_HTML + "\n\n" + content[insert_pos:]
-        print("✅ Inserted floating button before bottom nav.")
-    else:
-        # Fallback: insert before </body>
-        body_end = content.rfind('</body>')
-        if body_end != -1:
-            content = content[:body_end] + FLOATING_BTN_HTML + "\n" + content[body_end:]
-            print("✅ Inserted floating button before closing body.")
-        else:
-            print("⚠️ Could not locate insertion point. Please add the button manually.")
-            return
-
-    # Insert fallback modal and script just before </body> as well
-    # We'll put them after the floating button, before </body>
-    body_end = content.rfind('</body>')
-    if body_end != -1:
-        insert = FALLBACK_MODAL_HTML + "\n" + INSTALL_SCRIPT + "\n"
-        content = content[:body_end] + insert + content[body_end:]
-        print("✅ Added fallback modal and install script.")
-    else:
-        print("⚠️ Could not find </body> to insert scripts.")
-
-    # Write back
+    # 3. Write back
     with open(MOBILE_BASE, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print("🎉 Patcher completed successfully!")
-    print("👉 Restart your server and test on mobile.")
+    print("✅ Patched mobile/base.html successfully.")
+    print("🔧 Install button will now show native prompt if available, or a brief toast if not.")
 
 if __name__ == "__main__":
     patch_mobile_base()

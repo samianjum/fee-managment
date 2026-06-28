@@ -149,6 +149,79 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body>
+
+<script>
+    (function() {
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+        const container = document.getElementById('pwaInstallContainer');
+
+        // Hide button if already installed
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            if (container) container.style.display = 'none';
+            return;
+        }
+
+        // Listen for beforeinstallprompt as early as possible
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('Install prompt captured');
+            // Show the button (in case it was hidden)
+            if (container) container.style.display = 'flex';
+        });
+
+        // Also listen for appinstalled to hide button
+        window.addEventListener('appinstalled', () => {
+            if (container) container.style.display = 'none';
+            deferredPrompt = null;
+        });
+
+        // Click handler
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('User accepted install');
+                        if (container) container.style.display = 'none';
+                    } else {
+                        console.log('User dismissed install');
+                    }
+                    deferredPrompt = null;
+                } else {
+                    // No native prompt – show a brief toast instead of a modal
+                    showToast('Installation is not supported in this browser or already installed.');
+                }
+            });
+        }
+
+        // Simple toast function
+        function showToast(msg) {
+            const existing = document.getElementById('installToast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'installToast';
+            toast.style.cssText = `
+                position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                background: #333; color: white; padding: 12px 24px;
+                border-radius: 30px; font-size: 14px; z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                max-width: 90%; text-align: center;
+                transition: opacity 0.3s;
+            `;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        }
+    })();
+</script>
+
+
     <!-- Top Bar -->
     <div class="top-bar">
         <div class="left">
@@ -213,17 +286,7 @@
     {% include "tenant/voucher_modal.html" %}
 
 <!-- Fallback Install Modal -->
-<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-        <h3 style="margin-top:0;">Install App</h3>
-        <p>To install this app on your device:</p>
-        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
-            <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
-            <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
-            <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
-        </ul>
-        <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
-    </div>
+
 </div>
 
 
@@ -267,7 +330,7 @@
             if (container) container.style.display = 'none';
         });
 
-        const closeFallback = document.getElementById('closeFallbackModal');
+        const closeFallback = document.getElementById('');
         if (closeFallback) {
             closeFallback.addEventListener('click', () => {
                 if (fallbackModal) fallbackModal.style.display = 'none';
