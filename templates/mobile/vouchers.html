@@ -1,0 +1,199 @@
+{% extends 'mobile/base.html' %}
+{% load fee_extras %}
+{% block title %}Fee Vouchers | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        background: var(--surface);
+        border-radius: 1.5rem;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+    }
+    .filter-bar select {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
+        font-size: 0.8rem;
+    }
+    .filter-bar button {
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .filter-bar .reset-link {
+        padding: 0.4rem 0.8rem;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.8rem;
+    }
+    .voucher-card {
+        background: var(--surface);
+        border-radius: 1.25rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .voucher-card .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .voucher-card .student-name {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    .voucher-card .student-meta {
+        font-size: 0.8rem;
+        color: var(--muted);
+    }
+    .voucher-card .amount {
+        font-weight: 700;
+        color: var(--primary);
+    }
+    .voucher-card .status-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-partial { background: #dbeafe; color: #1e40af; }
+    .status-paid { background: #d1fae5; color: #065f46; }
+    .status-overdue { background: #fee2e2; color: #991b1b; }
+    .voucher-card .actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        justify-content: flex-end;
+    }
+    .voucher-card .actions button, .voucher-card .actions a {
+        padding: 0.2rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-view {
+        background: var(--primary);
+        color: white;
+    }
+    .btn-collect {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.3rem;
+        margin-top: 1rem;
+    }
+    .page-link {
+        padding: 0.3rem 0.7rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        text-decoration: none;
+        color: var(--text);
+        font-size: 0.7rem;
+    }
+    .page-link.active {
+        background: var(--primary);
+        color: white;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--muted);
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <h1 class="page-title">Fee Vouchers</h1>
+    <p class="page-desc">All generated vouchers</p>
+</div>
+
+<!-- Filter -->
+<div class="filter-bar">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 0.5rem; width: 100%; align-items: center;">
+        <select name="month">
+            {% for m in months %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="year">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Apply</button>
+        <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="reset-link">Reset</a>
+    </form>
+</div>
+
+<!-- Voucher Cards -->
+<div class="voucher-list">
+    {% for fr in fee_records %}
+    <div class="voucher-card">
+        <div class="top-row">
+            <div>
+                <div class="student-name">{{ fr.student.name }}</div>
+                <div class="student-meta">{{ fr.student.roll_number }} • {{ fr.student.grade }} - {{ fr.student.section }}</div>
+            </div>
+            <div>
+                <span class="status-badge status-{{ fr.status }}">{{ fr.get_status_display }}</span>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+            <span>{{ fr.month }}/{{ fr.year }}</span>
+            <span class="amount">₹{{ fr.amount|floatformat:2 }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+            <span>Paid: ₹{{ fr.paid_amount|floatformat:2 }}</span>
+            <span>Due: {{ fr.due_date|date:"Y-m-d" }}</span>
+        </div>
+        <div class="actions">
+            <button class="btn-view" data-open-voucher data-student-id="{{ fr.student.id }}" data-schema-name="{{ tenant.schema_name }}">View</button>
+            <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=fr.student.id %}" class="btn-collect">Collect</a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">No vouchers for this month.</div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if fee_records.has_other_pages %}
+<div class="pagination">
+    {% if fee_records.has_previous %}
+        <a href="?page=1&month={{ month }}&year={{ year }}" class="page-link">&laquo;</a>
+        <a href="?page={{ fee_records.previous_page_number }}&month={{ month }}&year={{ year }}" class="page-link">‹</a>
+    {% endif %}
+    <span class="page-link active">{{ fee_records.number }}</span>
+    {% if fee_records.has_next %}
+        <a href="?page={{ fee_records.next_page_number }}&month={{ month }}&year={{ year }}" class="page-link">›</a>
+        <a href="?page={{ fee_records.paginator.num_pages }}&month={{ month }}&year={{ year }}" class="page-link">&raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% include "tenant/voucher_modal.html" %}
+{% endblock %}

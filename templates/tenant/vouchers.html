@@ -1,0 +1,250 @@
+{% extends 'tenant/base.html' %}
+{% load fee_extras %}
+{% block title %}Fee Vouchers | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: flex-end;
+        margin-bottom: 1.5rem;
+        padding: 1rem 1.25rem;
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex: 0 0 auto;
+    }
+    .filter-group label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+        letter-spacing: 0.3px;
+    }
+    .filter-group select {
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
+        color: var(--text);
+    }
+    .btn-filter {
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-filter:hover {
+        background: var(--primary-dark);
+    }
+    .btn-reset {
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+        cursor: pointer;
+    }
+    .voucher-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .voucher-table th, .voucher-table td {
+        padding: 0.75rem 0.5rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.85rem;
+    }
+    .voucher-table th {
+        background: var(--surface-alt);
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        font-size: 0.7rem;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-partial { background: #dbeafe; color: #1e40af; }
+    .status-paid { background: #d1fae5; color: #065f46; }
+    .status-overdue { background: #fee2e2; color: #991b1b; }
+    .action-btns {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .btn-sm {
+        background: var(--primary);
+        color: white;
+        padding: 0.15rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.7rem;
+        text-decoration: none;
+        display: inline-block;
+        border: none;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+    .btn-sm:hover {
+        background: var(--primary-dark);
+    }
+    .btn-sm.outline {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+    }
+    .btn-sm.outline:hover {
+        background: var(--primary);
+        color: white;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        flex-wrap: wrap;
+    }
+    .page-link {
+        padding: 0.3rem 0.8rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        text-decoration: none;
+        color: var(--text);
+        font-size: 0.8rem;
+    }
+    .page-link:hover {
+        background: var(--primary);
+        color: white;
+    }
+    .page-link.active {
+        background: var(--primary);
+        color: white;
+    }
+    .empty-row {
+        text-align: center;
+        padding: 2rem;
+        color: var(--muted);
+    }
+    @media (max-width: 768px) {
+        .filter-bar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .voucher-table th, .voucher-table td {
+            padding: 0.4rem 0.3rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Fee Vouchers</h1>
+        <p class="page-desc">View all generated fee vouchers for students</p>
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="get" class="filter-form" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; width: 100%;">
+        <div class="filter-group">
+            <label>Month</label>
+            <select name="month">
+                {% for m in months %}
+                <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Year</label>
+            <select name="year">
+                {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-group">
+            <button type="submit" class="btn-filter">Apply</button>
+        </div>
+        <div class="filter-group">
+            <a href="{% url 'vouchers_list' schema_name=tenant.schema_name %}" class="btn-reset">Reset to Current</a>
+        </div>
+    </form>
+</div>
+
+<!-- Vouchers Table -->
+<div class="table-card" style="background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); overflow-x: auto;">
+    <table class="voucher-table">
+        <thead>
+            <tr>
+                <th>Student</th>
+                <th>Roll No</th>
+                <th>Grade</th>
+                <th>Month/Year</th>
+                <th>Amount</th>
+                <th>Paid</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fr in fee_records %}
+            <tr>
+                <td><strong>{{ fr.student.name }}</strong></td>
+                <td>{{ fr.student.roll_number }}</td>
+                <td>{{ fr.student.grade }} - {{ fr.student.section }}</td>
+                <td>{{ fr.month }}/{{ fr.year }}</td>
+                <td>₹{{ fr.amount|floatformat:2 }}</td>
+                <td>₹{{ fr.paid_amount|floatformat:2 }}</td>
+                <td>{{ fr.due_date|date:"Y-m-d" }}</td>
+                <td><span class="status-badge status-{{ fr.status }}">{{ fr.get_status_display }}</span></td>
+                <td class="action-btns">
+                    <button class="btn-sm" data-open-voucher data-student-id="{{ fr.student.id }}" data-schema-name="{{ tenant.schema_name }}">View</button>
+                    <a href="{% url 'fee_collection' schema_name=tenant.schema_name student_id=fr.student.id %}" class="btn-sm outline">Collect</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" class="empty-row">No fee records found for this month.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if fee_records.has_other_pages %}
+<div class="pagination">
+    {% if fee_records.has_previous %}
+        <a href="?page=1&month={{ month }}&year={{ year }}" class="page-link">&laquo; First</a>
+        <a href="?page={{ fee_records.previous_page_number }}&month={{ month }}&year={{ year }}" class="page-link">Previous</a>
+    {% endif %}
+    <span class="page-link active">{{ fee_records.number }}</span>
+    {% if fee_records.has_next %}
+        <a href="?page={{ fee_records.next_page_number }}&month={{ month }}&year={{ year }}" class="page-link">Next</a>
+        <a href="?page={{ fee_records.paginator.num_pages }}&month={{ month }}&year={{ year }}" class="page-link">Last &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% include "tenant/voucher_modal.html" %}
+{% endblock %}

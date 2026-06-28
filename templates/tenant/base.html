@@ -512,6 +512,13 @@
                     <span>Fee Structure</span>
                 </a>
                 {% endif %}
+                {% if tenant.tenant_type == 'school' %}
+                <a href="{% url 'vouchers_list' schema_name=tenant.schema_name %}" class="nav-item">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg>
+                    <span>Vouchers</span>
+                </a>
+                {% endif %}
+
                 {% endif %}
                 {% if tenant.tenant_type == 'gym' %}
                 <a href="{% url 'gym_dashboard' schema_name=tenant.schema_name %}" class="nav-item">

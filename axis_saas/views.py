@@ -3221,3 +3221,102 @@ def voucher_html_api(request, schema_name, student_id):
         html = render_to_string('tenant/voucher_snippet.html', voucher_data)
         return HttpResponse(html)
 
+
+
+# ==================== VOUCHERS LIST (Central page) ====================
+
+@require_tenant_type(['school'])
+def vouchers_list(request, schema_name):
+    """List all fee vouchers (fee records) with filters and actions."""
+    tenant = get_tenant(request, schema_name)
+    with schema_context(schema_name):
+        # Filter by month/year
+        today = timezone.localdate()
+        current_month = today.month
+        current_year = today.year
+
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+        if month:
+            try:
+                month = int(month)
+                if month < 1 or month > 12:
+                    month = current_month
+            except ValueError:
+                month = current_month
+        else:
+            month = current_month
+
+        if year:
+            try:
+                year = int(year)
+            except ValueError:
+                year = current_year
+        else:
+            year = current_year
+
+        # Fetch fee records for the selected month/year
+        fee_records = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
+
+        # Pagination
+        paginator = Paginator(fee_records, 20)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # Build context
+        context = {
+            'tenant': tenant,
+            'fee_records': page_obj,
+            'month': month,
+            'year': year,
+            'months': list(range(1, 13)),
+            'years': list(range(current_year - 5, current_year + 2)),
+            'logo_url': tenant.school_logo.url if tenant.school_logo else None,
+        }
+        return render(request, 'tenant/vouchers.html', context)
+
+
+@require_tenant_type(['school'])
+def mobile_vouchers_list(request, schema_name):
+    """Mobile version of vouchers list."""
+    tenant = get_tenant(request, schema_name)
+    with schema_context(schema_name):
+        today = timezone.localdate()
+        current_month = today.month
+        current_year = today.year
+
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+        if month:
+            try:
+                month = int(month)
+                if month < 1 or month > 12:
+                    month = current_month
+            except ValueError:
+                month = current_month
+        else:
+            month = current_month
+
+        if year:
+            try:
+                year = int(year)
+            except ValueError:
+                year = current_year
+        else:
+            year = current_year
+
+        fee_records = FeeRecord.objects.filter(month=month, year=year).select_related('student').order_by('student__name')
+        paginator = Paginator(fee_records, 15)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        context = {
+            'tenant': tenant,
+            'fee_records': page_obj,
+            'month': month,
+            'year': year,
+            'months': list(range(1, 13)),
+            'years': list(range(current_year - 5, current_year + 2)),
+            'logo_url': tenant.school_logo.url if tenant.school_logo else None,
+        }
+        return render(request, 'mobile/vouchers.html', context)
