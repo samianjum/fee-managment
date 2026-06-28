@@ -820,7 +820,7 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
 
         pending_students = []
         for s in students_qs:
-            pending = sum(fr.remaining for fr in s.fee_records.all())
+            pending = get_overall_pending(s)
             if pending > 0:
                 s.pending_total = pending
                 pending_students.append(s)
@@ -829,7 +829,7 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
         paginator = Paginator(pending_students, 20)
         pending_page = paginator.get_page(page_number)
 
-        total_pending_all = sum(fr.remaining for fr in FeeRecord.objects.filter(status__in=['pending', 'partial', 'overdue']))
+        total_pending_all = sum(get_overall_pending(s) for s in Student.objects.all())
         total_payments_count = PaymentTransaction.objects.count()
         today = date.today()
         today_collection = PaymentTransaction.objects.filter(payment_date=today).aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
