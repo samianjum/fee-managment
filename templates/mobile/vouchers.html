@@ -40,12 +40,66 @@
         font-size: 0.8rem;
     }
 
+    /* Mobile Tab Bar */
+    .tab-bar {
+        display: flex;
+        gap: 0.4rem;
+        margin-bottom: 1rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 0.25rem 0.25rem 0.5rem;
+        scroll-snap-type: x mandatory;
+        background: var(--surface);
+        border-radius: 1.25rem;
+        border: 1px solid var(--border);
+        padding: 0.5rem;
+        flex-wrap: nowrap;
+    }
+    .tab-bar .tab-btn {
+        flex: 0 0 auto;
+        background: transparent;
+        border: none;
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: var(--muted);
+        cursor: pointer;
+        transition: var(--transition);
+        scroll-snap-align: start;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .tab-bar .tab-btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    }
+    .tab-bar .tab-btn .badge {
+        background: var(--surface-alt);
+        color: var(--text);
+        padding: 0.05rem 0.4rem;
+        border-radius: 2rem;
+        font-size: 0.6rem;
+        font-weight: 600;
+    }
+    .tab-bar .tab-btn.active .badge {
+        background: rgba(255,255,255,0.2);
+        color: white;
+    }
+
     .section-card {
         background: var(--surface);
         border-radius: 1.25rem;
         border: 1px solid var(--border);
         margin-bottom: 1.25rem;
         overflow: hidden;
+        display: none;
+    }
+    .section-card.active {
+        display: block;
     }
     .section-header {
         padding: 0.6rem 1rem;
@@ -190,8 +244,24 @@
     </form>
 </div>
 
+<!-- Tab Bar -->
+<div class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-tab="pending">
+        Pending <span class="badge">{{ pending_page.paginator.count }}</span>
+    </button>
+    <button class="tab-btn" data-tab="partial">
+        Partial <span class="badge">{{ partial_page.paginator.count }}</span>
+    </button>
+    <button class="tab-btn" data-tab="paid">
+        Paid <span class="badge">{{ paid_page.paginator.count }}</span>
+    </button>
+    <button class="tab-btn" data-tab="missing">
+        Missing <span class="badge">{{ missing_page.paginator.count }}</span>
+    </button>
+</div>
+
 <!-- Section: Pending -->
-<div class="section-card">
+<div class="section-card active" id="section-pending">
     <div class="section-header">
         <h4>Pending</h4>
         <span class="badge">{{ pending_page.paginator.count }}</span>
@@ -229,13 +299,13 @@
         {% if pending_page.has_other_pages %}
         <div class="pagination">
             {% if pending_page.has_previous %}
-                <a href="?pending_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
-                <a href="?pending_page={{ pending_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+                <a href="?tab=pending&pending_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?tab=pending&pending_page={{ pending_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
             {% endif %}
             <span class="page-link active">{{ pending_page.number }}</span>
             {% if pending_page.has_next %}
-                <a href="?pending_page={{ pending_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
-                <a href="?pending_page={{ pending_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+                <a href="?tab=pending&pending_page={{ pending_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?tab=pending&pending_page={{ pending_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
             {% endif %}
         </div>
         {% endif %}
@@ -243,7 +313,7 @@
 </div>
 
 <!-- Section: Partial -->
-<div class="section-card">
+<div class="section-card" id="section-partial">
     <div class="section-header">
         <h4>Partially Paid</h4>
         <span class="badge">{{ partial_page.paginator.count }}</span>
@@ -279,13 +349,13 @@
         {% if partial_page.has_other_pages %}
         <div class="pagination">
             {% if partial_page.has_previous %}
-                <a href="?partial_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
-                <a href="?partial_page={{ partial_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+                <a href="?tab=partial&partial_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?tab=partial&partial_page={{ partial_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
             {% endif %}
             <span class="page-link active">{{ partial_page.number }}</span>
             {% if partial_page.has_next %}
-                <a href="?partial_page={{ partial_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
-                <a href="?partial_page={{ partial_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+                <a href="?tab=partial&partial_page={{ partial_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?tab=partial&partial_page={{ partial_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
             {% endif %}
         </div>
         {% endif %}
@@ -293,7 +363,7 @@
 </div>
 
 <!-- Section: Paid -->
-<div class="section-card">
+<div class="section-card" id="section-paid">
     <div class="section-header">
         <h4>Paid</h4>
         <span class="badge">{{ paid_page.paginator.count }}</span>
@@ -328,13 +398,13 @@
         {% if paid_page.has_other_pages %}
         <div class="pagination">
             {% if paid_page.has_previous %}
-                <a href="?paid_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
-                <a href="?paid_page={{ paid_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+                <a href="?tab=paid&paid_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?tab=paid&paid_page={{ paid_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
             {% endif %}
             <span class="page-link active">{{ paid_page.number }}</span>
             {% if paid_page.has_next %}
-                <a href="?paid_page={{ paid_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
-                <a href="?paid_page={{ paid_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+                <a href="?tab=paid&paid_page={{ paid_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?tab=paid&paid_page={{ paid_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
             {% endif %}
         </div>
         {% endif %}
@@ -342,7 +412,7 @@
 </div>
 
 <!-- Section: Not Generated -->
-<div class="section-card">
+<div class="section-card" id="section-missing">
     <div class="section-header">
         <h4>Not Generated</h4>
         <span class="badge">{{ missing_page.paginator.count }}</span>
@@ -381,13 +451,13 @@
         {% if missing_page.has_other_pages %}
         <div class="pagination">
             {% if missing_page.has_previous %}
-                <a href="?missing_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
-                <a href="?missing_page={{ missing_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+                <a href="?tab=missing&missing_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?tab=missing&missing_page={{ missing_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
             {% endif %}
             <span class="page-link active">{{ missing_page.number }}</span>
             {% if missing_page.has_next %}
-                <a href="?missing_page={{ missing_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
-                <a href="?missing_page={{ missing_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+                <a href="?tab=missing&missing_page={{ missing_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?tab=missing&missing_page={{ missing_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
             {% endif %}
         </div>
         {% endif %}
@@ -395,4 +465,44 @@
 </div>
 
 {% include "tenant/voucher_modal.html" %}
+
+<script>
+    (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let activeTab = urlParams.get('tab') || 'pending';
+
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const sections = {
+            pending: document.getElementById('section-pending'),
+            partial: document.getElementById('section-partial'),
+            paid: document.getElementById('section-paid'),
+            missing: document.getElementById('section-missing')
+        };
+
+        function activateTab(tabId) {
+            tabBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tab === tabId);
+            });
+            Object.keys(sections).forEach(key => {
+                sections[key].classList.toggle('active', key === tabId);
+            });
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.replaceState({}, '', url);
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                const tabId = this.dataset.tab;
+                activateTab(tabId);
+            });
+        });
+
+        if (activeTab && sections[activeTab]) {
+            activateTab(activeTab);
+        } else {
+            activateTab('pending');
+        }
+    })();
+</script>
 {% endblock %}
