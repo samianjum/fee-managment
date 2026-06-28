@@ -40,11 +40,40 @@
         font-size: 0.8rem;
     }
 
-    .voucher-card {
+    .section-card {
         background: var(--surface);
         border-radius: 1.25rem;
+        border: 1px solid var(--border);
+        margin-bottom: 1.25rem;
+        overflow: hidden;
+    }
+    .section-header {
+        padding: 0.6rem 1rem;
+        background: var(--surface-alt);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .section-header h4 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    .section-header .badge {
+        background: var(--primary);
+        color: white;
+        padding: 0.1rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    .voucher-card {
+        background: var(--surface);
+        border-radius: 1rem;
         padding: 0.75rem;
-        margin-bottom: 0.75rem;
+        margin: 0.5rem 0.75rem;
         border: 1px solid var(--border);
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
     }
@@ -101,7 +130,7 @@
         display: flex;
         justify-content: center;
         gap: 0.3rem;
-        margin-top: 1rem;
+        margin: 0.5rem 0;
     }
     .page-link {
         padding: 0.3rem 0.7rem;
@@ -113,7 +142,7 @@
         font-size: 0.7rem;
     }
     .page-link.active { background: var(--primary); color: white; }
-    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+    .empty-state { text-align: center; padding: 1.5rem; color: var(--muted); }
 
     .mobile-header-actions {
         display: flex;
@@ -155,72 +184,215 @@
             <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
             {% endfor %}
         </select>
-        <select name="status">
-            <option value="all" {% if selected_status == 'all' or not selected_status %}selected{% endif %}>All</option>
-            <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
-            <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
-            <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
-            <option value="missing" {% if selected_status == 'missing' %}selected{% endif %}>Missing</option>
-        </select>
         <input type="text" name="search" value="{{ search_query }}" placeholder="Search...">
         <button type="submit">Apply</button>
         <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="reset-link">Reset</a>
     </form>
 </div>
 
-<!-- Voucher Cards -->
-<div class="voucher-list">
-    {% for item in items %}
-    <div class="voucher-card">
-        <div class="top-row">
-            <div>
-                <div class="student-name">{{ item.student.name }}</div>
-                <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
-            </div>
-            <div>
-                <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:"Missing" }}</span>
-            </div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
-            <span>{{ item.month }}/{{ item.year }}</span>
-            <span class="amount">{% if item.type == 'missing' %}—{% else %}₹{{ item.amount|floatformat:2 }}{% endif %}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
-            <span>Paid: {% if item.type == 'missing' %}—{% else %}₹{{ item.paid|floatformat:2 }}{% endif %}</span>
-            <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
-        </div>
-        {% if item.type == 'missing' %}
-        <div class="missing-reason">{{ item.reason }}</div>
-        {% endif %}
-        <div class="actions">
-            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
-            {% if item.type == 'record' and item.status != 'paid' %}
-            <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
-            {% endif %}
-            {% if item.type == 'missing' and is_current_month %}
-            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}?open_voucher=1" class="btn-generate">Generate</a>
-            {% endif %}
-        </div>
+<!-- Section: Pending -->
+<div class="section-card">
+    <div class="section-header">
+        <h4>Pending</h4>
+        <span class="badge">{{ pending_page.paginator.count }}</span>
     </div>
-    {% empty %}
-    <div class="empty-state">No vouchers for this month.</div>
-    {% endfor %}
+    <div class="voucher-list">
+        {% for item in pending_page %}
+        <div class="voucher-card">
+            <div class="top-row">
+                <div>
+                    <div class="student-name">{{ item.student.name }}</div>
+                    <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+                </div>
+                <div>
+                    <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+                <span>{{ item.month }}/{{ item.year }}</span>
+                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+                <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
+                <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+            </div>
+            <div class="actions">
+                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+                {% if item.status != 'paid' %}
+                <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">No pending vouchers.</div>
+        {% endfor %}
+        {% if pending_page.has_other_pages %}
+        <div class="pagination">
+            {% if pending_page.has_previous %}
+                <a href="?pending_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?pending_page={{ pending_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+            {% endif %}
+            <span class="page-link active">{{ pending_page.number }}</span>
+            {% if pending_page.has_next %}
+                <a href="?pending_page={{ pending_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?pending_page={{ pending_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
 </div>
 
-<!-- Pagination -->
-{% if items.has_other_pages %}
-<div class="pagination">
-    {% if items.has_previous %}
-        <a href="?page=1&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&laquo;</a>
-        <a href="?page={{ items.previous_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">‹</a>
-    {% endif %}
-    <span class="page-link active">{{ items.number }}</span>
-    {% if items.has_next %}
-        <a href="?page={{ items.next_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">›</a>
-        <a href="?page={{ items.paginator.num_pages }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&raquo;</a>
-    {% endif %}
+<!-- Section: Partial -->
+<div class="section-card">
+    <div class="section-header">
+        <h4>Partially Paid</h4>
+        <span class="badge">{{ partial_page.paginator.count }}</span>
+    </div>
+    <div class="voucher-list">
+        {% for item in partial_page %}
+        <div class="voucher-card">
+            <div class="top-row">
+                <div>
+                    <div class="student-name">{{ item.student.name }}</div>
+                    <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+                </div>
+                <div>
+                    <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+                <span>{{ item.month }}/{{ item.year }}</span>
+                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+                <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
+                <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+            </div>
+            <div class="actions">
+                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+                <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">No partially paid vouchers.</div>
+        {% endfor %}
+        {% if partial_page.has_other_pages %}
+        <div class="pagination">
+            {% if partial_page.has_previous %}
+                <a href="?partial_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?partial_page={{ partial_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+            {% endif %}
+            <span class="page-link active">{{ partial_page.number }}</span>
+            {% if partial_page.has_next %}
+                <a href="?partial_page={{ partial_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?partial_page={{ partial_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% endif %}
+
+<!-- Section: Paid -->
+<div class="section-card">
+    <div class="section-header">
+        <h4>Paid</h4>
+        <span class="badge">{{ paid_page.paginator.count }}</span>
+    </div>
+    <div class="voucher-list">
+        {% for item in paid_page %}
+        <div class="voucher-card">
+            <div class="top-row">
+                <div>
+                    <div class="student-name">{{ item.student.name }}</div>
+                    <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+                </div>
+                <div>
+                    <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+                <span>{{ item.month }}/{{ item.year }}</span>
+                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+                <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
+                <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+            </div>
+            <div class="actions">
+                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">No paid vouchers.</div>
+        {% endfor %}
+        {% if paid_page.has_other_pages %}
+        <div class="pagination">
+            {% if paid_page.has_previous %}
+                <a href="?paid_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?paid_page={{ paid_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+            {% endif %}
+            <span class="page-link active">{{ paid_page.number }}</span>
+            {% if paid_page.has_next %}
+                <a href="?paid_page={{ paid_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?paid_page={{ paid_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Section: Not Generated -->
+<div class="section-card">
+    <div class="section-header">
+        <h4>Not Generated</h4>
+        <span class="badge">{{ missing_page.paginator.count }}</span>
+    </div>
+    <div class="voucher-list">
+        {% for item in missing_page %}
+        <div class="voucher-card">
+            <div class="top-row">
+                <div>
+                    <div class="student-name">{{ item.student.name }}</div>
+                    <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+                </div>
+                <div>
+                    <span class="status-badge status-missing">Missing</span>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+                <span>{{ item.month }}/{{ item.year }}</span>
+                <span class="amount">—</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+                <span>Paid: —</span>
+                <span>Due: —</span>
+            </div>
+            <div class="missing-reason">{{ item.reason }}</div>
+            <div class="actions">
+                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+                {% if is_current_month %}
+                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}?open_voucher=1" class="btn-generate">Generate</a>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">All active students have vouchers for this month.</div>
+        {% endfor %}
+        {% if missing_page.has_other_pages %}
+        <div class="pagination">
+            {% if missing_page.has_previous %}
+                <a href="?missing_page=1&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&laquo;</a>
+                <a href="?missing_page={{ missing_page.previous_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">‹</a>
+            {% endif %}
+            <span class="page-link active">{{ missing_page.number }}</span>
+            {% if missing_page.has_next %}
+                <a href="?missing_page={{ missing_page.next_page_number }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">›</a>
+                <a href="?missing_page={{ missing_page.paginator.num_pages }}&month={{ month }}&year={{ year }}&search={{ search_query }}" class="page-link">&raquo;</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
 
 {% include "tenant/voucher_modal.html" %}
 {% endblock %}

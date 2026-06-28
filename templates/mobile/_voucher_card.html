@@ -1,0 +1,23 @@
+<div class="voucher-card">
+    <div class="top-row">
+        <div>
+            <div class="student-name">{{ item.student.name }}</div>
+            <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+        </div>
+        <span class="status-badge status-{{ item.status }}">{{ item.get_status_display }}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+        <span>{{ item.month }}/{{ item.year }}</span>
+        <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+        <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
+        <span>Due: {{ item.due_date|date:"Y-m-d" }}</span>
+    </div>
+    <div class="actions">
+        <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+        {% if item.status != 'paid' %}
+        <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
+        {% endif %}
+    </div>
+</div>

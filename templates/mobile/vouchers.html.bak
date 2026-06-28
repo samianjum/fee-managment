@@ -1,0 +1,226 @@
+{% extends 'mobile/base.html' %}
+{% load fee_extras %}
+{% block title %}Fee Vouchers | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .filter-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        background: var(--surface);
+        border-radius: 1.5rem;
+        padding: 0.5rem 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--border);
+    }
+    .filter-bar select, .filter-bar input {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
+        font-size: 0.8rem;
+        min-width: 60px;
+    }
+    .filter-bar button {
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .filter-bar .reset-link {
+        padding: 0.4rem 0.8rem;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.8rem;
+    }
+
+    .voucher-card {
+        background: var(--surface);
+        border-radius: 1.25rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .voucher-card .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .voucher-card .student-name {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    .voucher-card .student-meta {
+        font-size: 0.8rem;
+        color: var(--muted);
+    }
+    .voucher-card .amount {
+        font-weight: 700;
+        color: var(--primary);
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+    .status-pending { background: #fef3c7; color: #92400e; }
+    .status-partial { background: #dbeafe; color: #1e40af; }
+    .status-paid { background: #d1fae5; color: #065f46; }
+    .status-overdue { background: #fee2e2; color: #991b1b; }
+    .status-missing { background: #e5e7eb; color: #374151; }
+    .voucher-card .actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .voucher-card .actions a, .voucher-card .actions button {
+        padding: 0.2rem 0.8rem;
+        border-radius: 2rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-view { background: var(--primary); color: white; }
+    .btn-collect { background: transparent; color: var(--primary); border: 1px solid var(--primary); }
+    .btn-generate { background: #f59e0b; color: white; }
+    .missing-reason { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.3rem;
+        margin-top: 1rem;
+    }
+    .page-link {
+        padding: 0.3rem 0.7rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        text-decoration: none;
+        color: var(--text);
+        font-size: 0.7rem;
+    }
+    .page-link.active { background: var(--primary); color: white; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--muted); }
+
+    .mobile-header-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .mobile-header-actions a {
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
+        background: var(--primary);
+        color: white;
+        text-decoration: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <h1 class="page-title">Fee Vouchers</h1>
+    <p class="page-desc">All generated vouchers</p>
+</div>
+
+<div class="mobile-header-actions">
+    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}">⚙️ Generate All</a>
+</div>
+
+<!-- Filter -->
+<div class="filter-bar">
+    <form method="get" style="display: flex; flex-wrap: wrap; gap: 0.4rem; width: 100%; align-items: center;">
+        <select name="month">
+            {% for m in months %}
+            <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="year">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="status">
+            <option value="all" {% if selected_status == 'all' or not selected_status %}selected{% endif %}>All</option>
+            <option value="pending" {% if selected_status == 'pending' %}selected{% endif %}>Pending</option>
+            <option value="partial" {% if selected_status == 'partial' %}selected{% endif %}>Partial</option>
+            <option value="paid" {% if selected_status == 'paid' %}selected{% endif %}>Paid</option>
+            <option value="missing" {% if selected_status == 'missing' %}selected{% endif %}>Missing</option>
+        </select>
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search...">
+        <button type="submit">Apply</button>
+        <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="reset-link">Reset</a>
+    </form>
+</div>
+
+<!-- Voucher Cards -->
+<div class="voucher-list">
+    {% for item in items %}
+    <div class="voucher-card">
+        <div class="top-row">
+            <div>
+                <div class="student-name">{{ item.student.name }}</div>
+                <div class="student-meta">{{ item.student.roll_number }} • {{ item.student.grade }} - {{ item.student.section }}</div>
+            </div>
+            <div>
+                <span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:"Missing" }}</span>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
+            <span>{{ item.month }}/{{ item.year }}</span>
+            <span class="amount">{% if item.type == 'missing' %}—{% else %}₹{{ item.amount|floatformat:2 }}{% endif %}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
+            <span>Paid: {% if item.type == 'missing' %}—{% else %}₹{{ item.paid|floatformat:2 }}{% endif %}</span>
+            <span>Due: {% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</span>
+        </div>
+        {% if item.type == 'missing' %}
+        <div class="missing-reason">{{ item.reason }}</div>
+        {% endif %}
+        <div class="actions">
+            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-view">Profile</a>
+            {% if item.type == 'record' and item.status != 'paid' %}
+            <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=item.student.id %}" class="btn-collect">Collect</a>
+            {% endif %}
+            {% if item.type == 'missing' and is_current_month %}
+            <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=item.student.id %}?open_voucher=1" class="btn-generate">Generate</a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">No vouchers for this month.</div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if items.has_other_pages %}
+<div class="pagination">
+    {% if items.has_previous %}
+        <a href="?page=1&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&laquo;</a>
+        <a href="?page={{ items.previous_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">‹</a>
+    {% endif %}
+    <span class="page-link active">{{ items.number }}</span>
+    {% if items.has_next %}
+        <a href="?page={{ items.next_page_number }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">›</a>
+        <a href="?page={{ items.paginator.num_pages }}&month={{ month }}&year={{ year }}&status={{ selected_status }}&search={{ search_query }}" class="page-link">&raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% include "tenant/voucher_modal.html" %}
+{% endblock %}
