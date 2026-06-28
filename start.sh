@@ -1,18 +1,37 @@
 #!/bin/bash
-mkdir -p /tmp/django_sessions/
-
-# Create superuser if it doesn't exist (for admin panel)
-python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin123')"
-
 set -e
 
-echo "Running migrations on public schema..."
-python manage.py shell -c "from axis_saas.models import SchoolClient; SchoolClient.objects.get_or_create(schema_name='sh', defaults={'name':'School', 'admin_username':'admin', 'admin_password':'admin123'})"
-python manage.py migrate_schemas --shared || echo "Public schema migration failed, continuing..."
+# Wait for database to be ready (max 30s)
+echo "Waiting for PostgreSQL..."
+for i in {1..30}; do
+    if python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'])" 2>/dev/null; then
+        echo "Database ready!"
+        break
+    fi
+    echo "Waiting... ($i/30)"
+    sleep 1
+done
 
-echo "Running migrations on tenant schemas (if any)..."
-python manage.py shell -c "from axis_saas.models import SchoolClient; SchoolClient.objects.get_or_create(schema_name='sh', defaults={'name':'School', 'admin_username':'admin', 'admin_password':'admin123'})"
-python manage.py migrate_schemas --tenant || echo "Tenant migrations failed, continuing..."
+# Run migrations (public + tenants)
+echo "Running migrations..."
+python manage.py migrate
 
+# Ensure default tenant 'sh' exists
+echo "Creating default tenant (if missing)..."
+python manage.py shell -c "
+from axis_saas.models import SchoolClient
+SchoolClient.objects.get_or_create(
+    schema_name='sh',
+    defaults={
+        'name': 'School',
+        'admin_username': 'admin',
+        'admin_password': 'admin123',
+        'is_active': True
+    }
+)
+print('Tenant check complete.')
+"
+
+# Start Gunicorn
 echo "Starting Gunicorn..."
-exec gunicorn axis_saas.wsgi:application --bind 0.0.0.0:7860 --workers 3 --threads 2
+exec gunicorn axis_saas.wsgi:application --bind 0.0.0.0:7860 --workers 2 --threads 4 --worker-class gthread

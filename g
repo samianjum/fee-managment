@@ -1,57 +1,93 @@
 #!/usr/bin/env python3
 """
 AXIS Railway Deployment Patcher
-Ensures a default tenant exists before migrations.
-Run this once, then push to Railway.
+- Fixes database connection by making start.sh wait for PostgreSQL
+- Creates default tenant 'sh' if missing
+- Enforces DATABASE_URL in production
+Run once, then push to Railway.
 """
 
 import os
 import re
 
 START_SH = "start.sh"
-TENANT_SCHEMA = "sh"          # change if you want a different schema name
-TENANT_NAME = "School"
-ADMIN_USER = "admin"
-ADMIN_PASS = "admin123"
+SETTINGS_FILE = "axis_saas/settings.py"
 
-def patch_start_sh():
-    if not os.path.exists(START_SH):
-        print(f"❌ {START_SH} not found. Are you in the project root?")
-        return
+# --------------------------------------------------------------
+# 1. NEW START.SH (robust, with wait and tenant creation)
+# --------------------------------------------------------------
+NEW_START_SH = """#!/bin/bash
+set -e
 
-    with open(START_SH, "r") as f:
+# Wait for database to be ready (max 30s)
+echo "Waiting for PostgreSQL..."
+for i in {1..30}; do
+    if python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'])" 2>/dev/null; then
+        echo "Database ready!"
+        break
+    fi
+    echo "Waiting... ($i/30)"
+    sleep 1
+done
+
+# Run migrations (public + tenants)
+echo "Running migrations..."
+python manage.py migrate
+
+# Ensure default tenant 'sh' exists
+echo "Creating default tenant (if missing)..."
+python manage.py shell -c "
+from axis_saas.models import SchoolClient
+SchoolClient.objects.get_or_create(
+    schema_name='sh',
+    defaults={
+        'name': 'School',
+        'admin_username': 'admin',
+        'admin_password': 'admin123',
+        'is_active': True
+    }
+)
+print('Tenant check complete.')
+"
+
+# Start Gunicorn
+echo "Starting Gunicorn..."
+exec gunicorn axis_saas.wsgi:application --bind 0.0.0.0:7860 --workers 2 --threads 4 --worker-class gthread
+"""
+
+# --------------------------------------------------------------
+# 2. PATCH SETTINGS.PY – enforce DATABASE_URL in production
+# --------------------------------------------------------------
+def patch_settings():
+    with open(SETTINGS_FILE, "r") as f:
         content = f.read()
 
-    # Already patched?
-    if "get_or_create(schema_name=" in content:
-        print("✅ start.sh already has tenant creation.")
-        return
+    # Add a check after the DATABASES block
+    if "if not os.environ.get('DATABASE_URL'):" not in content:
+        # Insert right after the DATABASES assignment
+        pattern = r"(DATABASES\s*=\s*\{.*?\n\s*\})"
+        replacement = r"\1\n\n# Production check: ensure DATABASE_URL is set\nif not DEBUG and not os.environ.get('DATABASE_URL'):\n    raise RuntimeError(\"DATABASE_URL environment variable is required in production.\")\n"
+        new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+        with open(SETTINGS_FILE, "w") as f:
+            f.write(new_content)
+        print("✅ Patched settings.py: enforced DATABASE_URL in production.")
+    else:
+        print("ℹ️ settings.py already contains the DATABASE_URL check.")
 
-    # Find the migrate command and insert tenant creation before it
-    if "python manage.py migrate" not in content:
-        print("⚠️ Could not find 'python manage.py migrate' in start.sh. Please add the creation line manually.")
-        return
-
-    # Build the creation command
-    create_cmd = (
-        f'python manage.py shell -c "from axis_saas.models import SchoolClient; '
-        f'SchoolClient.objects.get_or_create(schema_name=\'{TENANT_SCHEMA}\', '
-        f"defaults={{'name':'{TENANT_NAME}', 'admin_username':'{ADMIN_USER}', 'admin_password':'{ADMIN_PASS}'}})\""
-    )
-
-    # Insert before the migrate line
-    new_content = content.replace(
-        "python manage.py migrate",
-        f"{create_cmd}\npython manage.py migrate"
-    )
-
+# --------------------------------------------------------------
+# 3. OVERWRITE START.SH
+# --------------------------------------------------------------
+def patch_start_sh():
     with open(START_SH, "w") as f:
-        f.write(new_content)
+        f.write(NEW_START_SH)
+    print("✅ Replaced start.sh with robust version (waits for DB, creates tenant).")
 
-    print("✅ Patched start.sh:")
-    print(f"   - Will create tenant '{TENANT_SCHEMA}' (if missing) before migrations.")
-    print("   - Then runs migrations for all schemas (including the new tenant).")
-    print("\nNow push your code to Railway and restart the deployment.")
-
+# --------------------------------------------------------------
+# 4. RUN
+# --------------------------------------------------------------
 if __name__ == "__main__":
+    print("🔧 AXIS Railway Patcher")
     patch_start_sh()
+    patch_settings()
+    print("\n🎉 Done! Now commit and push to Railway.")
+    print("   The container will wait for PostgreSQL, run migrations, create tenant 'sh', and start.")
