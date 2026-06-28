@@ -1,4 +1,17 @@
-from django.core.management.base import BaseCommand
+#!/usr/bin/env python3
+"""
+AXIS Fee Automation Patcher
+Replaces the broken auto_generate_fees command with a corrected version.
+Run this once and it will fix the automation for good.
+"""
+
+import os
+import sys
+
+TARGET_FILE = "axis_saas/management/commands/auto_generate_fees.py"
+
+# The corrected command code
+NEW_COMMAND = '''from django.core.management.base import BaseCommand
 from django_tenants.utils import schema_context
 from axis_saas.models import SchoolClient, SchoolFeeSettings, Student, FeeRecord, FeeStructure
 from datetime import date, timedelta
@@ -74,3 +87,22 @@ class Command(BaseCommand):
                 generated_total += created
 
         self.stdout.write(self.style.SUCCESS(f"Total fees generated: {generated_total}"))
+'''
+
+def patch():
+    if not os.path.exists(TARGET_FILE):
+        print(f"❌ Target file not found: {TARGET_FILE}")
+        print("   Make sure you are in the project root.")
+        sys.exit(1)
+
+    with open(TARGET_FILE, "w") as f:
+        f.write(NEW_COMMAND)
+
+    print(f"✅ Patched {TARGET_FILE} successfully.")
+    print("   The auto_generate_fees command will now generate missing fees per student.")
+    print("   Run it again: python manage.py auto_generate_fees")
+    print("\n⚠️  Important: Some students may still be skipped if they lack a fee structure.")
+    print("   To fix that, create FeeStructure entries for all grades or set custom_fee per student.")
+
+if __name__ == "__main__":
+    patch()
