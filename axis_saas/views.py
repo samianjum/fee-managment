@@ -60,7 +60,11 @@ def get_overall_pending(student):
     """Compute overall remaining balance: total fee + total items cost - total paid."""
     from decimal import Decimal
     from django.db.models import Sum
-    total_fee = student.fee_records.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
+    total_fee = Decimal('0')
+    for fr in student.fee_records.all():
+        total_fee += fr.amount
+        for ch in (fr.extra_charges or []):
+            total_fee += Decimal(str(ch.get('amount', 0)))
     total_paid = student.payments.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
     # Compute total items cost from all payments
     total_items_cost = Decimal('0')
@@ -257,7 +261,11 @@ def get_student_profile_context(request, schema_name, student_id):
         current_year = today.year
 
         fee_records_qs = student.fee_records.all().order_by('-year', '-month')
-        total_fee = fee_records_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+        total_fee = Decimal('0')
+        for fr in fee_records_qs:
+            total_fee += fr.amount
+            for ch in (fr.extra_charges or []):
+                total_fee += Decimal(str(ch.get('amount', 0)))
         fee_records = list(fee_records_qs)
 
         payments_qs_all = student.payments.all().order_by('payment_date')
@@ -1346,7 +1354,7 @@ def manual_generate_single_api(request):
                 "error": f"Fee already exists for {month}/{year} with paid amount ₹{existing_record.paid_amount}. Cannot modify."
             }, status=400)
         
-        # Determine fee amount
+        # Determine base fee amount
         if custom_amount:
             try:
                 base_fee = Decimal(custom_amount)
@@ -1354,8 +1362,14 @@ def manual_generate_single_api(request):
                     raise ValueError
             except:
                 return JsonResponse({"error": "Invalid custom amount"}, status=400)
+            # If custom amount is provided, we treat it as the total (including charges)
+            # We will not add extra charges automatically.
+            extra_charges = []
+            total_extra = Decimal('0')
+            final_amount = base_fee
         else:
-            base_fee = student.custom_fee if student.custom_fee > 0 else 0
+            # No custom amount: use student's custom_fee or grade fee structure
+            base_fee = student.custom_fee if student.custom_fee > 0 else Decimal('0')
             if base_fee == 0:
                 fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
                 if fee_struct:
@@ -1364,23 +1378,38 @@ def manual_generate_single_api(request):
                     student.save(update_fields=["custom_fee"])
             if base_fee <= 0:
                 return JsonResponse({"error": "No fee structure defined for this grade and no valid custom amount provided."}, status=400)
+            
+            # Get default extra charges from school settings
+            extra_charges = settings.default_extra_charges or []
+            # Keep base fee separate; extra charges stored separately
+            final_amount = base_fee
         
         due_date = today + timedelta(days=settings.due_date_offset)
         
         if existing_record:
-            existing_record.amount = base_fee
+            # Update existing record with the new amount and extra charges
+            existing_record.amount = final_amount
             existing_record.due_date = due_date
+            existing_record.extra_charges = extra_charges
+            existing_record.due_date_offset = settings.due_date_offset
+            existing_record.late_fee_per_day = settings.late_fee_penalty
             existing_record.save()
-            print(f"[DEBUG] Updated fee for {student.name} to ₹{base_fee}")
-            return JsonResponse({"message": f"Fee amount updated for {student.name} for {month}/{year} to ₹{base_fee}."})
+            print(f"[DEBUG] Updated fee for {student.name} to ₹{final_amount} (base: {base_fee}, extras: {total_extra})")
+            return JsonResponse({
+                "message": f"Fee amount updated for {student.name} for {month}/{year} to ₹{final_amount} (including extras)."
+            })
         else:
             FeeRecord.objects.create(
                 student=student, month=month, year=year,
-                amount=base_fee, due_date=due_date, status="pending"
+                amount=final_amount, due_date=due_date, status="pending",
+                extra_charges=extra_charges,
+                due_date_offset=settings.due_date_offset,
+                late_fee_per_day=settings.late_fee_penalty
             )
-            print(f"[DEBUG] Created fee for {student.name} with amount ₹{base_fee}")
-            return JsonResponse({"message": f"Fee record created for {student.name} for {month}/{year} with amount ₹{base_fee}."})
-
+            print(f"[DEBUG] Created fee for {student.name} with amount ₹{final_amount} (base: {base_fee}, extras: {total_extra})")
+            return JsonResponse({
+                "message": f"Fee record created for {student.name} for {month}/{year} with amount ₹{final_amount} (including extras)."
+            })
 def student_fee_records_api(request, schema_name, student_id):
     """API: Return JSON list of fee records for a student."""
     from django.http import JsonResponse
