@@ -396,6 +396,28 @@ class GymSettings(models.Model):
         verbose_name_plural = "Gym Settings"
 
 # ------------------- Stock Management Models -------------------
+
+# ------------------- Manual Generation Log -------------------
+class ManualGenerationLog(models.Model):
+    LOG_TYPE_CHOICES = [
+        ('manual', 'Manual'),
+        ('auto', 'Auto'),
+    ]
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField()
+    created_count = models.PositiveIntegerField(default=0)
+    skipped_existing = models.PositiveIntegerField(default=0)
+    skipped_no_fee = models.PositiveIntegerField(default=0)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    triggered_by = models.CharField(max_length=150, blank=True, null=True)
+    log_type = models.CharField(max_length=10, choices=LOG_TYPE_CHOICES, default='manual', help_text="Type of generation (manual or auto)")
+
+    class Meta:
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f"{self.month}/{self.year} - {self.get_log_type_display()} - {self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+
 class ProductCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)

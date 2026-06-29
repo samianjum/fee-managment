@@ -1,144 +1,104 @@
 #!/usr/bin/env python3
+"""
+Fixes missing ManualGenerationLog model and applies migration.
+Run: python3 fix_manual_generation_log.py
+"""
+
 import os
-import re
+import sys
+import shutil
+import subprocess
 
-DESKTOP = "templates/tenant/fee_settings.html"
-MOBILE = "templates/mobile/fee_settings.html"
+MODELS_FILE = "axis_saas/models.py"
 
-def patch_file(filepath, btn_id, status_id, result_id):
-    if not os.path.exists(filepath):
-        print(f"⚠️ {filepath} not found, skipping.")
-        return False
+# The model class to insert (after GymSettings)
+MODEL_DEFINITION = """
+# ------------------- Manual Generation Log -------------------
+class ManualGenerationLog(models.Model):
+    LOG_TYPE_CHOICES = [
+        ('manual', 'Manual'),
+        ('auto', 'Auto'),
+    ]
+    month = models.PositiveSmallIntegerField()
+    year = models.PositiveSmallIntegerField()
+    created_count = models.PositiveIntegerField(default=0)
+    skipped_existing = models.PositiveIntegerField(default=0)
+    skipped_no_fee = models.PositiveIntegerField(default=0)
+    generated_at = models.DateTimeField(auto_now_add=True)
+    triggered_by = models.CharField(max_length=150, blank=True, null=True)
+    log_type = models.CharField(max_length=10, choices=LOG_TYPE_CHOICES, default='manual', help_text="Type of generation (manual or auto)")
 
-    with open(filepath, "r") as f:
+    class Meta:
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f"{self.month}/{self.year} - {self.get_log_type_display()} - {self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+"""
+
+def insert_model():
+    if not os.path.exists(MODELS_FILE):
+        print(f"❌ {MODELS_FILE} not found!")
+        sys.exit(1)
+
+    with open(MODELS_FILE, 'r') as f:
         content = f.read()
 
-    # Find the manual generation section – we'll locate the button id in the HTML
-    # We'll remove any existing script block that contains the button id, then append a new one at the end.
-    # Use regex to find <script>...</script> containing the button id.
-    pattern = re.compile(
-        r'<script>.*?' + re.escape(btn_id) + r'.*?</script>',
-        re.DOTALL | re.IGNORECASE
-    )
-    # Remove existing script block if found
-    new_content = re.sub(pattern, '', content)
+    # Check if model already exists
+    if 'class ManualGenerationLog' in content:
+        print("✅ ManualGenerationLog already exists in models.py – nothing to do.")
+        return
 
-    # Now add our new script just before </body>
-    new_js = f'''<script>
-(function() {{
-    const btn = document.getElementById('{btn_id}');
-    const status = document.getElementById('{status_id}');
-    const resultDiv = document.getElementById('{result_id}');
+    # Find insertion point: after the GymSettings class
+    gym_settings_marker = 'class GymSettings(models.Model):'
+    if gym_settings_marker not in content:
+        print("❌ Could not find 'class GymSettings' – cannot determine insertion point.")
+        sys.exit(1)
 
-    if (!btn) {{
-        console.error('Button #{btn_id} not found!');
-        return;
-    }}
-    console.log('Manual generate button found, attaching click handler.');
+    # We'll insert after the entire GymSettings class definition, which ends with a blank line or next class
+    # Find the end of GymSettings class: look for a line that starts with 'class ' but not indented, after the class.
+    lines = content.splitlines()
+    insert_index = None
+    in_gym_settings = False
+    for i, line in enumerate(lines):
+        if line.startswith('class GymSettings'):
+            in_gym_settings = True
+        elif in_gym_settings and line.startswith('class ') and not line.startswith('    '):
+            # Found next class; insert before this line
+            insert_index = i
+            break
+        elif in_gym_settings and i == len(lines)-1:
+            # End of file
+            insert_index = len(lines)
+            break
 
-    btn.addEventListener('click', async function(e) {{
-        e.preventDefault();
-        console.log('Generate button clicked!');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Generating...';
-        status.textContent = 'Generating fees...';
-        resultDiv.style.display = 'block';
-        resultDiv.innerHTML = '⏳ Processing, please wait...';
-        resultDiv.style.background = 'var(--surface-alt)';
-        resultDiv.style.color = 'var(--text)';
+    if insert_index is None:
+        print("⚠️ Could not automatically find insertion point – adding at the end of the file.")
+        insert_index = len(lines)
 
-        try {{
-            const csrfToken = getCsrfToken();
-            if (!csrfToken) {{
-                throw new Error('CSRF token not found. Please refresh the page and try again.');
-            }}
-            const resp = await fetch('/api/manual-generate/', {{
-                method: 'POST',
-                headers: {{
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json',
-                }},
-                credentials: 'same-origin'
-            }});
-            console.log('Response status:', resp.status);
-            if (!resp.ok) {{
-                if (resp.status === 401) {{
-                    throw new Error('You are not logged in. Please log in again.');
-                }}
-                throw new Error('Server returned ' + resp.status);
-            }}
-            const data = await resp.json();
-            console.log('Response data:', data);
-
-            if (data.error) {{
-                resultDiv.innerHTML = '❌ Error: ' + data.error;
-                resultDiv.style.background = '#fee2e2';
-                resultDiv.style.color = '#991b1b';
-                status.textContent = 'Failed';
-                return;
-            }}
-
-            const msg = data.message || 'Fee generation completed.';
-            const details = `Created: ${{data.created || 0}} | Skipped (already exist): ${{data.skipped_existing || 0}} | Skipped (no fee structure): ${{data.skipped_no_fee || 0}}`;
-            resultDiv.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
-            resultDiv.style.background = '#d1fae5';
-            resultDiv.style.color = '#065f46';
-            status.textContent = '✅ Done';
-
-        }} catch (err) {{
-            console.error('Error:', err);
-            resultDiv.innerHTML = '❌ Error: ' + err.message;
-            resultDiv.style.background = '#fee2e2';
-            resultDiv.style.color = '#991b1b';
-            status.textContent = '❌ Error';
-        }} finally {{
-            btn.disabled = false;
-            btn.innerHTML = originalText;
-        }}
-    }});
-
-    function getCsrfToken() {{
-        let name = 'csrftoken';
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {{
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {{
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {{
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }}
-            }}
-        }}
-        console.log('CSRF token:', cookieValue ? 'found' : 'not found');
-        return cookieValue;
-    }}
-}})();
-</script>'''
-
-    # Insert before </body>
-    if "</body>" in new_content:
-        new_content = new_content.replace("</body>", new_js + "\n</body>")
-    else:
-        new_content += new_js
-
-    with open(filepath, "w") as f:
+    # Insert the model definition (with a newline before)
+    lines.insert(insert_index, MODEL_DEFINITION)
+    new_content = '\n'.join(lines)
+    with open(MODELS_FILE, 'w') as f:
         f.write(new_content)
+    print("✅ Inserted ManualGenerationLog model into models.py")
 
-    print(f"✅ Patched {filepath}")
-    return True
+def run_migration():
+    print("🔄 Running migration 0022...")
+    # Ensure the migration file exists
+    migration_file = "axis_saas/migrations/0022_add_log_type_to_manualgenerationlog.py"
+    if not os.path.exists(migration_file):
+        print("❌ Migration file 0022 not found! Please ensure the patcher created it.")
+        sys.exit(1)
 
-def main():
-    print("🔧 Patching manual fee generation button JS with improved debugging...")
-    ok1 = patch_file(DESKTOP, "manualGenerateBtn", "manualGenStatus", "manualGenResult")
-    ok2 = patch_file(MOBILE, "manualGenerateBtnMobile", "manualGenStatusMobile", "manualGenResultMobile")
-    if ok1 or ok2:
-        print("\n✅ Patch applied. Restart your server and open the fee settings page.")
-        print("   Open the browser console (F12) and click the 'Generate Fees Now' button.")
-        print("   You will see detailed logs in the console that will help diagnose the issue.")
-    else:
-        print("\n❌ No files were patched. Check the template paths.")
+    # Run migrate for axis_saas
+    result = subprocess.run([sys.executable, "manage.py", "migrate", "axis_saas"], capture_output=True, text=True)
+    if result.returncode != 0:
+        print("❌ Migration failed:")
+        print(result.stderr)
+        sys.exit(1)
+    print("✅ Migration applied successfully.")
 
 if __name__ == "__main__":
-    main()
+    insert_model()
+    run_migration()
+    print("\n🎉 Done! Now restart the server: python manage.py runserver")

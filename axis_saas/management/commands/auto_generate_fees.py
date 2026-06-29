@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django_tenants.utils import schema_context
-from axis_saas.models import SchoolClient, SchoolFeeSettings, Student, FeeRecord, FeeStructure
+from axis_saas.models import SchoolClient, SchoolFeeSettings, Student, FeeRecord, FeeStructure, ManualGenerationLog
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -29,19 +29,15 @@ class Command(BaseCommand):
                 skipped_existing = 0
                 skipped_no_fee = 0
 
-                # Convert extra charges to Decimal safely
                 extra_charges = settings.default_extra_charges or []
-                total_extra = sum(
-                    (Decimal(str(ch.get('amount', 0))) for ch in extra_charges),
-                    Decimal('0')
-                )
+                total_extra = sum((ch.get('amount', 0) for ch in extra_charges), 0)
 
                 for s in students:
                     if FeeRecord.objects.filter(student=s, month=month, year=year).exists():
                         skipped_existing += 1
                         continue
 
-                    base_fee = s.custom_fee if s.custom_fee > 0 else Decimal('0')
+                    base_fee = s.custom_fee if s.custom_fee > 0 else 0
                     if base_fee == 0:
                         fee_struct = FeeStructure.objects.filter(grade=s.grade).first()
                         if fee_struct:
@@ -50,7 +46,7 @@ class Command(BaseCommand):
                             s.save(update_fields=['custom_fee'])
 
                     if base_fee > 0:
-                        total_fee = base_fee  # extra charges stored separately in extra_charges field
+                        total_fee = base_fee + total_extra
                         FeeRecord.objects.create(
                             student=s,
                             month=month,
@@ -67,6 +63,16 @@ class Command(BaseCommand):
                         skipped_no_fee += 1
 
                 if created > 0 or skipped_existing > 0 or skipped_no_fee > 0:
+                    # Create a log entry for auto generation
+                    ManualGenerationLog.objects.create(
+                        month=month,
+                        year=year,
+                        created_count=created,
+                        skipped_existing=skipped_existing,
+                        skipped_no_fee=skipped_no_fee,
+                        triggered_by='system',
+                        log_type='auto'
+                    )
                     self.stdout.write(
                         f"{tenant.schema_name}: generated {created}, "
                         f"already had fee: {skipped_existing}, "

@@ -52,6 +52,7 @@ from .models import SchoolClient, Student, FeeStructure, FeeRecord, PaymentTrans
 from .forms import StudentForm, FeeCollectionForm, FeeSettingsForm, FeeStructureForm, FamilyPaymentForm
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
+from .models import ManualGenerationLog
 
 
 
@@ -1259,24 +1260,24 @@ def fee_status_api(request):
 @require_http_methods(["POST"])
 def manual_generate_api(request):
     """Generate fee records for all active students with extra charges."""
-    if not request.session.get("school_admin_authenticated"):
-        return JsonResponse({"error": "Unauthorized"}, status=401)
-    schema_name = request.session.get("school_admin_schema")
+    if not request.session.get('school_admin_authenticated'):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    schema_name = request.session.get('school_admin_schema')
     if not schema_name:
-        return JsonResponse({"error": "No tenant schema"}, status=400)
+        return JsonResponse({'error': 'No tenant schema'}, status=400)
     try:
         tenant = SchoolClient.objects.get(schema_name=schema_name)
     except SchoolClient.DoesNotExist:
-        return JsonResponse({"error": "Tenant not found"}, status=404)
+        return JsonResponse({'error': 'Tenant not found'}, status=404)
 
     with schema_context(schema_name):
         settings, _ = SchoolFeeSettings.objects.get_or_create(pk=1)
         today = timezone.localdate()
         month = today.month
         year = today.year
-        students = Student.objects.filter(status="active")
+        students = Student.objects.filter(status='active')
         if not students.exists():
-            return JsonResponse({"message": "No active students found."})
+            return JsonResponse({'message': 'No active students found.'})
 
         due_date = today + timedelta(days=settings.due_date_offset)
 
@@ -1302,7 +1303,7 @@ def manual_generate_api(request):
                 # Update custom_fee to match the structure for consistency
                 if student.custom_fee != base_fee:
                     student.custom_fee = base_fee
-                    student.save(update_fields=["custom_fee"])
+                    student.save(update_fields=['custom_fee'])
             else:
                 base_fee = student.custom_fee if student.custom_fee > 0 else 0
 
@@ -1317,13 +1318,23 @@ def manual_generate_api(request):
             else:
                 skipped_no_fee += 1
 
+        # Create a log entry
+        ManualGenerationLog.objects.create(
+            month=month,
+            year=year,
+            created_count=created,
+            skipped_existing=skipped_existing,
+            skipped_no_fee=skipped_no_fee,
+            triggered_by=request.session.get('school_admin_username', 'admin'),
+            log_type='manual'
+        )
+
         message = f"Generated {created} fee records for {month}/{year}."
         if skipped_existing > 0:
             message += f" Skipped {skipped_existing} students because they already have a fee record."
         if skipped_no_fee > 0:
             message += f" Skipped {skipped_no_fee} students because no fee structure defined for their grade."
-        return JsonResponse({"message": message, "created": created, "skipped_existing": skipped_existing, "skipped_no_fee": skipped_no_fee})
-
+        return JsonResponse({'message': message, 'created': created, 'skipped_existing': skipped_existing, 'skipped_no_fee': skipped_no_fee})
 def manual_generate_single_api(request):
     if not request.session.get("school_admin_authenticated"):
         return JsonResponse({"error": "Unauthorized"}, status=401)
@@ -3504,3 +3515,54 @@ def mobile_vouchers_list(request, schema_name):
             'logo_url': tenant.school_logo.url if tenant.school_logo else None,
         }
         return render(request, 'mobile/vouchers.html', context)
+
+
+# ------------------- Fee Logs View -------------------
+def fee_logs(request, schema_name):
+    """Display fee generation logs with filters."""
+    from django.shortcuts import render
+    from django.core.paginator import Paginator
+    from .models import ManualGenerationLog
+    from django_tenants.utils import schema_context
+
+    tenant = get_tenant(request, schema_name)
+    month = request.GET.get('month')
+    year = request.GET.get('year')
+    log_type = request.GET.get('log_type', '')
+    page = request.GET.get('page', 1)
+
+    with schema_context(schema_name):
+        logs_qs = ManualGenerationLog.objects.all()
+        if month:
+            logs_qs = logs_qs.filter(month=month)
+        if year:
+            logs_qs = logs_qs.filter(year=year)
+        if log_type:
+            logs_qs = logs_qs.filter(log_type=log_type)
+        logs_qs = logs_qs.order_by('-generated_at')
+
+        paginator = Paginator(logs_qs, 20)
+        logs_page = paginator.get_page(page)
+
+        # Get distinct months/years for filter dropdowns
+        months = range(1, 13)
+        years = list(range(2020, date.today().year + 2))
+        log_types = ManualGenerationLog.LOG_TYPE_CHOICES
+
+        # For each log, compute a link to the voucher page for that month/year
+        # The voucher page uses month/year filters
+        for log in logs_page:
+            log.voucher_url = f'/portal/{schema_name}/vouchers/?month={log.month}&year={log.year}'
+
+        context = {
+            'tenant': tenant,
+            'logs': logs_page,
+            'months': months,
+            'years': years,
+            'log_types': log_types,
+            'selected_month': month,
+            'selected_year': year,
+            'selected_log_type': log_type,
+            'logo_url': tenant.school_logo.url if tenant.school_logo else None,
+        }
+        return render(request, 'tenant/fee_logs.html', context)
