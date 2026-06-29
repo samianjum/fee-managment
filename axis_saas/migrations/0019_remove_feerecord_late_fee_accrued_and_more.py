@@ -14,24 +14,12 @@ class Migration(migrations.Migration):
             model_name='feerecord',
             name='late_fee_accrued',
         ),
-        migrations.AddField(
-            model_name='feerecord',
-            name='due_date_offset',
-            field=models.PositiveSmallIntegerField(default=15, help_text='Days after generation when fee is due'),
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS due_date_offset integer DEFAULT 15 NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_feerecord DROP COLUMN IF EXISTS due_date_offset;"
         ),
-        migrations.AddField(
-            model_name='feerecord',
-            name='late_fee_per_day',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text='Late fee amount applied per day', max_digits=6),
-        ),
-        migrations.AddField(
-            model_name='schoolfeesettings',
-            name='automation_enabled',
-            field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
-        ),
-        migrations.AddField(
-            model_name='student',
-            name='automation_enabled',
-            field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS late_fee_per_day numeric(6,2) DEFAULT 0.00 NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_feerecord DROP COLUMN IF EXISTS late_fee_per_day;"
         ),
     ]
