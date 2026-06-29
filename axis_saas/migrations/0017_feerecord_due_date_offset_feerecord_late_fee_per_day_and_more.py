@@ -10,24 +10,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='feerecord',
-            name='due_date_offset',
-            field=models.PositiveSmallIntegerField(default=15, help_text='Days after generation when fee is due'),
-        ),
-        migrations.AddField(
-            model_name='feerecord',
-            name='late_fee_per_day',
-            field=models.DecimalField(decimal_places=2, default=0.0, help_text='Late fee amount applied per day', max_digits=6),
-        ),
-        migrations.AddField(
-            model_name='schoolfeesettings',
-            name='automation_enabled',
-            field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
-        ),
-        migrations.AddField(
-            model_name='student',
-            name='automation_enabled',
-            field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
-        ),
-    ]
+    migrations.AddField(
+        model_name='schoolfeesettings',
+        name='automation_enabled',
+        field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
+    ),
+    migrations.AddField(
+        model_name='student',
+        name='automation_enabled',
+        field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
+    ),
+]
