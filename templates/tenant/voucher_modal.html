@@ -497,7 +497,7 @@ function showVoucherForm(data, isEdit) {
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                     Fee Amount (₹)
                 </label>
-                <input type="number" step="0.01" id="voucherFeeAmount" value="${data.fee_record ? data.fee_record.amount : data.default_fee}" placeholder="Default: ${data.default_fee}">
+                <input type="number" step="0.01" id="voucherFeeAmount" value="${data.fee_record ? data.fee_record.total_amount : data.default_fee}" placeholder="Default: ${data.default_fee}">
             </div>`;
     const dueOffset = data.fee_record && data.fee_record.due_date_offset !== undefined && data.fee_record.due_date_offset !== null
         ? data.fee_record.due_date_offset

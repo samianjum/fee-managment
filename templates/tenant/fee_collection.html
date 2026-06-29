@@ -150,9 +150,9 @@
                     {% for r in pending_records %}
                     <tr>
                         <td>{{ r.month }}/{{ r.year }}</td>
-                        <td>₹{{ r.amount }}</td>
+                        <td>₹{{ r.total_amount }}</td>
                         <td>₹{{ r.paid_amount }}</td>
-                        <td class="remaining">₹{{ r.remaining }}</td>
+                        <td class="remaining">₹{{ r.remaining_total }}</td>
                         <td>{{ r.due_date|date:"Y-m-d" }}</td>
                     </tr>
                     {% empty %}

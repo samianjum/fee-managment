@@ -1,67 +1,41 @@
 #!/usr/bin/env python3
-import os
-import re
-import sys
+"""
+Fix voucher snippet: Monthly Fee row should show base fee, not total.
+"""
 
-MIGRATION_FILE = "axis_saas/migrations/0017_feerecord_due_date_offset_feerecord_late_fee_per_day_and_more.py"
+FILE = "templates/tenant/voucher_snippet.html"
 
-def patch_migration():
-    if not os.path.exists(MIGRATION_FILE):
-        print(f"❌ Migration file not found: {MIGRATION_FILE}")
-        sys.exit(1)
+def patch():
+    try:
+        with open(FILE, "r") as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"❌ File not found: {FILE}")
+        return
 
-    with open(MIGRATION_FILE, "r") as f:
-        content = f.read()
+    # Replace the Monthly Fee row to use fee_record.amount (base) instead of total_amount
+    old_line = '<td>Monthly Fee</td>\n                    <td>{{ fee_record.total_amount|floatformat:2 }}</td>'
+    new_line = '<td>Monthly Fee</td>\n                    <td>{{ fee_record.amount|floatformat:2 }}</td>'
 
-    # Check if already patched (look for RunSQL)
-    if "RunSQL" in content and "ADD COLUMN IF NOT EXISTS" in content:
-        print("✅ Migration already patched. Skipping.")
-        return True
-
-    # Replace AddField operations with RunSQL
-    # We'll define a replacement pattern for AddField for SchoolFeeSettings and Student
-    new_ops = """
-    operations = [
-        migrations.RunSQL(
-            sql="ALTER TABLE axis_saas_schoolfeesettings ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
-            reverse_sql="ALTER TABLE axis_saas_schoolfeesettings DROP COLUMN IF EXISTS automation_enabled;"
-        ),
-        migrations.RunSQL(
-            sql="ALTER TABLE axis_saas_student ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
-            reverse_sql="ALTER TABLE axis_saas_student DROP COLUMN IF EXISTS automation_enabled;"
-        ),
-    ]
-    """
-
-    # Find the operations list and replace it
-    # We'll use regex to locate the operations assignment
-    pattern = r"operations\s*=\s*\[[\s\S]*?\]"
-    match = re.search(pattern, content)
-    if not match:
-        print("❌ Could not find 'operations = [...]' in migration file.")
-        sys.exit(1)
-
-    new_content = content[:match.start()] + new_ops + content[match.end():]
-
-    with open(MIGRATION_FILE, "w") as f:
-        f.write(new_content)
-
-    print(f"✅ Patched {MIGRATION_FILE} to use IF NOT EXISTS.")
-    return True
-
-def main():
-    print("🔄 Patching migration to handle duplicate column error...")
-    if patch_migration():
-        print("\n🔄 Running migrate to apply to all tenants...")
-        exit_code = os.system("python3 manage.py migrate")
-        if exit_code != 0:
-            print("❌ Migration failed. Please check the error output above.")
-            sys.exit(1)
-        print("✅ Migration completed successfully.")
-        print("\n🎉 You can now run: python3 manage.py runserver")
+    if old_line in content:
+        content = content.replace(old_line, new_line)
+        with open(FILE, "w") as f:
+            f.write(content)
+        print("✅ Voucher snippet fixed: Monthly Fee now shows base fee only.")
     else:
-        print("❌ Patching failed.")
-        sys.exit(1)
+        print("⚠️ Could not find the exact line. Trying alternative pattern...")
+        # Fallback: replace any occurrence of fee_record.total_amount in that context
+        # More robust: replace the first occurrence in the Monthly Fee row
+        import re
+        pattern = r'(<td>Monthly Fee</td>\s*<td>)\{\{ fee_record\.total_amount\|floatformat:2 \}\}(</td>)'
+        replacement = r'\1{{ fee_record.amount|floatformat:2 }}\2'
+        new_content, count = re.subn(pattern, replacement, content)
+        if count:
+            with open(FILE, "w") as f:
+                f.write(new_content)
+            print("✅ Voucher snippet fixed (regex).")
+        else:
+            print("❌ Could not find the line to patch. Please check manually.")
 
 if __name__ == "__main__":
-    main()
+    patch()

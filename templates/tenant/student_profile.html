@@ -57,7 +57,7 @@
                 {% for r in fee_records %}
                 <tr>
                     <td>{{ r.month }}/{{ r.year }}</td>
-                    <td>₹{{ r.amount|floatformat:2 }}</td>
+                    <td>₹{{ r.total_amount|floatformat:2 }}</td>
                     <td>₹{{ r.paid_amount|floatformat:2 }}</td>
                     <td><span class="status-badge status-{{ r.status|lower }}">{{ r.get_status_display }}</span></td>
                     <td>{% if r.payments.exists %}{% for rc in r.payments.all %}<a href="/portal/{{ tenant.schema_name }}/fee/receipt/{{ rc.id }}/" class="receipt-link">{{ rc.receipt_number }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}—{% endif %}</td>
@@ -215,7 +215,7 @@ async function loadFeeRecords() {
         let totalFee = 0, totalPaid = 0;
         let html = '';
         for (let r of data) {
-            totalFee += r.amount;
+            totalFee += r.total_amount;
             totalPaid += r.paid_amount;
             let receiptsHtml = '';
             if (r.receipts && r.receipts.length) {
@@ -225,7 +225,7 @@ async function loadFeeRecords() {
             }
             html += `<tr>
                         <td>${r.month}/${r.year}</td>
-                        <td>₹${r.amount.toFixed(2)}</td>
+                        <td>₹${r.total_amount.toFixed(2)}</td>
                         <td>₹${r.paid_amount.toFixed(2)}</td>
                         <td><span class="status-badge status-${r.status.toLowerCase()}">${r.status}</span></td>
                         <td>${receiptsHtml}</td>

@@ -541,7 +541,7 @@
           <span class="item-label">{{ record.month }}/{{ record.year }}</span>
           <span class="status-badge status-{{ record.status|lower }}">{{ record.get_status_display }}</span>
         </div>
-        <div class="item-meta">Amount: ₹{{ record.amount|floatformat:2 }} &nbsp;|&nbsp; Paid: ₹{{ record.paid_amount|floatformat:2 }}</div>
+        <div class="item-meta">Amount: ₹{{ record.total_amount|floatformat:2 }} &nbsp;|&nbsp; Paid: ₹{{ record.paid_amount|floatformat:2 }}</div>
       </div>
     {% endfor %}
   {% else %}
@@ -655,7 +655,7 @@
         {% for r in fee_records %}
         <tr>
           <td>{{ r.month }}/{{ r.year }}</td>
-          <td>₹{{ r.amount|floatformat:2 }}</td>
+          <td>₹{{ r.total_amount|floatformat:2 }}</td>
           <td>₹{{ r.paid_amount|floatformat:2 }}</td>
           <td><span class="status-badge status-{{ r.status|lower }}">{{ r.get_status_display }}</span></td>
         </tr>

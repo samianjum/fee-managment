@@ -20,7 +20,7 @@
     <h3>Pending Fee Records</h3>
     <table class="data-table">
         <thead><tr><th>Month/Year</th><th>Amount</th><th>Paid</th><th>Remaining</th></tr></thead>
-        <tbody>{% for fr in pending_fees %}<tr><td>{{ fr.month }}/{{ fr.year }}</td><td>{{ fr.amount }}</td><td>{{ fr.paid_amount }}</td><td><strong>{{ fr.remaining }}</strong></td></tr>{% empty %}<tr><td colspan="4">No pending fees</td></tr>{% endfor %}</tbody>
+        <tbody>{% for fr in pending_fees %}<tr><td>{{ fr.month }}/{{ fr.year }}</td><td>{{ fr.total_amount }}</td><td>{{ fr.paid_amount }}</td><td><strong>{{ fr.remaining_total }}</strong></td></tr>{% empty %}<tr><td colspan="4">No pending fees</td></tr>{% endfor %}</tbody>
     </table>
 </div>
 <style>.btn-primary{background:var(--primary);color:white;padding:10px 20px;border-radius:6px;border:none;}</style>

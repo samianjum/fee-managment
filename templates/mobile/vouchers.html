@@ -280,7 +280,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
                 <span>{{ item.month }}/{{ item.year }}</span>
-                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+                <span class="amount">₹{{ item.total_amount|floatformat:2 }}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
                 <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
@@ -332,7 +332,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
                 <span>{{ item.month }}/{{ item.year }}</span>
-                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+                <span class="amount">₹{{ item.total_amount|floatformat:2 }}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
                 <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>
@@ -382,7 +382,7 @@
             </div>
             <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
                 <span>{{ item.month }}/{{ item.year }}</span>
-                <span class="amount">₹{{ item.amount|floatformat:2 }}</span>
+                <span class="amount">₹{{ item.total_amount|floatformat:2 }}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size:0.75rem; color:var(--muted);">
                 <span>Paid: ₹{{ item.paid|floatformat:2 }}</span>

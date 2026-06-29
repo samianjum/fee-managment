@@ -500,8 +500,8 @@
       {% for record in pending_records %}
       <div class="pending-record">
         <span class="month">{{ record.month }}/{{ record.year }}</span>
-        <span class="amount">₹{{ record.amount|floatformat:2 }}</span>
-        <span class="amount remaining">₹{{ record.remaining|floatformat:2 }}</span>
+        <span class="amount">₹{{ record.total_amount|floatformat:2 }}</span>
+        <span class="amount remaining">₹{{ record.remaining_total|floatformat:2 }}</span>
       </div>
       {% endfor %}
     {% else %}

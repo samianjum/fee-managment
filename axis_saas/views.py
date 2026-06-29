@@ -62,9 +62,7 @@ def get_overall_pending(student):
     from django.db.models import Sum
     total_fee = Decimal('0')
     for fr in student.fee_records.all():
-        total_fee += fr.amount
-        for ch in (fr.extra_charges or []):
-            total_fee += Decimal(str(ch.get('amount', 0)))
+        total_fee += fr.total_amount
     total_paid = student.payments.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
     # Compute total items cost from all payments
     total_items_cost = Decimal('0')
@@ -121,7 +119,7 @@ def get_dashboard_context(tenant, schema_name):
         for student in Student.objects.all():
             pending = get_overall_pending(student)
             if pending > 0:
-                fee_pending = sum(fr.remaining for fr in student.fee_records.filter(status__in=['pending', 'partial', 'overdue']))
+                fee_pending = sum(fr.remaining_total for fr in student.fee_records.filter(status__in=['pending', 'partial', 'overdue']))
                 top_defaulters.append({'student': student, 'pending': pending, 'fee_pending': fee_pending})
         top_defaulters = sorted(top_defaulters, key=lambda x: x['pending'], reverse=True)[:5]
 
@@ -262,8 +260,10 @@ def get_student_profile_context(request, schema_name, student_id):
 
         fee_records_qs = student.fee_records.all().order_by('-year', '-month')
         total_fee = Decimal('0')
+
         for fr in fee_records_qs:
-            total_fee += fr.amount
+
+            total_fee += fr.total_amount
             for ch in (fr.extra_charges or []):
                 total_fee += Decimal(str(ch.get('amount', 0)))
         fee_records = list(fee_records_qs)
@@ -576,7 +576,7 @@ def reports(request, schema_name, force_mobile=False):
         payment_count = payments_qs.count()
 
         pending_records = FeeRecord.objects.all()
-        total_pending = sum(fr.remaining for fr in pending_records)
+        total_pending = sum(fr.remaining_total for fr in pending_records)
 
         total_collection_all = PaymentTransaction.objects.aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
         total_billed = total_collection_all + total_pending
@@ -1426,7 +1426,7 @@ def student_fee_records_api(request, schema_name, student_id):
                 'id': fr.id,
                 'month': fr.month,
                 'year': fr.year,
-                'amount': float(fr.amount),
+                'amount': float(fr.total_amount),
                 'paid_amount': float(fr.paid_amount),
                 'status': fr.get_status_display(),
                 'due_date': fr.due_date.isoformat(),
@@ -1478,7 +1478,7 @@ def student_current_fee_status_api(request, schema_name, student_id):
             record = FeeRecord.objects.get(student=student, month=month, year=year)
             data = {
                 'exists': True,
-                'amount': float(record.amount),
+                'amount': float(record.total_amount),
                 'paid_amount': float(record.paid_amount),
                 'status': record.get_status_display(),
                 'due_date': record.due_date.isoformat(),

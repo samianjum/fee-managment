@@ -137,6 +137,8 @@ class FeeRecord(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     remarks = models.TextField(blank=True, null=True)
     extra_charges = models.JSONField(default=list, blank=True, null=True)
+    late_fee_accrued = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"), help_text="Accumulated late fee amount")
+
 
     class Meta:
         unique_together = ['student', 'month', 'year']
@@ -145,13 +147,26 @@ class FeeRecord(models.Model):
     @property
     def remaining(self):
         return self.amount - self.paid_amount
+    @property
+    def total_amount(self):
+        """Total fee = base + extra charges"""
+        from decimal import Decimal
+        extras = sum(Decimal(str(ch.get('amount', 0))) for ch in (self.extra_charges or []))
+        return self.amount + extras
+
+    @property
+    def remaining_total(self):
+        from decimal import Decimal
+        return self.total_amount - Decimal(str(self.paid_amount))
+
 
     @property
     def is_fully_paid(self):
         return self.paid_amount >= self.amount
 
     def save(self, *args, **kwargs):
-        if self.paid_amount >= self.amount:
+        # Use total_amount (base + extras) for status
+        if self.remaining_total <= 0:
             self.status = 'paid'
         elif self.paid_amount > 0:
             self.status = 'partial'
@@ -275,13 +290,26 @@ class GymSubscription(models.Model):
     @property
     def remaining(self):
         return self.amount - self.paid_amount
+    @property
+    def total_amount(self):
+        """Total fee = base + extra charges"""
+        from decimal import Decimal
+        extras = sum(Decimal(str(ch.get('amount', 0))) for ch in (self.extra_charges or []))
+        return self.amount + extras
+
+    @property
+    def remaining_total(self):
+        from decimal import Decimal
+        return self.total_amount - Decimal(str(self.paid_amount))
+
 
     @property
     def is_fully_paid(self):
         return self.paid_amount >= self.amount
 
     def save(self, *args, **kwargs):
-        if self.paid_amount >= self.amount:
+        # Use total_amount (base + extras) for status
+        if self.remaining_total <= 0:
             self.status = 'paid'
         elif self.paid_amount > 0:
             self.status = 'partial'

@@ -501,7 +501,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const monthlyData = {{ monthly_data|safe }};
-    if (monthlyData && monthlyData.length > 0 && monthlyData.some(item => item.amount > 0)) {
+    if (monthlyData && monthlyData.length > 0 && monthlyData.some(item => item.total_amount > 0)) {
         const ctx = document.getElementById('trendChart').getContext('2d');
         new Chart(ctx, {
             type: 'line',
@@ -509,7 +509,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 labels: monthlyData.map(item => item.month),
                 datasets: [{
                     label: 'Collection (₹)',
-                    data: monthlyData.map(item => item.amount),
+                    data: monthlyData.map(item => item.total_amount),
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59,130,246,0.1)',
                     fill: true,
@@ -531,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 labels: modeData.map(item => item.name),
                 datasets: [{
-                    data: modeData.map(item => item.amount),
+                    data: modeData.map(item => item.total_amount),
                     backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
                 }]
             }

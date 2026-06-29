@@ -314,7 +314,7 @@
                     <td>{{ item.student.roll_number }}</td>
                     <td>{{ item.student.grade }} - {{ item.student.section }}</td>
                     <td>{{ item.month }}/{{ item.year }}</td>
-                    <td>₹{{ item.amount|floatformat:2 }}</td>
+                    <td>₹{{ item.total_amount|floatformat:2 }}</td>
                     <td>₹{{ item.paid|floatformat:2 }}</td>
                     <td>{% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                     <td><span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span></td>
@@ -374,7 +374,7 @@
                     <td>{{ item.student.roll_number }}</td>
                     <td>{{ item.student.grade }} - {{ item.student.section }}</td>
                     <td>{{ item.month }}/{{ item.year }}</td>
-                    <td>₹{{ item.amount|floatformat:2 }}</td>
+                    <td>₹{{ item.total_amount|floatformat:2 }}</td>
                     <td>₹{{ item.paid|floatformat:2 }}</td>
                     <td>{% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                     <td><span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span></td>
@@ -432,7 +432,7 @@
                     <td>{{ item.student.roll_number }}</td>
                     <td>{{ item.student.grade }} - {{ item.student.section }}</td>
                     <td>{{ item.month }}/{{ item.year }}</td>
-                    <td>₹{{ item.amount|floatformat:2 }}</td>
+                    <td>₹{{ item.total_amount|floatformat:2 }}</td>
                     <td>₹{{ item.paid|floatformat:2 }}</td>
                     <td>{% if item.due_date %}{{ item.due_date|date:"Y-m-d" }}{% else %}—{% endif %}</td>
                     <td><span class="status-badge status-{{ item.status }}">{{ item.get_status_display|default:item.status }}</span></td>

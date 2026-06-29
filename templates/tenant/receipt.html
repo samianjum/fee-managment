@@ -61,7 +61,7 @@
                     {% for fr in fee_records %}
                     <tr>
                         <td>{{ fr.month }}/{{ fr.year }}</td>
-                        <td>₹{{ fr.amount|floatformat:2 }}</td>
+                        <td>₹{{ fr.total_amount|floatformat:2 }}</td>
                         <td>₹{{ fr.paid_amount|floatformat:2 }}</td>
                         <td><span class="status-badge status-{{ fr.status }}">{{ fr.get_status_display }}</span></td>
                     </tr>

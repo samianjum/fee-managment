@@ -263,9 +263,9 @@
                         {% for fr in pending_records %}
                         <tr>
                             <td>{{ fr.month }}/{{ fr.year }}</td>
-                            <td>₹{{ fr.amount|floatformat:2 }}</td>
+                            <td>₹{{ fr.total_amount|floatformat:2 }}</td>
                             <td>₹{{ fr.paid_amount|floatformat:2 }}</td>
-                            <td class="remaining">₹{{ fr.remaining|floatformat:2 }}</td>
+                            <td class="remaining">₹{{ fr.remaining_total|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
