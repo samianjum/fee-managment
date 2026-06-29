@@ -1295,13 +1295,16 @@ def manual_generate_api(request):
                 skipped_existing += 1
                 continue
 
-            base_fee = student.custom_fee if student.custom_fee > 0 else 0
-            if base_fee == 0:
-                fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
-                if fee_struct:
-                    base_fee = fee_struct.monthly_fee
+            # PRIORITY: class fee structure FIRST, then custom fee
+            fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
+            if fee_struct:
+                base_fee = fee_struct.monthly_fee
+                # Update custom_fee to match the structure for consistency
+                if student.custom_fee != base_fee:
                     student.custom_fee = base_fee
                     student.save(update_fields=["custom_fee"])
+            else:
+                base_fee = student.custom_fee if student.custom_fee > 0 else 0
 
             if base_fee > 0:
                 total_fee = base_fee  # extra charges stored separately in extra_charges field

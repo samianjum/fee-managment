@@ -302,146 +302,123 @@
         <li><strong>Start/Stop:</strong> Toggle automation on/off.</li>
     </ul>
 </div>
+<!-- ====== MANUAL GENERATION SECTION (MOBILE) ====== -->
+<div class="settings-card" style="margin-top: 1.5rem; border-left: 4px solid #10b981; padding: 1rem 1rem 1.25rem;">
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <h3 style="margin:0; font-size:1rem;">Manual Fee Generation</h3>
+        <span style="margin-left:auto; font-size:0.6rem; background:#10b981; color:white; padding:0.1rem 0.5rem; border-radius:2rem;">Current Month</span>
+    </div>
+    <p style="color:var(--muted); font-size:0.85rem; margin-bottom:0.75rem;">
+        Generate fees for <strong>all active students</strong> for the current month.
+        <br>Priority: <strong>class fee structure</strong> → <strong>custom fee</strong>.
+    </p>
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+        <button id="manualGenerateBtnMobile" class="btn-primary" style="background:#10b981; padding:0.4rem 1.2rem; font-size:0.85rem; border:none; border-radius:2rem; color:white; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Generate Fees Now
+        </button>
+        <span id="manualGenStatusMobile" style="font-size:0.8rem; color:var(--muted);">Ready</span>
+    </div>
+    <div id="manualGenResultMobile" style="margin-top:0.75rem; display:none; padding:0.6rem; border-radius:0.5rem; background:var(--surface-alt); font-size:0.8rem;"></div>
+</div>
+
 
 <div class="bottom-spacer"></div>
 
+
 <script>
-    // ---------- Extra charges management ----------
-    const chargesContainer = document.getElementById('chargesContainer');
-    const noChargesMsg = document.getElementById('noChargesMsg');
-    const totalExtraDisplay = document.getElementById('totalExtraDisplay');
-    const extraChargesJson = document.getElementById('extraChargesJson');
+(function() {
+    const btn = document.getElementById('manualGenerateBtnMobile');
+    const status = document.getElementById('manualGenStatusMobile');
+    const resultDiv = document.getElementById('manualGenResultMobile');
 
-    function updateTotal() {
-        let total = 0;
-        const items = chargesContainer.querySelectorAll('.charge-item');
-        items.forEach(item => {
-            const amountInput = item.querySelector('.charge-amount');
-            const val = parseFloat(amountInput.value) || 0;
-            total += val;
-        });
-        totalExtraDisplay.textContent = total.toFixed(2);
-        const charges = [];
-        items.forEach(item => {
-            const title = item.querySelector('.charge-title').value.trim();
-            const amount = parseFloat(item.querySelector('.charge-amount').value) || 0;
-            if (title || amount) {
-                charges.push({ title: title || 'Unnamed', amount: amount });
-            }
-        });
-        extraChargesJson.value = JSON.stringify(charges);
-        if (items.length === 0) {
-            if (!noChargesMsg) {
-                const msg = document.createElement('div');
-                msg.id = 'noChargesMsg';
-                msg.style.color = 'var(--muted)';
-                msg.style.fontSize = '0.85rem';
-                msg.textContent = 'No extra charges added yet.';
-                chargesContainer.appendChild(msg);
-            }
-        } else {
-            const existing = document.getElementById('noChargesMsg');
-            if (existing) existing.remove();
-        }
+    if (!btn) {
+        console.error('Button #manualGenerateBtnMobile not found!');
+        return;
     }
+    console.log('Manual generate button found, attaching click handler.');
 
-    function addCharge(title = '', amount = '') {
-        const item = document.createElement('div');
-        item.className = 'charge-item';
-        item.innerHTML = `
-            <input type="text" class="charge-title" value="${title}" placeholder="Title">
-            <input type="number" step="0.01" class="charge-amount" value="${amount}" placeholder="Amount">
-            <button type="button" class="edit-charge" title="Edit">✎</button>
-            <button type="button" class="remove-charge" title="Remove">×</button>
-        `;
-        const noMsg = document.getElementById('noChargesMsg');
-        if (noMsg) noMsg.remove();
-        chargesContainer.appendChild(item);
-        item.querySelector('.remove-charge').addEventListener('click', function() {
-            item.remove();
-            updateTotal();
-        });
-        item.querySelector('.edit-charge').addEventListener('click', function() {
-            const titleInput = item.querySelector('.charge-title');
-            titleInput.focus();
-            titleInput.select();
-        });
-        item.querySelectorAll('input').forEach(inp => {
-            inp.addEventListener('input', updateTotal);
-        });
-        updateTotal();
-    }
+    btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        console.log('Generate button clicked!');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Generating...';
+        status.textContent = 'Generating fees...';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '⏳ Processing, please wait...';
+        resultDiv.style.background = 'var(--surface-alt)';
+        resultDiv.style.color = 'var(--text)';
 
-    document.getElementById('addChargeBtn').addEventListener('click', function() {
-        addCharge();
-    });
-
-    document.querySelectorAll('.charge-item').forEach(item => {
-        const removeBtn = item.querySelector('.remove-charge');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                item.remove();
-                updateTotal();
-            });
-        }
-        const editBtn = item.querySelector('.edit-charge');
-        if (editBtn) {
-            editBtn.addEventListener('click', function() {
-                const titleInput = item.querySelector('.charge-title');
-                titleInput.focus();
-                titleInput.select();
-            });
-        }
-        item.querySelectorAll('input').forEach(inp => {
-            inp.addEventListener('input', updateTotal);
-        });
-    });
-
-    updateTotal();
-
-    // ---------- Next generation date ----------
-    async function fetchNextGeneration() {
         try {
-            const resp = await fetch('/api/fee-status/');
-            const data = await resp.json();
-            if (data.next_generation) {
-                document.getElementById('nextGenDate').textContent = data.next_generation;
-            } else {
-                document.getElementById('nextGenDate').textContent = 'Not set';
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                throw new Error('CSRF token not found. Please refresh the page and try again.');
             }
-        } catch(e) {
-            document.getElementById('nextGenDate').textContent = 'Error fetching';
-        }
-    }
-    fetchNextGeneration();
-
-    // Confirmation for start/stop
-    document.querySelectorAll('form[method="post"]').forEach(form => {
-        if (form.querySelector('input[name="toggle_automation"]')) {
-            form.addEventListener('submit', function(e) {
-                const btn = this.querySelector('button[type="submit"]');
-                const isStart = btn.classList.contains('start');
-                if (isStart) {
-                    if (!confirm('Are you sure you want to START automation?')) {
-                        e.preventDefault();
-                    }
-                } else {
-                    if (!confirm('Are you sure you want to STOP automation?')) {
-                        e.preventDefault();
-                    }
-                }
+            const resp = await fetch('/api/manual-generate/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
             });
+            console.log('Response status:', resp.status);
+            if (!resp.ok) {
+                if (resp.status === 401) {
+                    throw new Error('You are not logged in. Please log in again.');
+                }
+                throw new Error('Server returned ' + resp.status);
+            }
+            const data = await resp.json();
+            console.log('Response data:', data);
+
+            if (data.error) {
+                resultDiv.innerHTML = '❌ Error: ' + data.error;
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
+                status.textContent = 'Failed';
+                return;
+            }
+
+            const msg = data.message || 'Fee generation completed.';
+            const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
+            resultDiv.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
+            resultDiv.style.background = '#d1fae5';
+            resultDiv.style.color = '#065f46';
+            status.textContent = '✅ Done';
+
+        } catch (err) {
+            console.error('Error:', err);
+            resultDiv.innerHTML = '❌ Error: ' + err.message;
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.style.color = '#991b1b';
+            status.textContent = '❌ Error';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
     });
 
-    // ----- PATCH: Ensure extra charges JSON is updated on submit -----
-    document.getElementById('settingsForm').addEventListener('submit', function(e) {
-        if (typeof updateTotal === 'function') {
-            updateTotal();  // refresh the hidden input value
+    function getCsrfToken() {
+        let name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
-        // Debug: log the submitted JSON (you can view in browser console)
-        console.log('Submitting extra charges:', document.getElementById('extraChargesJson').value);
-    });
-    
+        console.log('CSRF token:', cookieValue ? 'found' : 'not found');
+        return cookieValue;
+    }
+})();
 </script>
 {% endblock %}
