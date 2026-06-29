@@ -1,104 +1,101 @@
 #!/usr/bin/env python3
 """
-Fixes missing ManualGenerationLog model and applies migration.
-Run: python3 fix_manual_generation_log.py
+Patcher to add "Fee Logs" link to desktop sidebar and mobile More page.
+Run with: python3 add_fee_logs_links.py
 """
 
-import os
-import sys
-import shutil
-import subprocess
+import re
+from pathlib import Path
 
-MODELS_FILE = "axis_saas/models.py"
+DESKTOP_BASE = Path("templates/tenant/base.html")
+MOBILE_MORE = Path("templates/mobile/more.html")
 
-# The model class to insert (after GymSettings)
-MODEL_DEFINITION = """
-# ------------------- Manual Generation Log -------------------
-class ManualGenerationLog(models.Model):
-    LOG_TYPE_CHOICES = [
-        ('manual', 'Manual'),
-        ('auto', 'Auto'),
-    ]
-    month = models.PositiveSmallIntegerField()
-    year = models.PositiveSmallIntegerField()
-    created_count = models.PositiveIntegerField(default=0)
-    skipped_existing = models.PositiveIntegerField(default=0)
-    skipped_no_fee = models.PositiveIntegerField(default=0)
-    generated_at = models.DateTimeField(auto_now_add=True)
-    triggered_by = models.CharField(max_length=150, blank=True, null=True)
-    log_type = models.CharField(max_length=10, choices=LOG_TYPE_CHOICES, default='manual', help_text="Type of generation (manual or auto)")
-
-    class Meta:
-        ordering = ['-generated_at']
-
-    def __str__(self):
-        return f"{self.month}/{self.year} - {self.get_log_type_display()} - {self.generated_at.strftime('%Y-%m-%d %H:%M')}"
+# Desktop sidebar link (to be inserted after Vouchers link)
+DESKTOP_LINK = """
+                {% if tenant.tenant_type == 'school' %}
+                <a href="{% url 'fee_logs' schema_name=tenant.schema_name %}" class="nav-item">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>Fee Logs</span>
+                </a>
+                {% endif %}
 """
 
-def insert_model():
-    if not os.path.exists(MODELS_FILE):
-        print(f"❌ {MODELS_FILE} not found!")
-        sys.exit(1)
+# Mobile More card (insert after Fee Vouchers card)
+MOBILE_CARD = """
+    <!-- Fee Logs -->
+    <a href="{% url 'mobile_fee_logs' schema_name=tenant.schema_name %}" class="more-card">
+        <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </div>
+        <h3>Fee Logs</h3>
+        <p>View fee generation history.</p>
+    </a>
+"""
 
-    with open(MODELS_FILE, 'r') as f:
+def patch_desktop():
+    if not DESKTOP_BASE.exists():
+        print(f"❌ {DESKTOP_BASE} not found.")
+        return False
+
+    with open(DESKTOP_BASE, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Check if model already exists
-    if 'class ManualGenerationLog' in content:
-        print("✅ ManualGenerationLog already exists in models.py – nothing to do.")
-        return
+    # Check if already added
+    if 'Fee Logs' in content and 'fee_logs' in content:
+        print("ℹ️ Desktop sidebar already has Fee Logs link.")
+        return True
 
-    # Find insertion point: after the GymSettings class
-    gym_settings_marker = 'class GymSettings(models.Model):'
-    if gym_settings_marker not in content:
-        print("❌ Could not find 'class GymSettings' – cannot determine insertion point.")
-        sys.exit(1)
+    # Find the Vouchers link and insert after it
+    # Look for the line: <a href="{% url 'vouchers_list' ... and the closing </a>.
+    # We'll match the entire block: from the opening <a for vouchers to the closing </a> and insert after.
+    pattern = r'(<a href="{% url \'vouchers_list\' schema_name=tenant.schema_name %}" class="nav-item">.*?</a>)'
+    match = re.search(pattern, content, re.DOTALL)
+    if not match:
+        print("❌ Could not find Vouchers link in desktop base.html")
+        return False
 
-    # We'll insert after the entire GymSettings class definition, which ends with a blank line or next class
-    # Find the end of GymSettings class: look for a line that starts with 'class ' but not indented, after the class.
-    lines = content.splitlines()
-    insert_index = None
-    in_gym_settings = False
-    for i, line in enumerate(lines):
-        if line.startswith('class GymSettings'):
-            in_gym_settings = True
-        elif in_gym_settings and line.startswith('class ') and not line.startswith('    '):
-            # Found next class; insert before this line
-            insert_index = i
-            break
-        elif in_gym_settings and i == len(lines)-1:
-            # End of file
-            insert_index = len(lines)
-            break
+    # Insert the new link after the vouchers block
+    new_content = content.replace(match.group(0), match.group(0) + '\n' + DESKTOP_LINK)
 
-    if insert_index is None:
-        print("⚠️ Could not automatically find insertion point – adding at the end of the file.")
-        insert_index = len(lines)
-
-    # Insert the model definition (with a newline before)
-    lines.insert(insert_index, MODEL_DEFINITION)
-    new_content = '\n'.join(lines)
-    with open(MODELS_FILE, 'w') as f:
+    with open(DESKTOP_BASE, 'w', encoding='utf-8') as f:
         f.write(new_content)
-    print("✅ Inserted ManualGenerationLog model into models.py")
+    print("✅ Added Fee Logs link to desktop sidebar.")
+    return True
 
-def run_migration():
-    print("🔄 Running migration 0022...")
-    # Ensure the migration file exists
-    migration_file = "axis_saas/migrations/0022_add_log_type_to_manualgenerationlog.py"
-    if not os.path.exists(migration_file):
-        print("❌ Migration file 0022 not found! Please ensure the patcher created it.")
-        sys.exit(1)
+def patch_mobile():
+    if not MOBILE_MORE.exists():
+        print(f"❌ {MOBILE_MORE} not found.")
+        return False
 
-    # Run migrate for axis_saas
-    result = subprocess.run([sys.executable, "manage.py", "migrate", "axis_saas"], capture_output=True, text=True)
-    if result.returncode != 0:
-        print("❌ Migration failed:")
-        print(result.stderr)
-        sys.exit(1)
-    print("✅ Migration applied successfully.")
+    with open(MOBILE_MORE, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    if 'Fee Logs' in content and 'mobile_fee_logs' in content:
+        print("ℹ️ Mobile More page already has Fee Logs card.")
+        return True
+
+    # Find the Fee Vouchers card and insert after it
+    pattern = r'(<a href="{% url \'mobile_vouchers_list\' schema_name=tenant.schema_name %}" class="more-card">.*?</a>)'
+    match = re.search(pattern, content, re.DOTALL)
+    if not match:
+        print("❌ Could not find Fee Vouchers card in mobile/more.html")
+        return False
+
+    new_content = content.replace(match.group(0), match.group(0) + '\n' + MOBILE_CARD)
+
+    with open(MOBILE_MORE, 'w', encoding='utf-8') as f:
+        f.write(new_content)
+    print("✅ Added Fee Logs card to mobile More page.")
+    return True
+
+def main():
+    print("🚀 Adding Fee Logs links to sidebar and More page.\n")
+    ok_desktop = patch_desktop()
+    ok_mobile = patch_mobile()
+    if ok_desktop and ok_mobile:
+        print("\n✅ Done! Refresh the pages to see the new links.")
+    else:
+        print("\n⚠️  Some steps failed. Check the output above.")
 
 if __name__ == "__main__":
-    insert_model()
-    run_migration()
-    print("\n🎉 Done! Now restart the server: python manage.py runserver")
+    main()

@@ -517,6 +517,14 @@
                     <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg>
                     <span>Vouchers</span>
                 </a>
+
+                {% if tenant.tenant_type == 'school' %}
+                <a href="{% url 'fee_logs' schema_name=tenant.schema_name %}" class="nav-item">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                    <span>Fee Logs</span>
+                </a>
+                {% endif %}
+
                 {% endif %}
 
                 {% endif %}

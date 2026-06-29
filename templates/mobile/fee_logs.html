@@ -1,0 +1,540 @@
+{% extends 'mobile/base.html' %}
+{% load fee_extras %}
+{% block title %}Fee Logs | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    /* ---- Base Typography & Spacing ---- */
+    .page-header {
+        margin-bottom: 1.25rem;
+    }
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        margin-bottom: 0.1rem;
+        letter-spacing: -0.02em;
+    }
+    .page-desc {
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 400;
+    }
+
+    /* ---- Sticky Filter Bar ---- */
+    .filter-section {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        background: var(--bg);
+        padding: 0.5rem 0 0.75rem;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        align-items: center;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 1.75rem;
+        padding: 0.25rem 0.5rem 0.25rem 1rem;
+        border: 1px solid rgba(255,255,255,0.7);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        transition: box-shadow 0.2s;
+    }
+    .filter-row:focus-within {
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .filter-row select {
+        border: none;
+        background: transparent;
+        font-size: 0.85rem;
+        padding: 0.4rem 1.5rem 0.4rem 0.2rem;
+        outline: none;
+        color: var(--text);
+        font-weight: 500;
+        flex: 1;
+        min-width: 70px;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.2rem center;
+        padding-right: 1.5rem;
+        cursor: pointer;
+    }
+    .filter-row select:hover {
+        color: var(--primary);
+    }
+    .filter-row button {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: white;
+        border: none;
+        border-radius: 2.5rem;
+        padding: 0.35rem 1rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .filter-row button:hover {
+        transform: scale(1.02);
+        box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+    }
+    .filter-row .clear-btn {
+        background: transparent;
+        color: var(--muted);
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border: none;
+    }
+    .filter-row .clear-btn:hover {
+        color: var(--danger);
+    }
+    .filter-stats {
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-left: auto;
+        white-space: nowrap;
+        padding: 0.2rem 0.4rem;
+        background: var(--surface-alt);
+        border-radius: 2rem;
+        font-weight: 500;
+    }
+
+    /* ---- Card Grid ---- */
+    .log-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        margin-top: 0.75rem;
+        animation: fadeUp 0.5s ease forwards;
+    }
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(16px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .log-card {
+        background: rgba(255,255,255,0.96);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 1.5rem;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(255,255,255,0.6);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .log-card:active {
+        transform: scale(0.98);
+    }
+    .log-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    .log-card .top-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .log-card .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        background: var(--surface-alt);
+        color: var(--muted);
+    }
+    .badge-manual {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    .badge-auto {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .log-card .date-time {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+    }
+    .log-card .date-time svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--muted);
+    }
+
+    .log-card .month-year {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.01em;
+    }
+
+    .log-card .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin-top: 0.1rem;
+    }
+    .log-card .stats .stat-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: var(--surface-alt);
+        padding: 0.15rem 0.6rem;
+        border-radius: 2rem;
+        border: 1px solid var(--border);
+        font-weight: 500;
+    }
+    .log-card .stats .stat-item svg {
+        width: 14px;
+        height: 14px;
+        stroke: currentColor;
+        flex-shrink: 0;
+    }
+    .log-card .stats .stat-item strong {
+        color: var(--text);
+        font-weight: 600;
+    }
+    .stat-created svg { color: #10b981; }
+    .stat-skipped svg { color: #f59e0b; }
+    .stat-nofee svg { color: #ef4444; }
+
+    .log-card .triggered {
+        font-size: 0.7rem;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .log-card .triggered svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--muted);
+    }
+    .log-card .triggered strong {
+        color: var(--text);
+        font-weight: 600;
+    }
+
+    .log-card .actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.2rem;
+        justify-content: flex-end;
+    }
+    .log-card .actions a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.3rem 0.9rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        background: var(--primary);
+        color: white;
+        border: none;
+        transition: 0.2s;
+    }
+    .log-card .actions a:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+    }
+    .log-card .actions a svg {
+        width: 14px;
+        height: 14px;
+        stroke: white;
+    }
+    .log-card .actions .view-detail {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    .log-card .actions .view-detail:hover {
+        background: var(--surface);
+    }
+    .log-card .actions .view-detail svg {
+        stroke: var(--text);
+    }
+
+    /* ---- Empty State ---- */
+    .empty-state {
+        text-align: center;
+        padding: 2.5rem 1.5rem;
+        color: var(--muted);
+    }
+    .empty-state svg {
+        width: 56px;
+        height: 56px;
+        stroke: var(--muted);
+        opacity: 0.4;
+        margin-bottom: 0.75rem;
+    }
+    .empty-state h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 0.2rem;
+    }
+    .empty-state p {
+        font-size: 0.85rem;
+    }
+
+    /* ---- Pagination ---- */
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.3rem;
+        margin: 1.2rem 0 0.5rem;
+        flex-wrap: wrap;
+    }
+    .page-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.4rem;
+        height: 2.4rem;
+        padding: 0 0.6rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: 0.2s;
+    }
+    .page-link:hover {
+        background: var(--surface-alt);
+    }
+    .page-link.active {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    .page-link.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+
+    /* ---- Bottom spacer & Back button ---- */
+    .bottom-spacer {
+        height: 80px;
+    }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+        text-decoration: none;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: 0.2s;
+        margin-top: 0.5rem;
+    }
+    .back-link:hover {
+        background: var(--surface);
+        border-color: var(--primary);
+        color: var(--primary);
+    }
+    .back-link svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+    }
+
+    /* ---- Responsive fine-tune ---- */
+    @media (max-width: 480px) {
+        .filter-row {
+            padding: 0.2rem 0.4rem 0.2rem 0.6rem;
+            flex-wrap: wrap;
+        }
+        .filter-row select {
+            font-size: 0.75rem;
+            min-width: 60px;
+            padding-right: 1.2rem;
+        }
+        .filter-row button {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.8rem;
+        }
+        .log-card {
+            padding: 0.7rem;
+        }
+        .log-card .date-time {
+            font-size: 0.65rem;
+        }
+        .log-card .month-year {
+            font-size: 0.85rem;
+        }
+        .log-card .stats .stat-item {
+            font-size: 0.65rem;
+            padding: 0.05rem 0.4rem;
+        }
+        .page-link {
+            min-width: 2rem;
+            height: 2rem;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <h1 class="page-title">Fee Generation Logs</h1>
+    <p class="page-desc">History of manual and automated fee generations</p>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-section">
+    <form method="get" class="filter-row" id="filterForm">
+        <select name="month">
+            <option value="">Month</option>
+            {% for m in months %}
+            <option value="{{ m }}" {% if selected_month == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="year">
+            <option value="">Year</option>
+            {% for y in years %}
+            <option value="{{ y }}" {% if selected_year == y %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="log_type">
+            <option value="">Type</option>
+            {% for key, label in log_types %}
+            <option value="{{ key }}" {% if selected_log_type == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Apply</button>
+        {% if selected_month or selected_year or selected_log_type %}
+        <a href="{% url 'mobile_fee_logs' schema_name=tenant.schema_name %}" class="clear-btn" aria-label="Clear filters">✕</a>
+        {% endif %}
+        <span class="filter-stats">{{ logs.paginator.count }} log{{ logs.paginator.count|pluralize }}</span>
+    </form>
+</div>
+
+<!-- Log Cards -->
+<div class="log-grid">
+    {% for log in logs %}
+    <div class="log-card">
+        <div class="top-row">
+            <div class="badge badge-{{ log.log_type }}">
+                {% if log.log_type == 'manual' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                {% endif %}
+                {{ log.get_log_type_display }}
+            </div>
+            <span class="date-time">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                {{ log.generated_at|date:"d M Y H:i" }}
+            </span>
+        </div>
+
+        <div class="month-year">{{ log.month }}/{{ log.year }}</div>
+
+        <div class="stats">
+            <span class="stat-item stat-created">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+                Created <strong>{{ log.created_count }}</strong>
+            </span>
+            <span class="stat-item stat-skipped">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                Skipped (existing) <strong>{{ log.skipped_existing }}</strong>
+            </span>
+            <span class="stat-item stat-nofee">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+                Skipped (no fee) <strong>{{ log.skipped_no_fee }}</strong>
+            </span>
+        </div>
+
+        <div class="triggered">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Triggered by <strong>{{ log.triggered_by|default:"System" }}</strong>
+        </div>
+
+        <div class="actions">
+            <a href="{{ log.voucher_url }}" target="_blank" class="view-detail">
+                View Vouchers
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4m0 4h.01"/>
+        </svg>
+        <h3>No logs found</h3>
+        <p>No fee generation logs match your filters.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if logs.has_other_pages %}
+<div class="pagination">
+    {% if logs.has_previous %}
+        <a href="?page=1{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_log_type %}&log_type={{ selected_log_type }}{% endif %}" class="page-link" aria-label="First">&laquo;</a>
+        <a href="?page={{ logs.previous_page_number }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_log_type %}&log_type={{ selected_log_type }}{% endif %}" class="page-link" aria-label="Previous">‹</a>
+    {% else %}
+        <span class="page-link disabled">&laquo;</span>
+        <span class="page-link disabled">‹</span>
+    {% endif %}
+
+    <span class="page-link active">{{ logs.number }}</span>
+
+    {% if logs.has_next %}
+        <a href="?page={{ logs.next_page_number }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_log_type %}&log_type={{ selected_log_type }}{% endif %}" class="page-link" aria-label="Next">›</a>
+        <a href="?page={{ logs.paginator.num_pages }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_year %}&year={{ selected_year }}{% endif %}{% if selected_log_type %}&log_type={{ selected_log_type }}{% endif %}" class="page-link" aria-label="Last">&raquo;</a>
+    {% else %}
+        <span class="page-link disabled">›</span>
+        <span class="page-link disabled">&raquo;</span>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="bottom-spacer"></div>
+
+<!-- Back to Settings -->
+<div style="text-align:center;">
+    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}" class="back-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to Settings
+    </a>
+</div>
+{% endblock %}

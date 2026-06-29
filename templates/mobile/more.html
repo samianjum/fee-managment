@@ -129,6 +129,16 @@
         <h3>Fee Vouchers</h3>
         <p>View all student fee vouchers.</p>
     </a>
+
+    <!-- Fee Logs -->
+    <a href="{% url 'mobile_fee_logs' schema_name=tenant.schema_name %}" class="more-card">
+        <div class="icon-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </div>
+        <h3>Fee Logs</h3>
+        <p>View fee generation history.</p>
+    </a>
+
 <!-- Sell Separately -->
   <a href="{% url 'mobile_sell_separately' schema_name=tenant.schema_name %}" class="more-card">
     <div class="icon-wrapper">
