@@ -137,7 +137,6 @@ class FeeRecord(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     remarks = models.TextField(blank=True, null=True)
     extra_charges = models.JSONField(default=list, blank=True, null=True)
-    late_fee_accrued = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"), help_text="Accumulated late fee amount")
 
 
     class Meta:
