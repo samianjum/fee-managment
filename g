@@ -1,93 +1,67 @@
 #!/usr/bin/env python3
-"""
-AXIS Railway Deployment Patcher
-- Fixes database connection by making start.sh wait for PostgreSQL
-- Creates default tenant 'sh' if missing
-- Enforces DATABASE_URL in production
-Run once, then push to Railway.
-"""
-
 import os
 import re
+import sys
 
-START_SH = "start.sh"
-SETTINGS_FILE = "axis_saas/settings.py"
+MIGRATION_FILE = "axis_saas/migrations/0017_feerecord_due_date_offset_feerecord_late_fee_per_day_and_more.py"
 
-# --------------------------------------------------------------
-# 1. NEW START.SH (robust, with wait and tenant creation)
-# --------------------------------------------------------------
-NEW_START_SH = """#!/bin/bash
-set -e
+def patch_migration():
+    if not os.path.exists(MIGRATION_FILE):
+        print(f"❌ Migration file not found: {MIGRATION_FILE}")
+        sys.exit(1)
 
-# Wait for database to be ready (max 30s)
-echo "Waiting for PostgreSQL..."
-for i in {1..30}; do
-    if python -c "import os, psycopg2; psycopg2.connect(os.environ['DATABASE_URL'])" 2>/dev/null; then
-        echo "Database ready!"
-        break
-    fi
-    echo "Waiting... ($i/30)"
-    sleep 1
-done
-
-# Run migrations (public + tenants)
-echo "Running migrations..."
-python manage.py migrate
-
-# Ensure default tenant 'sh' exists
-echo "Creating default tenant (if missing)..."
-python manage.py shell -c "
-from axis_saas.models import SchoolClient
-SchoolClient.objects.get_or_create(
-    schema_name='sh',
-    defaults={
-        'name': 'School',
-        'admin_username': 'admin',
-        'admin_password': 'admin123',
-        'is_active': True
-    }
-)
-print('Tenant check complete.')
-"
-
-# Start Gunicorn
-echo "Starting Gunicorn..."
-exec gunicorn axis_saas.wsgi:application --bind 0.0.0.0:7860 --workers 2 --threads 4 --worker-class gthread
-"""
-
-# --------------------------------------------------------------
-# 2. PATCH SETTINGS.PY – enforce DATABASE_URL in production
-# --------------------------------------------------------------
-def patch_settings():
-    with open(SETTINGS_FILE, "r") as f:
+    with open(MIGRATION_FILE, "r") as f:
         content = f.read()
 
-    # Add a check after the DATABASES block
-    if "if not os.environ.get('DATABASE_URL'):" not in content:
-        # Insert right after the DATABASES assignment
-        pattern = r"(DATABASES\s*=\s*\{.*?\n\s*\})"
-        replacement = r"\1\n\n# Production check: ensure DATABASE_URL is set\nif not DEBUG and not os.environ.get('DATABASE_URL'):\n    raise RuntimeError(\"DATABASE_URL environment variable is required in production.\")\n"
-        new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-        with open(SETTINGS_FILE, "w") as f:
-            f.write(new_content)
-        print("✅ Patched settings.py: enforced DATABASE_URL in production.")
+    # Check if already patched (look for RunSQL)
+    if "RunSQL" in content and "ADD COLUMN IF NOT EXISTS" in content:
+        print("✅ Migration already patched. Skipping.")
+        return True
+
+    # Replace AddField operations with RunSQL
+    # We'll define a replacement pattern for AddField for SchoolFeeSettings and Student
+    new_ops = """
+    operations = [
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_schoolfeesettings ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_schoolfeesettings DROP COLUMN IF EXISTS automation_enabled;"
+        ),
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_student ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_student DROP COLUMN IF EXISTS automation_enabled;"
+        ),
+    ]
+    """
+
+    # Find the operations list and replace it
+    # We'll use regex to locate the operations assignment
+    pattern = r"operations\s*=\s*\[[\s\S]*?\]"
+    match = re.search(pattern, content)
+    if not match:
+        print("❌ Could not find 'operations = [...]' in migration file.")
+        sys.exit(1)
+
+    new_content = content[:match.start()] + new_ops + content[match.end():]
+
+    with open(MIGRATION_FILE, "w") as f:
+        f.write(new_content)
+
+    print(f"✅ Patched {MIGRATION_FILE} to use IF NOT EXISTS.")
+    return True
+
+def main():
+    print("🔄 Patching migration to handle duplicate column error...")
+    if patch_migration():
+        print("\n🔄 Running migrate to apply to all tenants...")
+        exit_code = os.system("python3 manage.py migrate")
+        if exit_code != 0:
+            print("❌ Migration failed. Please check the error output above.")
+            sys.exit(1)
+        print("✅ Migration completed successfully.")
+        print("\n🎉 You can now run: python3 manage.py runserver")
     else:
-        print("ℹ️ settings.py already contains the DATABASE_URL check.")
+        print("❌ Patching failed.")
+        sys.exit(1)
 
-# --------------------------------------------------------------
-# 3. OVERWRITE START.SH
-# --------------------------------------------------------------
-def patch_start_sh():
-    with open(START_SH, "w") as f:
-        f.write(NEW_START_SH)
-    print("✅ Replaced start.sh with robust version (waits for DB, creates tenant).")
-
-# --------------------------------------------------------------
-# 4. RUN
-# --------------------------------------------------------------
 if __name__ == "__main__":
-    print("🔧 AXIS Railway Patcher")
-    patch_start_sh()
-    patch_settings()
-    print("\n🎉 Done! Now commit and push to Railway.")
-    print("   The container will wait for PostgreSQL, run migrations, create tenant 'sh', and start.")
+    main()

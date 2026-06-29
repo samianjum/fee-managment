@@ -9,15 +9,15 @@ class Migration(migrations.Migration):
         ('axis_saas', '0016_feerecord_late_fee_per_day'),
     ]
 
+    
     operations = [
-    migrations.AddField(
-        model_name='schoolfeesettings',
-        name='automation_enabled',
-        field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
-    ),
-    migrations.AddField(
-        model_name='student',
-        name='automation_enabled',
-        field=models.BooleanField(default=False, help_text='Enable monthly auto‑generation of fees'),
-    ),
-]
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_schoolfeesettings ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_schoolfeesettings DROP COLUMN IF EXISTS automation_enabled;"
+        ),
+        migrations.RunSQL(
+            sql="ALTER TABLE axis_saas_student ADD COLUMN IF NOT EXISTS automation_enabled boolean DEFAULT false NOT NULL;",
+            reverse_sql="ALTER TABLE axis_saas_student DROP COLUMN IF EXISTS automation_enabled;"
+        ),
+    ]
+    
