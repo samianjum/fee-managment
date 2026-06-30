@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django_tenants.utils import schema_context
+from axis_saas.views import create_fee_generation_notification
 from axis_saas.models import SchoolClient, SchoolFeeSettings, Student, FeeRecord, FeeStructure, ManualGenerationLog
 from datetime import date, timedelta
 from decimal import Decimal
@@ -73,6 +74,10 @@ class Command(BaseCommand):
                         triggered_by='system',
                         log_type='auto'
                     )
+
+        # Create notification
+        create_fee_generation_notification(tenant.schema_name, month, year, created, 'system', mobile=False)
+
                     self.stdout.write(
                         f"{tenant.schema_name}: generated {created}, "
                         f"already had fee: {skipped_existing}, "

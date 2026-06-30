@@ -49,6 +49,20 @@ def require_school_feature(feature_key):
 
 
 from .models import SchoolClient, Student, FeeStructure, FeeRecord, PaymentTransaction, SchoolFeeSettings, Product, ProductCategory
+
+# --- Helper to create notification for fee generation ---
+def create_fee_generation_notification(schema_name, month, year, created_count, triggered_by, mobile=False):
+    """Create a notification for fee generation."""
+    from .models import Notification
+    from django_tenants.utils import schema_context
+    with schema_context(schema_name):
+        message = f"Fee vouchers generated for {month}/{year}: {created_count} records created."
+        if mobile:
+            link = f"/portal/{schema_name}/vouchers/mobile/?month={month}&year={year}"
+        else:
+            link = f"/portal/{schema_name}/vouchers/?month={month}&year={year}"
+        Notification.objects.create(message=message, link=link)
+
 from .forms import StudentForm, FeeCollectionForm, FeeSettingsForm, FeeStructureForm, FamilyPaymentForm
 from django.http import JsonResponse, HttpResponse
 from django.db import transaction
@@ -1369,6 +1383,10 @@ def manual_generate_api(request):
             triggered_by=request.session.get('school_admin_username', 'admin'),
             log_type='manual'
         )
+
+        # Create notification
+        create_fee_generation_notification(schema_name, month, year, created, request.session.get('school_admin_username', 'admin'), mobile=is_mobile_user_agent(request))
+
 
         message = f"Generated {created} fee records for {month}/{year}."
         if skipped_existing > 0:
@@ -3669,3 +3687,61 @@ def dismiss_notification(request, schema_name):
         current_max_id = FeeRecord.objects.aggregate(Max('id'))['id__max'] or 0
         request.session['last_fee_record_id'] = current_max_id
         return JsonResponse({'status': 'ok'})
+
+
+# ==================== NOTIFICATION API VIEWS ====================
+@require_tenant_type(['school'])
+def notifications_list_api(request, schema_name):
+    """Return list of notifications for the tenant, with unread count."""
+    from django.http import JsonResponse
+    from .models import Notification
+    from django_tenants.utils import schema_context
+    with schema_context(schema_name):
+        notifs = Notification.objects.all()[:50]
+        unread_count = Notification.objects.filter(is_read=False).count()
+        data = [{
+            'id': n.id,
+            'message': n.message,
+            'link': n.link,
+            'is_read': n.is_read,
+            'created_at': n.created_at.isoformat(),
+        } for n in notifs]
+        return JsonResponse({'notifications': data, 'unread_count': unread_count})
+
+@csrf_exempt
+@require_tenant_type(['school'])
+def mark_notification_read_api(request, schema_name):
+    """Mark a single notification as read."""
+    from django.http import JsonResponse
+    from .models import Notification
+    from django_tenants.utils import schema_context
+    import json
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    try:
+        data = json.loads(request.body)
+        notif_id = data.get('id')
+        if not notif_id:
+            return JsonResponse({'error': 'Missing id'}, status=400)
+        with schema_context(schema_name):
+            notif = Notification.objects.get(id=notif_id)
+            notif.is_read = True
+            notif.save()
+            return JsonResponse({'success': True})
+    except Notification.DoesNotExist:
+        return JsonResponse({'error': 'Notification not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@csrf_exempt
+@require_tenant_type(['school'])
+def mark_all_notifications_read_api(request, schema_name):
+    """Mark all notifications as read for the tenant."""
+    from django.http import JsonResponse
+    from .models import Notification
+    from django_tenants.utils import schema_context
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    with schema_context(schema_name):
+        updated = Notification.objects.filter(is_read=False).update(is_read=True)
+        return JsonResponse({'success': True, 'updated': updated})

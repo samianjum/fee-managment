@@ -460,6 +460,7 @@
             <div class="sidebar-header">
                 <div class="logo-area" id="logoArea">
                     <div class="logo-icon">{{ tenant.name|slice:":2"|upper }}</div>
+            <div style="margin-left: auto;">{% include "tenant/notification_bell.html" %}</div>
                     <span class="school-name">{{ tenant.name }}</span>
                 </div>
                 <button class="toggle-btn" id="sidebarToggleBtn" title="Collapse">

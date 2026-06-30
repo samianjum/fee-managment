@@ -1,0 +1,289 @@
+{% load static %}
+<div class="notification-wrapper-mobile">
+    <button class="notification-bell-mobile" id="notificationBellMobile" aria-label="Notifications">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        </svg>
+        <span class="notif-badge-mobile" id="notifBadgeMobile" style="display: none;">0</span>
+    </button>
+    <div class="notification-dropdown-mobile" id="notificationDropdownMobile">
+        <div class="dropdown-header-mobile">
+            <span>Notifications</span>
+            <button id="markAllReadMobileBtn" class="mark-all-read-mobile">Mark all read</button>
+        </div>
+        <div class="notification-list-mobile" id="notificationListMobile">
+            <div class="loading">Loading...</div>
+        </div>
+    </div>
+</div>
+<style>
+    .notification-wrapper-mobile {
+        position: relative;
+        display: inline-block;
+    }
+    .notification-bell-mobile {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.3rem 0.5rem;
+        border-radius: 2rem;
+        position: relative;
+        color: var(--text);
+        transition: background 0.2s;
+    }
+    .notification-bell-mobile:hover {
+        background: var(--surface-alt);
+    }
+    .notif-badge-mobile {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        background: #ef4444;
+        color: white;
+        border-radius: 50%;
+        padding: 0.05rem 0.35rem;
+        font-size: 0.6rem;
+        font-weight: 700;
+        line-height: 1.2;
+        min-width: 16px;
+        text-align: center;
+    }
+    .notification-dropdown-mobile {
+        position: absolute;
+        top: 110%;
+        right: -10px;
+        width: 320px;
+        max-height: 400px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        display: none;
+        overflow: hidden;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+    }
+    .notification-dropdown-mobile.open {
+        display: block;
+    }
+    .dropdown-header-mobile {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.6rem 1rem;
+        border-bottom: 1px solid var(--border);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .mark-all-read-mobile {
+        background: none;
+        border: none;
+        color: var(--primary);
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+    .notification-list-mobile {
+        max-height: 320px;
+        overflow-y: auto;
+        padding: 0.2rem 0;
+    }
+    .notification-item-mobile {
+        padding: 0.5rem 0.8rem;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.15s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+    }
+    .notification-item-mobile:hover {
+        background: var(--surface-alt);
+    }
+    .notification-item-mobile.unread {
+        background: rgba(59,130,246,0.04);
+        border-left: 3px solid var(--primary);
+    }
+    .notification-item-mobile .message {
+        flex: 1;
+        color: var(--text);
+    }
+    .notification-item-mobile .time {
+        font-size: 0.6rem;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+    .notification-item-mobile .dismiss {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        padding: 0.1rem 0.2rem;
+        font-size: 0.9rem;
+        line-height: 1;
+    }
+    .notification-item-mobile .dismiss:hover {
+        color: var(--danger);
+    }
+    .notification-empty-mobile {
+        padding: 1rem;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.8rem;
+    }
+    .notification-loading-mobile {
+        padding: 1rem;
+        text-align: center;
+        color: var(--muted);
+    }
+</style>
+<script>
+    
+        // Fix link for mobile: if on mobile and link points to /vouchers/ without /mobile/, rewrite it
+        function fixMobileLink(link) {
+            if (!link) return link;
+            var isMobile = /Mobile|Android|iP(hone|od|ad)|Opera Mini|IEMobile|BlackBerry|webOS|Fennec|Silk/i.test(navigator.userAgent);
+            if (isMobile && link.indexOf('/vouchers/') !== -1 && link.indexOf('/vouchers/mobile/') === -1) {
+                return link.replace('/vouchers/', '/vouchers/mobile/');
+            }
+            return link;
+        }
+(function() {
+        let dropdownOpen = false;
+        const bell = document.getElementById('notificationBellMobile');
+        const dropdown = document.getElementById('notificationDropdownMobile');
+        const list = document.getElementById('notificationListMobile');
+        const badge = document.getElementById('notifBadgeMobile');
+        const markAllBtn = document.getElementById('markAllReadMobileBtn');
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrfToken = getCookie('csrftoken');
+        const schema = '{{ tenant.schema_name }}';
+
+        function fetchNotifications() {
+            fetch(`/portal/${schema}/api/notifications/`)
+                .then(res => res.json())
+                .then(data => {
+                    const unread = data.unread_count || 0;
+                    if (unread > 0) {
+                        badge.style.display = 'inline';
+                        badge.textContent = unread > 99 ? '99+' : unread;
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                    if (dropdownOpen) {
+                        renderList(data.notifications);
+                    }
+                })
+                .catch(err => console.error('Notif fetch error:', err));
+        }
+
+        function renderList(notifs) {
+            if (!notifs || notifs.length === 0) {
+                list.innerHTML = '<div class="notification-empty-mobile">No notifications</div>';
+                return;
+            }
+            let html = '';
+            notifs.forEach(n => {
+                const isUnread = !n.is_read;
+                const time = new Date(n.created_at).toLocaleString();
+                html += `<div class="notification-item-mobile ${isUnread ? 'unread' : ''}" data-id="${n.id}" data-link="${n.link || ''}">
+                            <div class="message">${n.message}</div>
+                            <div class="time">${time}</div>
+                            <button class="dismiss" data-id="${n.id}" title="Mark read">×</button>
+                        </div>`;
+            });
+            list.innerHTML = html;
+            list.querySelectorAll('.notification-item-mobile').forEach(item => {
+                const id = item.dataset.id;
+                const link = item.dataset.link;
+                const isUnread = item.classList.contains('unread');
+                item.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('dismiss')) return;
+                    if (link) {
+                        window.location.href = link;
+                    }
+                    // Mark as read
+                    markRead(id);
+                });
+                const dismissBtn = item.querySelector('.dismiss');
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const id = this.dataset.id;
+                        markRead(id);
+                    });
+                }
+            });
+        }
+
+        function markRead(id) {
+            fetch(`/portal/${schema}/api/notifications/mark-read/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ id: id })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    fetchNotifications();
+                }
+            })
+            .catch(err => console.error('Mark read error:', err));
+        }
+
+        function markAllRead() {
+            fetch(`/portal/${schema}/api/notifications/mark-all-read/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    fetchNotifications();
+                }
+            })
+            .catch(err => console.error('Mark all read error:', err));
+        }
+
+        bell.addEventListener('click', function(e) {
+            e.stopPropagation();
+            dropdownOpen = !dropdownOpen;
+            dropdown.classList.toggle('open', dropdownOpen);
+            if (dropdownOpen) {
+                fetchNotifications();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (dropdownOpen && !bell.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+                dropdownOpen = false;
+            }
+        });
+
+        markAllBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            markAllRead();
+        });
+
+        fetchNotifications();
+        setInterval(fetchNotifications, 30000);
+    })();
+</script>
