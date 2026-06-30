@@ -1,0 +1,712 @@
+{% extends 'mobile/base.html' %}
+{% load fee_extras %}
+{% block title %}Dashboard | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ===== RESET / BASE ===== */
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.92);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --card-radius: 1.25rem;
+    --shadow-soft: 0 8px 30px rgba(15, 23, 42, 0.08);
+    --shadow-hover: 0 12px 40px rgba(15, 23, 42, 0.14);
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --gradient-hero: linear-gradient(145deg, #1e293b, #0f172a);
+  }
+
+  /* ===== HERO SECTION ===== */
+  .hero-card {
+    background: var(--gradient-hero);
+    color: white;
+    border-radius: 1.75rem;
+    padding: 1.6rem 1.4rem 1.2rem;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .hero-card .greeting {
+    font-size: 1.2rem;
+    font-weight: 500;
+    opacity: 0.9;
+    margin-bottom: 0.15rem;
+  }
+  .hero-card h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.02em;
+  }
+  .hero-card .sub {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.9rem;
+    margin-bottom: 0.8rem;
+  }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  .hero-stat {
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 1rem;
+    padding: 0.6rem 0.8rem;
+    text-align: center;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.8);
+  }
+  .hero-stat strong {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: white;
+    margin-top: 0.2rem;
+  }
+
+  /* ===== NOTIFICATION CAROUSEL ===== */
+  .notif-carousel-wrapper {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    padding: 0.6rem 0.8rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+    transition: var(--transition);
+  }
+  .notif-carousel-wrapper:hover {
+    box-shadow: var(--shadow-hover);
+  }
+  .notif-carousel {
+    display: flex;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+  }
+  .notif-slide {
+    flex: 0 0 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.3rem 0.2rem;
+    cursor: pointer;
+    min-height: 52px;
+  }
+  .notif-slide .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 2rem;
+    background: rgba(59,130,246,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+  .notif-slide .icon svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+  }
+  .notif-slide .msg {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.3;
+  }
+  .notif-slide .msg .highlight {
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .notif-slide .time {
+    font-size: 0.6rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .notif-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+  .notif-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: var(--transition);
+    cursor: pointer;
+  }
+  .notif-dot.active {
+    background: var(--primary);
+    width: 20px;
+    border-radius: 4px;
+  }
+  .notif-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    padding: 0.3rem 0;
+  }
+
+  /* ===== KPI STRIP ===== */
+  .kpi-strip {
+    display: flex;
+    gap: 0.6rem;
+    overflow-x: auto;
+    padding: 0.2rem 0 0.8rem;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    margin-bottom: 0.5rem;
+  }
+  .kpi-card {
+    flex: 0 0 140px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: var(--card-radius);
+    padding: 0.8rem 0.7rem;
+    border: 1px solid var(--glass-border);
+    scroll-snap-align: start;
+    box-shadow: var(--shadow-soft);
+    text-align: center;
+    transition: var(--transition);
+  }
+  .kpi-card:active {
+    transform: scale(0.96);
+  }
+  .kpi-card .label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  .kpi-card .value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 0.1rem;
+  }
+  .kpi-card .trend {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 0.05rem;
+  }
+
+  /* ===== QUICK ACTIONS ===== */
+  .section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1.2rem 0 0.6rem;
+  }
+  .section-heading h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .section-heading a {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.6rem;
+  }
+  .action-tile {
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    border-radius: var(--card-radius);
+    padding: 0.8rem 0.4rem;
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    transition: var(--transition);
+    text-align: center;
+  }
+  .action-tile:active {
+    transform: scale(0.94);
+  }
+  .action-tile .icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 2rem;
+    background: rgba(59,130,246,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+  }
+  .action-tile .icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .action-tile strong {
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  /* ===== ACTIVITY / DEFAULTER CARDS ===== */
+  .activity-card,
+  .defaulter-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(8px);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow-soft);
+    padding: 0.3rem 0.2rem;
+  }
+  .activity-row,
+  .defaulter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid rgba(148,163,184,0.10);
+  }
+  .activity-row:last-child,
+  .defaulter-row:last-child {
+    border-bottom: none;
+  }
+  .activity-row .info {
+    flex: 1;
+    min-width: 0;
+  }
+  .activity-row .info .name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text);
+  }
+  .activity-row .info .meta {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .activity-row .amount {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .defaulter-row .defaulter-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .defaulter-row .defaulter-info .name {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  .defaulter-row .defaulter-info .meta {
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+  .defaulter-row .defaulter-amount {
+    font-weight: 700;
+    color: var(--danger);
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  .defaulter-row .action-link {
+    color: var(--muted);
+    transition: var(--transition);
+    display: inline-flex;
+    padding: 0.2rem;
+  }
+  .defaulter-row .action-link:hover {
+    color: var(--primary);
+  }
+
+  /* ===== UTILITY ===== */
+  .bottom-spacer {
+    height: 90px;
+  }
+  .scroll-x {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 480px) {
+    .hero-card h1 {
+      font-size: 1.3rem;
+    }
+    .hero-stats {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+    .hero-stat {
+      padding: 0.4rem 0.4rem;
+      font-size: 0.6rem;
+    }
+    .hero-stat strong {
+      font-size: 1rem;
+    }
+    .kpi-card {
+      flex: 0 0 110px;
+      padding: 0.5rem 0.4rem;
+    }
+    .kpi-card .value {
+      font-size: 1rem;
+    }
+    .actions-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.4rem;
+    }
+    .action-tile {
+      padding: 0.5rem 0.2rem;
+    }
+    .action-tile .icon {
+      width: 34px;
+      height: 34px;
+    }
+    .action-tile strong {
+      font-size: 0.6rem;
+    }
+    .activity-row,
+    .defaulter-row {
+      padding: 0.4rem 0.4rem;
+      font-size: 0.75rem;
+    }
+    .notif-slide .msg {
+      font-size: 0.75rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<!-- ===== HERO ===== -->
+<div class="hero-card">
+  <div class="greeting">Welcome back</div>
+  <h1>{{ tenant.name }}</h1>
+  <div class="sub">School overview &amp; quick actions</div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      Students <strong>{{ total_students|humanize_number }}</strong>
+    </div>
+    <div class="hero-stat">
+      Collection <strong>{{ collection_rate }}%</strong>
+    </div>
+    <div class="hero-stat">
+      Defaulters <strong>{{ defaulters_count }}</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NOTIFICATION CAROUSEL ===== -->
+<div class="notif-carousel-wrapper" id="notifCarouselWrapper">
+  <div class="notif-carousel" id="notifCarousel">
+    <!-- Slides will be injected by JavaScript -->
+  </div>
+  <div class="notif-dots" id="notifDots"></div>
+</div>
+
+<!-- ===== KPI STRIP ===== -->
+<div class="kpi-strip scroll-x">
+  <div class="kpi-card">
+    <div class="label">Revenue</div>
+    <div class="value">₹{{ total_revenue|humanize_number }}</div>
+    <div class="trend">All time</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Pending</div>
+    <div class="value">₹{{ total_pending|humanize_number }}</div>
+    <div class="trend">All time</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Today</div>
+    <div class="value">₹{{ today_collection|humanize_number }}</div>
+    <div class="trend">{{ today|date:"d M" }}</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Defaulters</div>
+    <div class="value">{{ defaulters_count }}</div>
+    <div class="trend">Active</div>
+  </div>
+  <div class="kpi-card">
+    <div class="label">Low Stock</div>
+    <div class="value">{{ low_stock_count }}</div>
+    <div class="trend">Items < 10</div>
+  </div>
+</div>
+
+<!-- ===== QUICK ACTIONS ===== -->
+<div class="section-heading">
+  <h2>Quick actions</h2>
+  <a href="{% url 'mobile_more' schema_name=tenant.schema_name %}">
+    More <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+</div>
+<div class="actions-grid">
+  <a href="{% url 'add_student_mobile' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg></div>
+    <strong>Add Student</strong>
+  </a>
+  <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+    <strong>Fee Settings</strong>
+  </a>
+  <a href="{% url 'mobile_defaulters' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+    <strong>Defaulters</strong>
+  </a>
+  <a href="{% url 'mobile_reports' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+    <strong>Reports</strong>
+  </a>
+  <a href="{% url 'mobile_stock_management' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-4.18A3 3 0 0016 5.18V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v1.18A3 3 0 008.18 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 12v4m-2-2h4"/></svg></div>
+    <strong>Stock</strong>
+  </a>
+  <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="action-tile">
+    <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg></div>
+    <strong>Vouchers</strong>
+  </a>
+</div>
+
+<!-- ===== RECENT PAYMENTS ===== -->
+<div class="section-heading">
+  <h2>Recent payments</h2>
+  <a href="{% url 'mobile_reports' schema_name=tenant.schema_name %}?type=collection&quick_filter=all">
+    See all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+</div>
+<div class="activity-card">
+  {% if recent_payments %}
+    {% for p in recent_payments %}
+      <div class="activity-row">
+        <div class="info">
+          <div class="name">{{ p.student.name }}</div>
+          <div class="meta">{{ p.receipt_number }} • {{ p.payment_date|date:"d M" }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <div class="amount">₹{{ p.amount|floatformat:2 }}</div>
+          <a href="{% url 'mobile_fee_receipt' schema_name=tenant.schema_name receipt_id=p.id %}" class="action-link" title="Receipt">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="activity-row" style="justify-content:center; color:var(--muted); font-size:0.8rem; padding:0.8rem 0;">
+      No recent payments
+    </div>
+  {% endif %}
+</div>
+
+<!-- ===== TOP DEFAULTERS ===== -->
+<div class="section-heading">
+  <h2>Top defaulters</h2>
+  <a href="{% url 'mobile_defaulters' schema_name=tenant.schema_name %}">
+    View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+</div>
+<div class="defaulter-card">
+  {% if top_defaulters %}
+    {% for d in top_defaulters %}
+      <div class="defaulter-row">
+        <div class="defaulter-info">
+          <div class="name">{{ d.student.name }}</div>
+          <div class="meta">{{ d.student.father_name }} • {{ d.student.grade }} - {{ d.student.section }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <div class="defaulter-amount">₹{{ d.pending|floatformat:2 }}</div>
+          <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=d.student.id %}" class="action-link" title="Profile">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="defaulter-row" style="justify-content:center; color:var(--muted); font-size:0.8rem; padding:0.8rem 0;">
+      No defaulters
+    </div>
+  {% endif %}
+</div>
+
+<div class="bottom-spacer"></div>
+
+<!-- ===== JAVASCRIPT: NOTIFICATION CAROUSEL ===== -->
+<script>
+  (function() {
+    const schema = '{{ tenant.schema_name }}';
+    const carousel = document.getElementById('notifCarousel');
+    const dotsContainer = document.getElementById('notifDots');
+
+    let notifications = [];
+    let currentSlide = 0;
+    let slideInterval = null;
+    const AUTOPLAY_DELAY = 6000;
+
+    function fetchNotifications() {
+      fetch(`/portal/${schema}/api/notifications/`)
+        .then(res => res.json())
+        .then(data => {
+          notifications = data.notifications || [];
+          if (notifications.length === 0) {
+            carousel.innerHTML = `<div class="notif-empty">No notifications</div>`;
+            dotsContainer.innerHTML = '';
+            return;
+          }
+          renderCarousel();
+          startAutoplay();
+        })
+        .catch(err => {
+          console.error('Notif carousel error:', err);
+          carousel.innerHTML = `<div class="notif-empty">Could not load notifications</div>`;
+        });
+    }
+
+    function renderCarousel() {
+      // Build slides
+      let slidesHtml = '';
+      notifications.forEach((n, idx) => {
+        const isUnread = !n.is_read;
+        const icon = isUnread
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`;
+        const time = new Date(n.created_at).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' });
+        slidesHtml += `
+          <div class="notif-slide" data-id="${n.id}" data-link="${n.link || ''}" data-unread="${isUnread}">
+            <div class="icon">${icon}</div>
+            <div class="msg">${n.message}</div>
+            <div class="time">${time}</div>
+          </div>
+        `;
+      });
+      carousel.innerHTML = slidesHtml;
+
+      // Dots
+      let dotsHtml = '';
+      for (let i = 0; i < notifications.length; i++) {
+        dotsHtml += `<span class="notif-dot" data-index="${i}"></span>`;
+      }
+      dotsContainer.innerHTML = dotsHtml;
+      updateDots(0);
+
+      // Click handlers: navigate to link and mark as read
+      carousel.querySelectorAll('.notif-slide').forEach(slide => {
+        slide.addEventListener('click', function() {
+          const link = this.dataset.link;
+          const id = this.dataset.id;
+          const unread = this.dataset.unread === 'true';
+          if (link) {
+            window.location.href = link;
+          }
+          if (unread && id) {
+            // Mark as read in background
+            fetch(`/portal/${schema}/api/notifications/mark-read/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+              },
+              body: JSON.stringify({ id: parseInt(id) })
+            }).catch(err => console.warn('Mark read error:', err));
+          }
+        });
+      });
+
+      // Dot clicks
+      dotsContainer.querySelectorAll('.notif-dot').forEach(dot => {
+        dot.addEventListener('click', function() {
+          const index = parseInt(this.dataset.index);
+          goToSlide(index);
+        });
+      });
+    }
+
+    function goToSlide(index) {
+      if (notifications.length === 0) return;
+      const total = notifications.length;
+      currentSlide = (index + total) % total;
+      carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
+      updateDots(currentSlide);
+    }
+
+    function updateDots(index) {
+      dotsContainer.querySelectorAll('.notif-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === index);
+      });
+    }
+
+    function startAutoplay() {
+      if (slideInterval) clearInterval(slideInterval);
+      if (notifications.length <= 1) return;
+      slideInterval = setInterval(() => {
+        goToSlide(currentSlide + 1);
+      }, AUTOPLAY_DELAY);
+    }
+
+    function stopAutoplay() {
+      if (slideInterval) {
+        clearInterval(slideInterval);
+        slideInterval = null;
+      }
+    }
+
+    // Pause on hover
+    const wrapper = document.getElementById('notifCarouselWrapper');
+    wrapper.addEventListener('mouseenter', stopAutoplay);
+    wrapper.addEventListener('mouseleave', startAutoplay);
+    // Also pause on touch for mobile
+    wrapper.addEventListener('touchstart', stopAutoplay);
+    wrapper.addEventListener('touchend', startAutoplay);
+
+    function getCsrfToken() {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.startsWith('csrftoken=')) {
+            cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    // Initial load
+    fetchNotifications();
+
+    // Refresh every 30 seconds
+    setInterval(fetchNotifications, 30000);
+
+  })();
+</script>
+
+{% endblock %}
