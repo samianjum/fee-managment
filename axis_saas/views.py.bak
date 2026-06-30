@@ -2,7 +2,7 @@ import re
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, Http404
 from django.contrib import messages
-from django.db.models import Sum, Q, Exists, OuterRef, Max
+from django.db.models import Sum, Q, Exists, OuterRef
 from django.db.models.functions import TruncMonth, TruncDay
 from django.db.models import Count
 from django.core.paginator import Paginator
@@ -168,49 +168,8 @@ def dashboard(request, schema_name):
 def mobile_dashboard(request, schema_name):
     tenant = get_tenant(request, schema_name)
     context = get_dashboard_context(tenant, schema_name)
-
-    # ---- Notification banner logic ----
-    with schema_context(schema_name):
-        from .models import FeeRecord
-        current_max_id = FeeRecord.objects.aggregate(Max('id'))['id__max'] or 0
-        last_seen_id = request.session.get('last_fee_record_id')
-        if last_seen_id is None:
-            # First visit: set to current max, no banner
-            request.session['last_fee_record_id'] = current_max_id
-            show_banner = False
-            new_count = 0
-        elif current_max_id > last_seen_id:
-            show_banner = True
-            new_count = current_max_id - last_seen_id
-            # Don't update session yet; will update on dismiss or view vouchers
-        else:
-            show_banner = False
-            new_count = 0
-
-        # If the request has a dismiss parameter, update session and reload
-        if request.GET.get('dismiss_notification') == '1':
-            request.session['last_fee_record_id'] = current_max_id
-            show_banner = False
-            new_count = 0
-
-    context['show_notification_banner'] = show_banner
-    
-    context['new_vouchers_count'] = new_count
-    # ---- Get latest fee month/year ----
-    with schema_context(schema_name):
-        from .models import FeeRecord
-        latest_fee = FeeRecord.objects.order_by('-id').first()
-        if latest_fee:
-            context['voucher_month'] = latest_fee.month
-            context['voucher_year'] = latest_fee.year
-        else:
-            context['voucher_month'] = None
-            context['voucher_year'] = None
-    # ---- End month/year logic ----
-
-    # ---- End banner logic ----
-
     return render(request, 'mobile/dashboard.html', context)
+
 @require_tenant_type(['school'])
 @require_school_feature('dashboard')
 def mobile_more(request, schema_name):
@@ -3656,16 +3615,3 @@ def mobile_fee_logs(request, schema_name):
             'logo_url': tenant.school_logo.url if tenant.school_logo else None,
         }
     return render(request, 'mobile/fee_logs.html', context)
-
-
-# ---- Dismiss notification ----
-@require_tenant_type(['school'])
-def dismiss_notification(request, schema_name):
-    from django.http import JsonResponse
-    from .models import FeeRecord
-    from django.db.models import Max
-    from django_tenants.utils import schema_context
-    with schema_context(schema_name):
-        current_max_id = FeeRecord.objects.aggregate(Max('id'))['id__max'] or 0
-        request.session['last_fee_record_id'] = current_max_id
-        return JsonResponse({'status': 'ok'})

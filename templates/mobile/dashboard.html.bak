@@ -296,15 +296,6 @@
       <h1>Welcome back</h1>
       <p>School overview and quick actions</p>
     </div>
-
-
-
-    <!-- Notification Banner -->
-    {% if show_notification_banner %}
-        {% include "mobile/notification_banner.html" %}
-    {% endif %}
-    
-
     
   </div>
   <div class="hero-stat">
@@ -323,7 +314,12 @@
 </div>
 <div class="kpi-strip scroll-x">
   <div class="kpi-card">
-    <div class="label">Revenue</div><div class="value">₹{{ total_revenue|humanize_number }}</div>
+    <div class="label">Revenue</div>
+    {% if show_notification %}
+        {% include 'mobile/notification_banner.html' with notification_count=notification_count %}
+    {% endif %}
+
+    <div class="value">₹{{ total_revenue|humanize_number }}</div>
   </div>
   <div class="kpi-card">
     <div class="label">Pending</div>
