@@ -212,6 +212,7 @@ urlpatterns = [
     path('portal/<slug:schema_name>/students/<int:student_id>/', student_profile_view, name='student_profile'),
     
     # Fee collection
+        re_path(r'^portal/(?P<schema_name>[a-zA-Z0-9_-
     # Global Search API
     path('portal/<slug:schema_name>/api/global-search/', portal_wrapper(login_required_for_schema(global_search_api)), name='global_search_api'),
 re_path(r'^portal/(?P<schema_name>[a-zA-Z0-9_-]+)/fee/collection/(?:(?P<student_id>\d+)/)?$', fee_collection_view, name='fee_collection'),

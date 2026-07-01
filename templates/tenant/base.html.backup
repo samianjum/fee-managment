@@ -1,16 +1,4 @@
-#!/usr/bin/env python3
-"""
-Patcher for axis_school_sys/templates/tenant/base.html
-- Makes header rectangular, flush with top and sidebar edge.
-- Removes gap, full width, and adjusts content padding.
-"""
-import os
-import shutil
-
-TEMPLATE_PATH = "templates/tenant/base.html"
-BACKUP_PATH = TEMPLATE_PATH + ".backup"
-
-NEW_CONTENT = r"""{% load fee_extras %}
+{% load fee_extras %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -256,39 +244,32 @@ NEW_CONTENT = r"""{% load fee_extras %}
             min-height: 100vh;
             flex: 1;
             margin-left: 280px;
-            padding: 0;  /* remove all padding so header touches edges */
+            padding: 2rem;
             transition: var(--transition);
         }
         .sidebar.collapsed ~ .main-content {
             margin-left: 80px;
         }
 
-        /* Content area for the rest (messages + body) */
-        .content-area {
-            padding: 2rem;
-            padding-top: 1rem;  /* some spacing below header */
-        }
-
-        /* ===== TOP HEADER – RECTANGULAR, FLUSH ===== */
+        /* ===== TOP HEADER – PROFESSIONAL ===== */
         .top-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
             padding: 0.6rem 1.5rem;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            /* no border-radius */
-            border-radius: 0;
-            margin: 0;  /* no margin, flush */
-            width: 100%;
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.02);
+            margin-bottom: 1.5rem;
             transition: var(--transition);
+            position: relative;
         }
         [data-theme="dark"] .top-header {
-            background: rgba(30,41,59,0.85);
+            background: rgba(30,41,59,0.7);
             border-color: rgba(255,255,255,0.08);
         }
 
@@ -297,6 +278,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             align-items: center;
             gap: 0.75rem;
             flex-shrink: 0;
+            /* left side empty now – can be used for future elements */
         }
 
         .top-header .header-center {
@@ -344,7 +326,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             flex-shrink: 0;
         }
 
-        /* Notification bell */
+        /* Notification bell (now on right) */
         .top-header .notification-wrapper {
             position: relative;
             display: inline-flex;
@@ -446,9 +428,11 @@ NEW_CONTENT = r"""{% load fee_extras %}
             .top-header {
                 flex-wrap: wrap;
                 padding: 0.6rem 1rem;
+                border-radius: 1.5rem;
             }
             .top-header .header-left {
                 flex: 0 0 auto;
+                /* left side empty, hide if needed */
             }
             .top-header .header-right {
                 flex: 0 0 auto;
@@ -458,10 +442,6 @@ NEW_CONTENT = r"""{% load fee_extras %}
                 flex: 0 0 100%;
                 max-width: 100%;
                 margin-top: 0.25rem;
-            }
-            .content-area {
-                padding: 1rem;
-                padding-top: 0.5rem;
             }
         }
 
@@ -519,7 +499,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             }
             .main-content {
                 margin-left: 0;
-                padding: 0;
+                padding: 1rem;
             }
             .sidebar.collapsed ~ .main-content {
                 margin-left: 0;
@@ -809,10 +789,10 @@ NEW_CONTENT = r"""{% load fee_extras %}
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content" id="mainContent">
 
-            <!-- ===== TOP HEADER (Flush, rectangular) ===== -->
+            <!-- ===== TOP HEADER (Professional) ===== -->
             <header class="top-header">
                 <div class="header-left">
-                    <!-- Left side intentionally empty -->
+                    <!-- Left side is intentionally empty (only sidebar shows school name) -->
                 </div>
 
                 <div class="header-center">
@@ -831,12 +811,18 @@ NEW_CONTENT = r"""{% load fee_extras %}
                             <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
                         <span class="badge" id="notificationBadge" style="display: none;">0</span>
+                        <!-- Notification dropdown -->
                         <div class="notification-dropdown" id="notificationDropdown">
                             <div class="notif-empty">No notifications</div>
+                            <!-- Example items (you can replace with real data) -->
+                            <!-- <div class="notif-item">
+                                <span>Fee payment received from John</span>
+                                <span class="notif-time">2 min ago</span>
+                            </div> -->
                         </div>
                     </div>
 
-                    <!-- User Avatar -->
+                    <!-- User Avatar with Dropdown -->
                     <div class="profile-dropdown" id="headerProfileDropdown">
                         <div class="header-avatar" id="headerProfileBtn">A</div>
                         <div class="dropdown-menu" id="headerProfileMenu">
@@ -853,11 +839,8 @@ NEW_CONTENT = r"""{% load fee_extras %}
                 </div>
             </header>
 
-            <!-- Content area with padding for messages and body -->
-            <div class="content-area">
-                {% include "tenant/messages.html" %}
-                {% block body %}{% endblock %}
-            </div>
+            {% include "tenant/messages.html" %}
+            {% block body %}{% endblock %}
         </main>
     </div>
 
@@ -1045,7 +1028,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             });
         })();
 
-        // Notification bell
+        // ===== NOTIFICATION BELL =====
         (function() {
             const bell = document.getElementById('notificationBell');
             const dropdown = document.getElementById('notificationDropdown');
@@ -1054,6 +1037,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             bell.addEventListener('click', function(e) {
                 e.stopPropagation();
                 dropdown.classList.toggle('show');
+                // Position the dropdown below the bell
                 if (dropdown.classList.contains('show')) {
                     const rect = bell.getBoundingClientRect();
                     dropdown.style.position = 'fixed';
@@ -1172,29 +1156,4 @@ NEW_CONTENT = r"""{% load fee_extras %}
 
     {% include "tenant/voucher_modal.html" %}
 </body>
-</html>"""
-
-def main():
-    if not os.path.exists(TEMPLATE_PATH):
-        print(f"❌ Error: {TEMPLATE_PATH} not found. Are you in the project root?")
-        return
-
-    # Backup original
-    shutil.copy2(TEMPLATE_PATH, BACKUP_PATH)
-    print(f"✅ Backup saved to {BACKUP_PATH}")
-
-    # Write new content
-    with open(TEMPLATE_PATH, "w", encoding="utf-8") as f:
-        f.write(NEW_CONTENT)
-
-    print(f"✅ {TEMPLATE_PATH} successfully updated.")
-    print("👉 Changes:")
-    print("   - Header now rectangular (no border-radius).")
-    print("   - Header is flush with the top (touches sidebar's top edge).")
-    print("   - Header left edge exactly aligns with sidebar's right edge (no gap).")
-    print("   - When sidebar collapses, header adjusts automatically.")
-    print("   - Content below header has proper padding (2rem).")
-    print("Refresh your browser to see the changes.")
-
-if __name__ == "__main__":
-    main()
+</html>

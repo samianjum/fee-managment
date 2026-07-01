@@ -1,16 +1,4 @@
-#!/usr/bin/env python3
-"""
-Patcher for axis_school_sys/templates/tenant/base.html
-- Makes header rectangular, flush with top and sidebar edge.
-- Removes gap, full width, and adjusts content padding.
-"""
-import os
-import shutil
-
-TEMPLATE_PATH = "templates/tenant/base.html"
-BACKUP_PATH = TEMPLATE_PATH + ".backup"
-
-NEW_CONTENT = r"""{% load fee_extras %}
+{% load fee_extras %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -18,7 +6,6 @@ NEW_CONTENT = r"""{% load fee_extras %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}AXIS School Portal{% endblock %}</title>
     <style>
-        /* ----- Reset & Variables ----- */
         * {
             margin: 0;
             padding: 0;
@@ -65,7 +52,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             min-height: 100vh;
         }
 
-        /* ===== SIDEBAR ===== */
+        /* ========== SIDEBAR ========== */
         .sidebar {
             width: 280px;
             background: var(--surface);
@@ -195,7 +182,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             gap: 0.75rem;
         }
 
-        /* Profile dropdown (sidebar) */
+        /* Profile dropdown (unchanged) */
         .profile-dropdown { position: relative; }
         .profile-btn {
             display: flex;
@@ -251,221 +238,19 @@ NEW_CONTENT = r"""{% load fee_extras %}
         }
         .dropdown-item:hover { background: var(--surface-alt); color: var(--primary); }
 
-        /* ===== MAIN CONTENT ===== */
+        /* MAIN CONTENT */
         .main-content {
             min-height: 100vh;
             flex: 1;
             margin-left: 280px;
-            padding: 0;  /* remove all padding so header touches edges */
+            padding: 2rem;
             transition: var(--transition);
         }
         .sidebar.collapsed ~ .main-content {
             margin-left: 80px;
         }
 
-        /* Content area for the rest (messages + body) */
-        .content-area {
-            padding: 2rem;
-            padding-top: 1rem;  /* some spacing below header */
-        }
-
-        /* ===== TOP HEADER – RECTANGULAR, FLUSH ===== */
-        .top-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.6rem 1.5rem;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            /* no border-radius */
-            border-radius: 0;
-            margin: 0;  /* no margin, flush */
-            width: 100%;
-            transition: var(--transition);
-        }
-        [data-theme="dark"] .top-header {
-            background: rgba(30,41,59,0.85);
-            border-color: rgba(255,255,255,0.08);
-        }
-
-        .top-header .header-left {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        .top-header .header-center {
-            flex: 1;
-            min-width: 200px;
-            max-width: 560px;
-            margin: 0 auto;
-        }
-
-        .top-header .header-center .search-wrapper {
-            position: relative;
-            width: 100%;
-        }
-
-        .top-header .header-center .search-wrapper input {
-            width: 100%;
-            padding: 0.5rem 1rem 0.5rem 2.6rem;
-            border: 1px solid var(--border);
-            border-radius: 2rem;
-            background: var(--surface-alt);
-            color: var(--text);
-            font-size: 0.9rem;
-            transition: var(--transition);
-            outline: none;
-        }
-        .top-header .header-center .search-wrapper input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
-            background: var(--surface);
-        }
-        .top-header .header-center .search-wrapper .search-icon {
-            position: absolute;
-            left: 0.9rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--muted);
-            width: 18px;
-            height: 18px;
-        }
-
-        .top-header .header-right {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        /* Notification bell */
-        .top-header .notification-wrapper {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--surface-alt);
-            border: 1px solid var(--border);
-            transition: var(--transition);
-            cursor: pointer;
-            color: var(--text);
-        }
-        .top-header .notification-wrapper:hover {
-            background: var(--surface);
-            border-color: var(--primary);
-        }
-        .top-header .notification-wrapper .badge {
-            position: absolute;
-            top: -2px;
-            right: -2px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            font-size: 0.65rem;
-            font-weight: 700;
-            width: 20px;
-            height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid var(--surface);
-        }
-
-        /* Notification dropdown */
-        .notification-dropdown {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            background: var(--surface);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: 1rem;
-            box-shadow: var(--shadow);
-            min-width: 280px;
-            max-width: 360px;
-            padding: 0.5rem 0;
-            display: none;
-            z-index: 9999;
-        }
-        .notification-dropdown.show {
-            display: block;
-        }
-        .notification-dropdown .notif-item {
-            padding: 0.6rem 1rem;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.85rem;
-            color: var(--text);
-        }
-        .notification-dropdown .notif-item:last-child {
-            border-bottom: none;
-        }
-        .notification-dropdown .notif-item .notif-time {
-            font-size: 0.7rem;
-            color: var(--muted);
-            display: block;
-            margin-top: 0.2rem;
-        }
-        .notification-dropdown .notif-empty {
-            padding: 1rem;
-            text-align: center;
-            color: var(--muted);
-            font-size: 0.9rem;
-        }
-
-        /* User avatar in header */
-        .top-header .header-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: var(--transition);
-        }
-        .top-header .header-avatar:hover {
-            border-color: var(--primary);
-        }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .top-header {
-                flex-wrap: wrap;
-                padding: 0.6rem 1rem;
-            }
-            .top-header .header-left {
-                flex: 0 0 auto;
-            }
-            .top-header .header-right {
-                flex: 0 0 auto;
-            }
-            .top-header .header-center {
-                order: 3;
-                flex: 0 0 100%;
-                max-width: 100%;
-                margin-top: 0.25rem;
-            }
-            .content-area {
-                padding: 1rem;
-                padding-top: 0.5rem;
-            }
-        }
-
-        /* ===== MOBILE OVERLAY & BUTTON ===== */
+        /* Mobile Overlay */
         .sidebar-overlay {
             position: fixed;
             top: 0;
@@ -484,6 +269,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             transition: opacity 0.3s ease, visibility 0s linear 0s;
         }
 
+        /* Mobile menu button */
         .mobile-menu-btn {
             display: none;
             position: fixed;
@@ -498,6 +284,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             box-shadow: var(--shadow);
         }
 
+        /* Responsive */
         @media (max-width: 768px) {
             .mobile-menu-btn {
                 display: block;
@@ -519,14 +306,14 @@ NEW_CONTENT = r"""{% load fee_extras %}
             }
             .main-content {
                 margin-left: 0;
-                padding: 0;
+                padding: 1rem;
             }
             .sidebar.collapsed ~ .main-content {
                 margin-left: 0;
             }
         }
 
-        /* ===== BASE CARDS & UTILITIES ===== */
+        /* Base card styles (unchanged) */
         .stat-card, .card, .chart-card, .filter-card, .students-list-card, .student-panel, .history-card {
             background: var(--surface);
             backdrop-filter: blur(8px);
@@ -601,13 +388,57 @@ NEW_CONTENT = r"""{% load fee_extras %}
             font-size: 0.7rem;
             font-weight: 600;
         }
+    
+    
+@media all and (display-mode: standalone) {
+    #pwaInstallContainer { display: none !important; }
+    #installAppSidebarBtn { display: none !important; }
+}
 
-        /* PWA install button hiding */
-        @media all and (display-mode: standalone) {
-            #pwaInstallContainer { display: none !important; }
-            #installAppSidebarBtn { display: none !important; }
+    }
+    
+    /* ---- Top Header Styles ---- */
+    .top-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        flex-wrap: wrap;
+    }
+    .top-header .header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .top-header .header-center {
+        flex: 1;
+        min-width: 200px;
+    }
+    .top-header .header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    @media (max-width: 768px) {
+        .top-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
         }
-    </style>
+        .top-header .header-center {
+            order: 3;
+        }
+    }
+</style>
+    {% block extra_head %}{% endblock %}
 
     <!-- GYM COLOR OVERRIDE -->
     <style>
@@ -641,26 +472,72 @@ NEW_CONTENT = r"""{% load fee_extras %}
         .tenant-gym .tab.active {
             background: var(--primary);
         }
-    </style>
+    
+    
+@media all and (display-mode: standalone) {
+    #pwaInstallContainer { display: none !important; }
+    #installAppSidebarBtn { display: none !important; }
+}
 
-    {% block extra_head %}{% endblock %}
+    }
+    
+    /* ---- Top Header Styles ---- */
+    .top-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow-sm);
+        flex-wrap: wrap;
+    }
+    .top-header .header-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .top-header .header-center {
+        flex: 1;
+        min-width: 200px;
+    }
+    .top-header .header-right {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    @media (max-width: 768px) {
+        .top-header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+        .top-header .header-center {
+            order: 3;
+        }
+    }
+</style>
     <link rel="manifest" href="/portal/{{ tenant.schema_name }}/manifest.json">
     <meta name="theme-color" content="#3b82f6">
     <meta name="apple-mobile-web-app-capable" content="yes">
 </head>
 <body class="tenant-{{ tenant.tenant_type }}">
     <div class="app">
-        <!-- Mobile hamburger -->
+        <!-- Mobile hamburger button -->
         <div class="mobile-menu-btn" id="mobileMenuBtn">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
             </svg>
         </div>
 
-        <!-- Sidebar overlay -->
+        <!-- Sidebar overlay (mobile only) -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <!-- ===== SIDEBAR ===== -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo-area" id="logoArea">
@@ -729,9 +606,10 @@ NEW_CONTENT = r"""{% load fee_extras %}
                     <span>Fee Logs</span>
                 </a>
                 {% endif %}
-                {% endif %}
+
                 {% endif %}
 
+                {% endif %}
                 {% if tenant.tenant_type == 'gym' %}
                 <a href="{% url 'gym_dashboard' schema_name=tenant.schema_name %}" class="nav-item">
                     <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
@@ -758,16 +636,15 @@ NEW_CONTENT = r"""{% load fee_extras %}
                     <span>Settings</span>
                 </a>
                 {% endif %}
-
-                <!-- PWA Install button (sidebar) -->
+            
+                <!-- PWA Install Button (inside nav list) -->
                 <button id="installAppSidebarBtn" class="nav-item" style="display: flex; width: 100%; background: none; border: none; text-align: left; cursor: pointer;">
                     <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
                     </svg>
                     <span>Install App</span>
                 </button>
-            </nav>
-
+</nav>
             <div class="sidebar-footer">
                 <div class="profile-dropdown" id="profileDropdownContainer">
                     <button class="profile-btn" id="profileBtn">
@@ -801,67 +678,33 @@ NEW_CONTENT = r"""{% load fee_extras %}
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
                             <span>Logout</span>
                         </a>
-                    </div>
+                    
+                <!-- PWA Install Button (Sidebar) -->
+                
+</div>
                 </div>
             </div>
         </aside>
-
-        <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content" id="mainContent">
 
-            <!-- ===== TOP HEADER (Flush, rectangular) ===== -->
-            <header class="top-header">
-                <div class="header-left">
-                    <!-- Left side intentionally empty -->
-                </div>
-
-                <div class="header-center">
-                    <div class="search-wrapper">
-                        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-                        </svg>
-                        {% include "tenant/global_search.html" %}
-                    </div>
-                </div>
-
-                <div class="header-right">
-                    <!-- Notification Bell -->
-                    <div class="notification-wrapper" id="notificationBell">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        <span class="badge" id="notificationBadge" style="display: none;">0</span>
-                        <div class="notification-dropdown" id="notificationDropdown">
-                            <div class="notif-empty">No notifications</div>
-                        </div>
-                    </div>
-
-                    <!-- User Avatar -->
-                    <div class="profile-dropdown" id="headerProfileDropdown">
-                        <div class="header-avatar" id="headerProfileBtn">A</div>
-                        <div class="dropdown-menu" id="headerProfileMenu">
-                            <button onclick="toggleTheme()" class="dropdown-item">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                                <span>Theme</span>
-                            </button>
-                            <a href="{% url 'tenant_logout' schema_name=tenant.schema_name %}" class="dropdown-item">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
-                                <span>Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </header>
-
-            <!-- Content area with padding for messages and body -->
-            <div class="content-area">
-                {% include "tenant/messages.html" %}
-                {% block body %}{% endblock %}
-            </div>
+    <!-- ===== TOP HEADER (Desktop) ===== -->
+    <header class="top-header">
+        <div class="header-left">
+            {% include "tenant/notification_bell.html" %}
+        </div>
+        <div class="header-center">
+            {% include "tenant/global_search.html" %}
+        </div>
+        <div class="header-right">
+            <!-- Additional header items can go here -->
+        </div>
+    </header>
+    
+            {% include "tenant/messages.html" %}
+            {% block body %}{% endblock %}
         </main>
     </div>
 
-    <!-- ===== JAVASCRIPT ===== -->
     <script>
         // Sidebar collapse / expand (desktop)
         const sidebar = document.getElementById('sidebar');
@@ -910,6 +753,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
         if (overlay) {
             overlay.addEventListener('click', closeMobileSidebar);
         }
+        // Also close when clicking the toggle button inside sidebar on mobile
         if (toggleBtn) {
             toggleBtn.addEventListener('click', function(e) {
                 if (isMobile()) {
@@ -918,13 +762,14 @@ NEW_CONTENT = r"""{% load fee_extras %}
                 }
             });
         }
+        // Close sidebar when a navigation link is clicked on mobile
         document.querySelectorAll('.nav-item').forEach(link => {
             link.addEventListener('click', function() {
                 if (isMobile()) closeMobileSidebar();
             });
         });
 
-        // Theme toggle
+        // Theme
         const root = document.documentElement;
         const savedTheme = localStorage.getItem('theme');
         if (savedTheme === 'dark') root.setAttribute('data-theme', 'dark');
@@ -934,7 +779,7 @@ NEW_CONTENT = r"""{% load fee_extras %}
             localStorage.setItem('theme', isDark ? 'light' : 'dark');
         }
 
-        // Profile dropdown (sidebar)
+        // Profile dropdown (same as before, with position adjustments)
         (function() {
             const profileBtn = document.getElementById('profileBtn');
             const dropdown = document.getElementById('profileDropdown');
@@ -987,8 +832,13 @@ NEW_CONTENT = r"""{% load fee_extras %}
 
             profileBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                dropdown.classList.toggle('show');
-                if (dropdown.classList.contains('show')) setTimeout(positionDropdown, 10);
+                const isVisible = dropdown.classList.contains('show');
+                if (isVisible) {
+                    dropdown.classList.remove('show');
+                } else {
+                    dropdown.classList.add('show');
+                    setTimeout(positionDropdown, 10);
+                }
             });
 
             window.addEventListener('resize', function() {
@@ -1016,151 +866,71 @@ NEW_CONTENT = r"""{% load fee_extras %}
                 e.stopPropagation();
             });
         })();
-
-        // Header profile dropdown
-        (function() {
-            const avatarBtn = document.getElementById('headerProfileBtn');
-            const menu = document.getElementById('headerProfileMenu');
-            if (!avatarBtn || !menu) return;
-
-            avatarBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                menu.classList.toggle('show');
-                if (menu.classList.contains('show')) {
-                    const rect = avatarBtn.getBoundingClientRect();
-                    menu.style.position = 'fixed';
-                    menu.style.top = (rect.bottom + 6) + 'px';
-                    menu.style.right = (window.innerWidth - rect.right) + 'px';
-                    menu.style.left = 'auto';
-                    menu.style.bottom = 'auto';
-                    menu.style.margin = '0';
-                    menu.style.width = '200px';
-                }
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!avatarBtn.contains(e.target) && !menu.contains(e.target)) {
-                    menu.classList.remove('show');
-                }
-            });
-        })();
-
-        // Notification bell
-        (function() {
-            const bell = document.getElementById('notificationBell');
-            const dropdown = document.getElementById('notificationDropdown');
-            if (!bell || !dropdown) return;
-
-            bell.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
-                if (dropdown.classList.contains('show')) {
-                    const rect = bell.getBoundingClientRect();
-                    dropdown.style.position = 'fixed';
-                    dropdown.style.top = (rect.bottom + 6) + 'px';
-                    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-                    dropdown.style.left = 'auto';
-                    dropdown.style.bottom = 'auto';
-                    dropdown.style.margin = '0';
-                }
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-        })();
-
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed:', err));
-        }
     </script>
+    <script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Service Worker registered'))
+        .catch(err => console.log('Service Worker registration failed:', err));
+}
+</script>
 
-    <!-- PWA Install Fallback Modal -->
-    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-        <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-            <h3 style="margin-top:0;">Install App</h3>
-            <p>To install this app on your device:</p>
-            <ul style="padding-left:1.5rem; margin:0.5rem 0;">
-                <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
-                <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
-                <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
-            </ul>
-            <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
-        </div>
+    <!-- Custom Install Button (PWA) -->
+    
+    
+    
+
+<!-- Fallback Install Modal (shown if native prompt not available) -->
+<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <h3 style="margin-top:0;">Install App</h3>
+        <p>To install this app on your device:</p>
+        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
+            <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
+            <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
+            <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
+        </ul>
+        <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
     </div>
-    <script>
-        document.getElementById('closeFallbackModal')?.addEventListener('click', function() {
-            document.getElementById('installFallbackModal').style.display = 'none';
-        });
-        document.getElementById('installFallbackModal')?.addEventListener('click', function(e) {
-            if (e.target === this) this.style.display = 'none';
-        });
-    </script>
+</div>
+<script>
+    document.getElementById('closeFallbackModal')?.addEventListener('click', function() {
+        document.getElementById('installFallbackModal').style.display = 'none';
+    });
+    // Close on overlay click
+    document.getElementById('installFallbackModal')?.addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+</script>
 
-    <!-- PWA Install Buttons -->
-    <script>
-        (function() {
-            let deferredPrompt;
-            const floatingBtn = document.getElementById('installAppBtn');
-            const sidebarBtn = document.getElementById('installAppSidebarBtn');
-            const fallbackModal = document.getElementById('installFallbackModal');
 
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                console.log('beforeinstallprompt fired');
-            });
-
-            async function triggerInstall() {
-                if (deferredPrompt) {
+<script>
+    // Ensure sidebar install button works with fallback
+    (function() {
+        const sidebarBtn = document.getElementById('installAppSidebarBtn');
+        if (sidebarBtn) {
+            // Remove any existing listeners to avoid duplicates
+            sidebarBtn.replaceWith(sidebarBtn.cloneNode(true));
+            const newBtn = document.getElementById('installAppSidebarBtn');
+            newBtn.addEventListener('click', async () => {
+                if (typeof deferredPrompt !== 'undefined' && deferredPrompt) {
                     deferredPrompt.prompt();
                     const result = await deferredPrompt.userChoice;
                     if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
-                        if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
-                        if (sidebarBtn) sidebarBtn.style.display = 'none';
-                    } else {
-                        console.log('User dismissed install');
+                        console.log('Accepted');
+                        newBtn.style.display = 'none';
                     }
                     deferredPrompt = null;
                 } else {
-                    if (fallbackModal) fallbackModal.style.display = 'flex';
+                    document.getElementById('installFallbackModal').style.display = 'flex';
                 }
-            }
-
-            if (floatingBtn) {
-                floatingBtn.addEventListener('click', triggerInstall);
-            }
-            if (sidebarBtn) {
-                sidebarBtn.addEventListener('click', triggerInstall);
-            }
-
-            window.addEventListener('appinstalled', () => {
-                console.log('App installed');
-                if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
-                if (sidebarBtn) sidebarBtn.style.display = 'none';
             });
+        }
+    })();
+</script>
 
-            const closeFallback = document.getElementById('closeFallbackModal');
-            if (closeFallback) {
-                closeFallback.addEventListener('click', () => {
-                    if (fallbackModal) fallbackModal.style.display = 'none';
-                });
-            }
-            if (fallbackModal) {
-                fallbackModal.addEventListener('click', (e) => {
-                    if (e.target === fallbackModal) fallbackModal.style.display = 'none';
-                });
-            }
-        })();
-    </script>
 
-    <!-- Floating Install Button -->
+    <!-- Floating Install Button (always visible) -->
     <div id="pwaInstallContainer" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex;">
         <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1170,31 +940,74 @@ NEW_CONTENT = r"""{% load fee_extras %}
         </button>
     </div>
 
+
+<script>
+    (function() {
+        let deferredPrompt;
+        const floatingBtn = document.getElementById('installAppBtn');
+        const sidebarBtn = document.getElementById('installAppSidebarBtn');
+        const fallbackModal = document.getElementById('installFallbackModal');
+
+        // Listen for beforeinstallprompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('beforeinstallprompt fired');
+        });
+
+        // Function to trigger install or fallback
+        async function triggerInstall() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const result = await deferredPrompt.userChoice;
+                if (result.outcome === 'accepted') {
+                    console.log('User accepted install');
+                    // Hide both buttons after installation
+                    if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
+                    if (sidebarBtn) sidebarBtn.style.display = 'none';
+                } else {
+                    console.log('User dismissed install');
+                }
+                deferredPrompt = null;
+            } else {
+                // No native prompt – show fallback modal
+                if (fallbackModal) fallbackModal.style.display = 'flex';
+            }
+        }
+
+        // Attach to floating button
+        if (floatingBtn) {
+            floatingBtn.addEventListener('click', triggerInstall);
+        }
+
+        // Attach to sidebar button
+        if (sidebarBtn) {
+            sidebarBtn.addEventListener('click', triggerInstall);
+        }
+
+        // Hide buttons once installed (appinstalled event)
+        window.addEventListener('appinstalled', () => {
+            console.log('App installed');
+            if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
+            if (sidebarBtn) sidebarBtn.style.display = 'none';
+        });
+
+        // Also hide fallback modal when close button clicked
+        const closeFallback = document.getElementById('closeFallbackModal');
+        if (closeFallback) {
+            closeFallback.addEventListener('click', () => {
+                if (fallbackModal) fallbackModal.style.display = 'none';
+            });
+        }
+        if (fallbackModal) {
+            fallbackModal.addEventListener('click', (e) => {
+                if (e.target === fallbackModal) fallbackModal.style.display = 'none';
+            });
+        }
+
+    })();
+</script>
+
     {% include "tenant/voucher_modal.html" %}
 </body>
-</html>"""
-
-def main():
-    if not os.path.exists(TEMPLATE_PATH):
-        print(f"❌ Error: {TEMPLATE_PATH} not found. Are you in the project root?")
-        return
-
-    # Backup original
-    shutil.copy2(TEMPLATE_PATH, BACKUP_PATH)
-    print(f"✅ Backup saved to {BACKUP_PATH}")
-
-    # Write new content
-    with open(TEMPLATE_PATH, "w", encoding="utf-8") as f:
-        f.write(NEW_CONTENT)
-
-    print(f"✅ {TEMPLATE_PATH} successfully updated.")
-    print("👉 Changes:")
-    print("   - Header now rectangular (no border-radius).")
-    print("   - Header is flush with the top (touches sidebar's top edge).")
-    print("   - Header left edge exactly aligns with sidebar's right edge (no gap).")
-    print("   - When sidebar collapses, header adjusts automatically.")
-    print("   - Content below header has proper padding (2rem).")
-    print("Refresh your browser to see the changes.")
-
-if __name__ == "__main__":
-    main()
+</html>

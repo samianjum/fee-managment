@@ -3745,3 +3745,79 @@ def mark_all_notifications_read_api(request, schema_name):
     with schema_context(schema_name):
         updated = Notification.objects.filter(is_read=False).update(is_read=True)
         return JsonResponse({'success': True, 'updated': updated})
+
+
+# ==================== GLOBAL SEARCH API ====================
+@require_tenant_type(['school'])
+def global_search_api(request, schema_name):
+    """API endpoint for global search across students, fees, payments, products, categories."""
+    from django.db.models import Q
+    from .models import Student, FeeRecord, PaymentTransaction, Product, ProductCategory
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'error': 'Query too short'}, status=400)
+
+    results = {}
+
+    # Search Students
+    students = Student.objects.filter(
+        Q(name__icontains=q) |
+        Q(roll_number__icontains=q) |
+        Q(father_name__icontains=q) |
+        Q(father_cnic__icontains=q) |
+        Q(parent_mobile__icontains=q)
+    )[:10]
+    results['students'] = [{
+        'title': s.name,
+        'subtitle': f"Roll: {s.roll_number} | {s.grade} - {s.section}",
+        'type': 'Student',
+        'url': f'/portal/{schema_name}/students/{s.id}/',
+    } for s in students]
+
+    # Search FeeRecords (by student name, month/year)
+    fees = FeeRecord.objects.filter(
+        Q(student__name__icontains=q) |
+        Q(month__icontains=q) |
+        Q(year__icontains=q)
+    )[:10]
+    results['fees'] = [{
+        'title': f"{fr.student.name} - {fr.month}/{fr.year}",
+        'subtitle': f"Amount: ₹{fr.total_amount} | Status: {fr.get_status_display()}",
+        'type': 'Fee',
+        'url': f'/portal/{schema_name}/students/{fr.student.id}/',
+    } for fr in fees]
+
+    # Search Payments (by receipt number, student name)
+    payments = PaymentTransaction.objects.filter(
+        Q(receipt_number__icontains=q) |
+        Q(student__name__icontains=q)
+    )[:10]
+    results['payments'] = [{
+        'title': p.receipt_number,
+        'subtitle': f"{p.student.name} - ₹{p.amount} on {p.payment_date}",
+        'type': 'Payment',
+        'url': f'/portal/{schema_name}/fee/receipt/{p.id}/',
+    } for p in payments]
+
+    # Search Products
+    products = Product.objects.filter(
+        Q(name__icontains=q) |
+        Q(sku__icontains=q)
+    )[:10]
+    results['products'] = [{
+        'title': p.name,
+        'subtitle': f"SKU: {p.sku} | Price: ₹{p.selling_price} | Stock: {p.quantity}",
+        'type': 'Product',
+        'url': f'/portal/{schema_name}/stock/product/{p.id}/',
+    } for p in products]
+
+    # Search Categories
+    categories = ProductCategory.objects.filter(name__icontains=q)[:10]
+    results['categories'] = [{
+        'title': c.name,
+        'subtitle': c.description or '',
+        'type': 'Category',
+        'url': f'/portal/{schema_name}/stock/?category={c.id}',
+    } for c in categories]
+
+    return JsonResponse(results)
