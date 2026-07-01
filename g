@@ -1,122 +1,103 @@
 #!/usr/bin/env python3
 """
-Patcher: Add mobile parameter to global search API call and view.
+Fix PWA install button visibility and create missing icons.
+Run this script once from the project root.
 """
 
 import os
 import re
+import shutil
+import subprocess
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
 
-VIEWS_PATH = "axis_saas/views.py"
-TEMPLATE_PATH = "templates/tenant/global_search.html"
+PROJECT_ROOT = Path(__file__).parent.absolute()
+STATIC_PWA_DIR = PROJECT_ROOT / "static" / "pwa"
+TEMPLATES_DIR = PROJECT_ROOT / "templates"
 
-def patch_views(filepath):
-    """Modify global_search_api to use mobile GET param."""
-    if not os.path.exists(filepath):
-        print(f"❌ File not found: {filepath}")
-        return False
+# ---------- Create PWA icons ----------
+def create_icon(size, output_path):
+    """Create a simple icon with text."""
+    img = Image.new('RGB', (size, size), color=(79, 70, 229))  # primary color
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", size // 4)
+    except:
+        font = ImageFont.load_default()
+    text = "AXIS"
+    # Center text
+    bbox = draw.textbbox((0, 0), text, font=font)
+    w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    x = (size - w) // 2
+    y = (size - h) // 2
+    draw.text((x, y), text, fill="white", font=font)
+    img.save(output_path)
+    print(f"✅ Created {output_path}")
 
-    with open(filepath, "r", encoding="utf-8") as f:
+def ensure_icons():
+    STATIC_PWA_DIR.mkdir(parents=True, exist_ok=True)
+    icon_192 = STATIC_PWA_DIR / "icon-192x192.png"
+    icon_512 = STATIC_PWA_DIR / "icon-512x512.png"
+    if not icon_192.exists():
+        create_icon(192, icon_192)
+    else:
+        print(f"⏩ {icon_192} already exists")
+    if not icon_512.exists():
+        create_icon(512, icon_512)
+    else:
+        print(f"⏩ {icon_512} already exists")
+
+# ---------- Update templates ----------
+def update_template(file_path):
+    """Make install button always visible."""
+    if not file_path.exists():
+        print(f"⚠️  {file_path} not found, skipping")
+        return
+    with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
+    # Find the container div and change display: none; to display: flex;
+    pattern = r'(<div id="pwaInstallContainer"[^>]*style="[^"]*display:\s*none[^"]*")'
+    replacement = r'\1'  # we'll replace with a version that has display:flex
+    # More robust: replace the entire style attribute or just the display part.
+    # We'll look for the exact line and replace.
+    lines = content.splitlines()
+    modified = False
+    for i, line in enumerate(lines):
+        if 'id="pwaInstallContainer"' in line and 'display: none' in line:
+            new_line = line.replace('display: none;', 'display: flex;')
+            lines[i] = new_line
+            modified = True
+            break
+    if modified:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(lines))
+        print(f"✅ Updated {file_path}")
+    else:
+        print(f"ℹ️  No change needed in {file_path} (maybe already fixed)")
 
-    # Find the global_search_api function
-    func_pattern = r'(def global_search_api\(request, schema_name\):.*?)(?=\n\S*def |\Z)'
-    match = re.search(func_pattern, content, re.DOTALL)
-    if not match:
-        print("❌ Could not find global_search_api function.")
-        return False
-
-    old_func = match.group(1)
-
-    # Replace the mobile detection lines with a single line using GET param
-    # We'll find the line(s) setting mobile and replace with:
-    # mobile = request.GET.get('mobile') == '1'
-    lines = old_func.splitlines()
-    new_lines = []
-    inside_function = False
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("def global_search_api"):
-            inside_function = True
-            new_lines.append(line)
-            # Insert the new mobile detection line after the def
-            new_lines.append("    mobile = request.GET.get('mobile') == '1'")
-            continue
-        if inside_function and stripped.startswith("mobile ="):
-            # Skip the old mobile lines
-            continue
-        new_lines.append(line)
-
-    new_func = "\n".join(new_lines)
-
-    # Replace old function with new one
-    new_content = content.replace(old_func, new_func)
-
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-
-    print(f"✅ Patched {filepath}")
-    return True
-
-
-def patch_template(filepath):
-    """Modify the JavaScript to add mobile=1 to the API fetch."""
-    if not os.path.exists(filepath):
-        print(f"❌ File not found: {filepath}")
-        return False
-
-    with open(filepath, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Find the fetch call: `fetch(\`/portal/${schema}/api/global-search/?q=${encodeURIComponent(currentQuery)}\`)`
-    # We need to add `&mobile=1` if the page URL contains /mobile/.
-    # We'll replace the fetch line with a dynamic construction.
-
-    pattern = r'(fetch\(`/portal/\${schema}/api/global-search/\?q=\${encodeURIComponent\(currentQuery\)}`\))'
-    # We'll replace with a function call that builds the URL with mobile param.
-    replacement = """(function() {
-            let url = `/portal/${schema}/api/global-search/?q=${encodeURIComponent(currentQuery)}`;
-            if (window.location.pathname.includes('/mobile/')) {
-                url += '&mobile=1';
-            }
-            return fetch(url);
-        })()"""
-
-    # To avoid breaking, we'll use a regex to replace.
-    # The pattern might be inside the .then chain.
-    # We'll search for the exact fetch line and replace.
-    new_content = re.sub(pattern, replacement, content)
-
-    # Also need to handle the case where we have the same fetch in the code.
-    # Actually there might be multiple? Only one fetch call in this file.
-    # Check if the replacement happened.
-    if new_content == content:
-        # Try a more flexible approach: find the fetch line with a regex.
-        # Use a pattern to find fetch(`/portal/${schema}/api/global-search/?q=${...}`)
-        pattern2 = r'fetch\(`/portal/\${schema}/api/global-search/\?q=\${encodeURIComponent\(currentQuery\)}`\)'
-        replacement2 = """(function() {
-            let url = `/portal/${schema}/api/global-search/?q=${encodeURIComponent(currentQuery)}`;
-            if (window.location.pathname.includes('/mobile/')) {
-                url += '&mobile=1';
-            }
-            return fetch(url);
-        })()"""
-        new_content = re.sub(pattern2, replacement2, content)
-
-    if new_content == content:
-        print("⚠️ Could not find fetch call in global_search.html. Please manually add mobile=1.")
-        return False
-
-    with open(filepath, "w", encoding="utf-8") as f:
-        f.write(new_content)
-
-    print(f"✅ Patched {filepath}")
-    return True
-
+# ---------- Main ----------
+def main():
+    print("🔧 AXIS PWA Fixer\n")
+    ensure_icons()
+    update_template(TEMPLATES_DIR / "mobile" / "base.html")
+    update_template(TEMPLATES_DIR / "tenant" / "base.html")
+    # Also ensure the static files are collected
+    print("\n📦 Running collectstatic...")
+    result = subprocess.run(
+        ["python3", "manage.py", "collectstatic", "--noinput"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        print("✅ collectstatic completed")
+    else:
+        print("❌ collectstatic failed:")
+        print(result.stderr)
+    print("\n🎉 Done! The install button should now appear on mobile.")
+    print("   If the native prompt still doesn't show, check that:")
+    print("   - Your site is served over HTTPS (or localhost)")
+    print("   - The manifest is valid (check browser console)")
 
 if __name__ == "__main__":
-    views_ok = patch_views(VIEWS_PATH)
-    template_ok = patch_template(TEMPLATE_PATH)
-    if views_ok and template_ok:
-        print("✨ Mobile search param fix applied. Restart your Django server to see changes.")
-    else:
-        print("❌ Some patches failed. Check file paths.")
+    main()
