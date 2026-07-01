@@ -264,7 +264,13 @@
             currentQuery = query.trim();
             showLoading();
             clearBtn.style.display = 'inline-block';
-            fetch(`/portal/${schema}/api/global-search/?q=${encodeURIComponent(currentQuery)}`)
+            (function() {
+            let url = `/portal/${schema}/api/global-search/?q=${encodeURIComponent(currentQuery)}`;
+            if (window.location.pathname.includes('/mobile/')) {
+                url += '&mobile=1';
+            }
+            return fetch(url);
+        })()
                 .then(res => res.json())
                 .then(data => {
                     hideLoading();

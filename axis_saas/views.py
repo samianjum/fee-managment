@@ -3750,6 +3750,7 @@ def mark_all_notifications_read_api(request, schema_name):
 # ==================== GLOBAL SEARCH API ====================
 @require_tenant_type(['school'])
 def global_search_api(request, schema_name):
+    mobile = request.GET.get('mobile') == '1'
     """API endpoint for global search across students, fees, payments, products, categories."""
     from django.db.models import Q
     from .models import Student, FeeRecord, PaymentTransaction, Product, ProductCategory
@@ -3771,7 +3772,7 @@ def global_search_api(request, schema_name):
         'title': s.name,
         'subtitle': f"Roll: {s.roll_number} | {s.grade} - {s.section}",
         'type': 'Student',
-        'url': f'/portal/{schema_name}/students/{s.id}/',
+        'url': f"/portal/{schema_name}/students/{'mobile/' if mobile else ''}{s.id}/",
     } for s in students]
 
     # Search FeeRecords (by student name, month/year)
@@ -3784,7 +3785,7 @@ def global_search_api(request, schema_name):
         'title': f"{fr.student.name} - {fr.month}/{fr.year}",
         'subtitle': f"Amount: ₹{fr.total_amount} | Status: {fr.get_status_display()}",
         'type': 'Fee',
-        'url': f'/portal/{schema_name}/students/{fr.student.id}/',
+        'url': f"/portal/{schema_name}/students/{'mobile/' if mobile else ''}{fr.student.id}/",
     } for fr in fees]
 
     # Search Payments (by receipt number, student name)
@@ -3796,7 +3797,7 @@ def global_search_api(request, schema_name):
         'title': p.receipt_number,
         'subtitle': f"{p.student.name} - ₹{p.amount} on {p.payment_date}",
         'type': 'Payment',
-        'url': f'/portal/{schema_name}/fee/receipt/{p.id}/',
+        'url': f"/portal/{schema_name}/fee/receipt/{'mobile/' if mobile else ''}{p.id}/",
     } for p in payments]
 
     # Search Products
@@ -3808,7 +3809,7 @@ def global_search_api(request, schema_name):
         'title': p.name,
         'subtitle': f"SKU: {p.sku} | Price: ₹{p.selling_price} | Stock: {p.quantity}",
         'type': 'Product',
-        'url': f'/portal/{schema_name}/stock/product/{p.id}/',
+        'url': f"/portal/{schema_name}/stock/product/{p.id}/{'mobile/' if mobile else ''}",
     } for p in products]
 
     # Search Categories
@@ -3817,7 +3818,7 @@ def global_search_api(request, schema_name):
         'title': c.name,
         'subtitle': c.description or '',
         'type': 'Category',
-        'url': f'/portal/{schema_name}/stock/?category={c.id}',
+        'url': f"/portal/{schema_name}/stock/{'mobile/' if mobile else ''}?category={c.id}",
     } for c in categories]
 
     return JsonResponse(results)
