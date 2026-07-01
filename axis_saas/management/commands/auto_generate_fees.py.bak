@@ -18,11 +18,9 @@ class Command(BaseCommand):
                 settings, _ = SchoolFeeSettings.objects.get_or_create(pk=1)
 
                 if not settings.automation_enabled:
-                    self.stdout.write(self.style.WARNING(f"{tenant.schema_name}: automation disabled, skipping"))
                     continue
 
                 if today.day != settings.fee_generation_day:
-                    self.stdout.write(self.style.WARNING(f"{tenant.schema_name}: today {today.day} != generation day {settings.fee_generation_day}, skipping"))
                     continue
 
                 month, year = today.month, today.year
@@ -32,28 +30,29 @@ class Command(BaseCommand):
                 skipped_existing = 0
                 skipped_no_fee = 0
 
-                # Pre-fetch fee structures for efficiency
-                fee_structs = {fs.grade: fs.monthly_fee for fs in FeeStructure.objects.all()}
-
                 extra_charges = settings.default_extra_charges or []
-                total_extra = sum(Decimal(str(ch.get('amount', 0))) for ch in extra_charges)
+                total_extra = sum((ch.get('amount', 0) for ch in extra_charges), 0)
 
-                for student in students:
-                    if FeeRecord.objects.filter(student=student, month=month, year=year).exists():
+                for s in students:
+                    if FeeRecord.objects.filter(student=s, month=month, year=year).exists():
                         skipped_existing += 1
                         continue
 
-                    base_fee = student.custom_fee if student.custom_fee > 0 else 0
+                    base_fee = s.custom_fee if s.custom_fee > 0 else 0
                     if base_fee == 0:
-                        base_fee = fee_structs.get(student.grade, 0)
+                        fee_struct = FeeStructure.objects.filter(grade=s.grade).first()
+                        if fee_struct:
+                            base_fee = fee_struct.monthly_fee
+                            s.custom_fee = base_fee
+                            s.save(update_fields=['custom_fee'])
 
                     if base_fee > 0:
                         total_fee = base_fee + total_extra
                         FeeRecord.objects.create(
-                            student=student,
+                            student=s,
                             month=month,
                             year=year,
-                            amount=total_fee,          # base + extras
+                            amount=total_fee,
                             due_date=due_date,
                             status='pending',
                             extra_charges=extra_charges,
@@ -65,6 +64,7 @@ class Command(BaseCommand):
                         skipped_no_fee += 1
 
                 if created > 0 or skipped_existing > 0 or skipped_no_fee > 0:
+                    # Create a log entry for auto generation
                     ManualGenerationLog.objects.create(
                         month=month,
                         year=year,
@@ -74,15 +74,16 @@ class Command(BaseCommand):
                         triggered_by='system',
                         log_type='auto'
                     )
-                    # Create notification (only if fees were created)
-                    if created > 0:
-                        create_fee_generation_notification(tenant.schema_name, month, year, created, 'system', mobile=False)
+
+        # Create notification
+        create_fee_generation_notification(tenant.schema_name, month, year, created, 'system', mobile=False)
 
                     self.stdout.write(
                         f"{tenant.schema_name}: generated {created}, "
                         f"already had fee: {skipped_existing}, "
                         f"skipped (no fee structure): {skipped_no_fee} for {month}/{year}"
                     )
-                    generated_total += created
+
+                generated_total += created
 
         self.stdout.write(self.style.SUCCESS(f"Total fees generated: {generated_total}"))

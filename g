@@ -1,1038 +1,553 @@
 #!/usr/bin/env python3
 """
-Premium Theme Patcher v2 – Clean (No Emojis)
-Usage: python3 premium_theme_patcher_v2_clean.py
+AXIS Fee Automation Patcher
+Fixes auto-generation, adds working charges UI, and provides cron check.
+Run this from the project root: python3 fee_automation_patcher.py
 """
 
 import os
 import shutil
 from pathlib import Path
 
-TEMPLATES_DIR = Path("templates/mobile")
-BACKUP_DIR = Path("templates/mobile_backup_v2_clean")
+PROJECT_ROOT = Path(__file__).resolve().parent
 
-# -------------------------------------------------------------------
-# NEW BASE.HTML – Premium Glassmorphism (No Emojis)
-# -------------------------------------------------------------------
-NEW_BASE_HTML = '''{% load static %}
-<!DOCTYPE html>
-<html lang="en" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>{% block title %}AXIS Portal{% endblock %}</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        :root {
-            --primary: #4F46E5;
-            --primary-dark: #4338CA;
-            --primary-light: #818CF8;
-            --bg: #f0f4ff;
-            --surface: rgba(255, 255, 255, 0.75);
-            --surface-alt: rgba(255, 255, 255, 0.5);
-            --text: #0f172a;
-            --muted: #64748b;
-            --danger: #ef4444;
-            --success: #10b981;
-            --border: rgba(255, 255, 255, 0.3);
-            --shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-            --radius: 1.25rem;
-            --safe-bottom: env(safe-area-inset-bottom, 0px);
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding-bottom: 80px;
-            overflow-x: hidden;
-            position: relative;
-        }
-        /* Animated background blobs */
-        .bg-blob {
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.25;
-            pointer-events: none;
-            z-index: 0;
-            animation: floatBlob 20s ease-in-out infinite alternate;
-        }
-        .bg-blob-1 { width: 300px; height: 300px; background: #818CF8; top: -100px; left: -100px; }
-        .bg-blob-2 { width: 400px; height: 400px; background: #A78BFA; bottom: -150px; right: -100px; animation-delay: -5s; }
-        .bg-blob-3 { width: 200px; height: 200px; background: #F472B6; top: 50%; left: 50%; transform: translate(-50%, -50%); animation-duration: 15s; animation-delay: -10s; }
-        @keyframes floatBlob {
-            0% { transform: translate(0, 0) scale(1); }
-            100% { transform: translate(40px, -30px) scale(1.1); }
-        }
-
-        /* ---- Top Bar (glass) ---- */
-        .top-bar {
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            padding: 12px 20px 10px;
-            border-bottom: 1px solid rgba(255,255,255,0.5);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.04);
-        }
-        .top-bar .left {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .top-bar .logo {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 700;
-            font-size: 14px;
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(79,70,229,0.3);
-        }
-        .top-bar .school-name {
-            font-weight: 700;
-            font-size: 16px;
-            line-height: 1.2;
-            color: var(--text);
-        }
-        .top-bar .school-name small {
-            display: block;
-            font-weight: 400;
-            font-size: 11px;
-            color: var(--muted);
-        }
-        .top-bar .actions {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* ---- Main Content ---- */
-        .main-content {
-            padding: 16px 16px 20px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* ---- Bottom Navigation (glass) ---- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(255,255,255,0.8);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid rgba(255,255,255,0.4);
-            display: flex;
-            justify-content: space-around;
-            padding: 6px 0 calc(6px + var(--safe-bottom));
-            z-index: 30;
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.04);
-        }
-        .bottom-nav .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 10px;
-            color: var(--muted);
-            text-decoration: none;
-            padding: 4px 8px;
-            border-radius: 12px;
-            transition: var(--transition);
-            gap: 2px;
-        }
-        .bottom-nav .nav-item.active {
-            color: var(--primary);
-            background: rgba(79,70,229,0.08);
-        }
-        .bottom-nav .nav-item svg {
-            width: 24px;
-            height: 24px;
-            stroke: currentColor;
-            fill: none;
-            stroke-width: 1.8;
-        }
-        .bottom-nav .nav-item span {
-            font-weight: 500;
-            font-size: 9px;
-            letter-spacing: 0.02em;
-        }
-
-        /* ---- Messages ---- */
-        .message {
-            margin: 8px 16px;
-            padding: 10px 14px;
-            border-radius: 12px;
-            background: var(--surface);
-            border-left: 4px solid var(--primary);
-            font-size: 13px;
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(4px);
-        }
-        .message.success { border-left-color: var(--success); }
-        .message.error { border-left-color: var(--danger); }
-
-        /* ---- Utilities ---- */
-        .mt-2 { margin-top: 8px; }
-        .mb-2 { margin-bottom: 8px; }
-        .text-center { text-align: center; }
-        .text-muted { color: var(--muted); }
-        .scroll-x {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            gap: 12px;
-            padding-bottom: 8px;
-            -webkit-overflow-scrolling: touch;
-            scroll-snap-type: x mandatory;
-        }
-        .scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
-
-        /* override glass background for cards */
-        .glass-card {
-            background: var(--surface);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-        }
-    </style>
-    {% block extra_head %}{% endblock %}
-</head>
-<body>
-
-<!-- Background blobs -->
-<div class="bg-blob bg-blob-1"></div>
-<div class="bg-blob bg-blob-2"></div>
-<div class="bg-blob bg-blob-3"></div>
-
-<script>
-    (function() {
-        let deferredPrompt = null;
-        const installBtn = document.getElementById('installAppBtn');
-        const container = document.getElementById('pwaInstallContainer');
-
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            if (container) container.style.display = 'none';
-            return;
-        }
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            console.log('Install prompt captured');
-            if (container) container.style.display = 'flex';
-        });
-
-        window.addEventListener('appinstalled', () => {
-            if (container) container.style.display = 'none';
-            deferredPrompt = null;
-        });
-
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
-                        if (container) container.style.display = 'none';
-                    } else {
-                        console.log('User dismissed install');
-                    }
-                    deferredPrompt = null;
-                } else {
-                    showToast('Installation is not supported in this browser or already installed.');
-                }
-            });
-        }
-
-        function showToast(msg) {
-            const existing = document.getElementById('installToast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'installToast';
-            toast.style.cssText = `
-                position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                background: #1e293b; color: white; padding: 12px 24px;
-                border-radius: 30px; font-size: 14px; z-index: 9999;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                max-width: 90%; text-align: center;
-                transition: opacity 0.3s;
-            `;
-            toast.textContent = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
-        }
-    })();
-</script>
-
-    <!-- Top Bar -->
-    <div class="top-bar">
-        <div class="left">
-            <div class="logo">{{ tenant.name|slice:":2"|upper }}</div>
-            <div class="school-name">
-                {{ tenant.name }}
-                <small>Management Portal</small>
-            </div>
-        </div>
-        <div class="actions">
-            {% include "mobile/notification_bell.html" %}
-        </div>
-    </div>
-
-    <!-- Messages -->
-    {% include "tenant/messages.html" %}
-
-    <!-- Main Content -->
-    <div class="main-content">
-        {% block body %}{% endblock %}
-    </div>
-
-    <!-- Bottom Navigation -->
-    <nav class="bottom-nav">
-        <a href="{% url 'mobile_dashboard' schema_name=tenant.schema_name %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'mobile_dashboard' %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            <span>Home</span>
-        </a>
-        <a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}" class="nav-item {% if 'mobile_student' in request.resolver_match.url_name or request.resolver_match.url_name == 'student_list' %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-            <span>Students</span>
-        </a>
-        <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name %}" class="nav-item {% if 'fee_collection' in request.resolver_match.url_name %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
-            <span>Collect</span>
-        </a>
-        <a href="{% url 'mobile_stock_management' schema_name=tenant.schema_name %}" class="nav-item {% if 'stock' in request.resolver_match.url_name %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M20 7h-4.18A3 3 0 0016 5.18V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v1.18A3 3 0 008.18 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 12v4m-2-2h4"/></svg>
-            <span>Stock</span>
-        </a>
-        <a href="{% url 'mobile_more' schema_name=tenant.schema_name %}" class="nav-item {% if request.resolver_match.url_name == 'mobile_more' %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M12 6a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4zm0 8a2 2 0 110-4 2 2 0 010 4z"/></svg>
-            <span>More</span>
-        </a>
-    </nav>
-
-    <!-- Floating Install Button -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: none;">
-        <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
-            </svg>
-            Install App
-        </button>
-    </div>
-
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed:', err));
-        }
-    </script>
-
-    {% block scripts %}{% endblock %}
-    {% include "tenant/voucher_modal.html" %}
-
-</body>
-</html>
-'''
-
-# -------------------------------------------------------------------
-# NEW DASHBOARD.HTML – No Emojis
-# -------------------------------------------------------------------
-NEW_DASHBOARD_HTML = '''{% extends 'mobile/base.html' %}
-{% load fee_extras %}
-{% block title %}Dashboard | {{ tenant.name }}{% endblock %}
+# --------------------------------------------------------------------
+# 1. NEW fee_settings.html (complete replacement)
+# --------------------------------------------------------------------
+NEW_FEE_SETTINGS_HTML = '''{% extends 'tenant/base.html' %}
+{% load static %}
+{% block title %}Fee Settings | {{ tenant.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
-    /* ===== ROOT ===== */
-    :root {
-        --glass-bg: rgba(255, 255, 255, 0.75);
-        --glass-border: rgba(255, 255, 255, 0.4);
-        --card-radius: 1.25rem;
-        --shadow-soft: 0 8px 30px rgba(15, 23, 42, 0.06);
-        --shadow-hover: 0 12px 40px rgba(15, 23, 42, 0.12);
-        --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        --gradient-hero: linear-gradient(135deg, #4F46E5, #7C3AED, #3B82F6);
-    }
-
-    /* ===== HERO – gradient with floating shapes ===== */
-    .hero-card {
-        background: var(--gradient-hero);
-        color: white;
-        border-radius: 1.75rem;
-        padding: 1.8rem 1.5rem 1.4rem;
-        box-shadow: 0 20px 40px rgba(79,70,229,0.3);
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 1.2rem;
-        isolation: isolate;
-    }
-    .hero-card::before {
-        content: '';
-        position: absolute;
-        top: -30%;
-        right: -10%;
-        width: 250px;
-        height: 250px;
-        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 0;
-    }
-    .hero-card::after {
-        content: '';
-        position: absolute;
-        bottom: -30%;
-        left: -10%;
-        width: 200px;
-        height: 200px;
-        background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
-        border-radius: 50%;
-        pointer-events: none;
-        z-index: 0;
-    }
-    .hero-card .hero-content {
-        position: relative;
-        z-index: 1;
-    }
-    .hero-card .greeting {
-        font-size: 1.1rem;
-        font-weight: 500;
-        opacity: 0.9;
-        margin-bottom: 0.1rem;
-    }
-    .hero-card h1 {
-        font-size: 1.8rem;
-        font-weight: 700;
-        line-height: 1.2;
-        margin-bottom: 0.2rem;
-        letter-spacing: -0.02em;
-    }
-    .hero-card .sub {
-        color: rgba(255,255,255,0.85);
-        font-size: 0.95rem;
-        margin-bottom: 0.8rem;
-    }
-    .hero-stats {
+    .settings-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.6rem;
-        margin-top: 0.5rem;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
     }
-    .hero-stat {
-        background: rgba(255,255,255,0.12);
-        backdrop-filter: blur(4px);
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 1rem;
-        padding: 0.6rem 0.8rem;
-        text-align: center;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: rgba(255,255,255,0.85);
-    }
-    .hero-stat strong {
-        display: block;
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: white;
-        margin-top: 0.1rem;
-    }
-
-    /* ===== NOTIFICATION CAROUSEL (glass) ===== */
-    .notif-carousel-wrapper {
-        background: var(--glass-bg);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: var(--card-radius);
-        border: 1px solid var(--glass-border);
-        box-shadow: var(--shadow-soft);
-        padding: 0.6rem 0.8rem;
-        margin-bottom: 1rem;
-        position: relative;
+    .settings-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
         overflow: hidden;
-        transition: var(--transition);
     }
-    .notif-carousel-wrapper:hover {
-        box-shadow: var(--shadow-hover);
-    }
-    .notif-carousel {
-        display: flex;
-        transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-        will-change: transform;
-    }
-    .notif-slide {
-        flex: 0 0 100%;
+    .card-header {
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        padding: 0.3rem 0.2rem;
-        cursor: pointer;
-        min-height: 52px;
+        padding: 1rem 1.25rem;
+        background: var(--surface-alt);
+        border-bottom: 1px solid var(--border);
     }
-    .notif-slide .icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 2rem;
-        background: rgba(79,70,229,0.12);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--primary);
-        flex-shrink: 0;
+    .card-header h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
     }
-    .notif-slide .icon svg {
-        width: 20px;
-        height: 20px;
-        stroke: currentColor;
+    .settings-form {
+        padding: 1.25rem;
     }
-    .notif-slide .msg {
-        flex: 1;
+    .form-field {
+        margin-bottom: 1.25rem;
+    }
+    .form-field label {
+        display: block;
+        font-weight: 600;
         font-size: 0.85rem;
-        font-weight: 500;
+        margin-bottom: 0.3rem;
+    }
+    .input-icon {
+        position: relative;
+    }
+    .input-icon input, .input-icon select {
+        width: 100%;
+        padding: 0.6rem 0.6rem 0.6rem 2rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
         color: var(--text);
-        line-height: 1.3;
+        font-size: 0.9rem;
     }
-    .notif-slide .msg .highlight {
-        font-weight: 700;
-        color: var(--primary);
-    }
-    .notif-slide .time {
-        font-size: 0.6rem;
+    .input-icon svg {
+        position: absolute;
+        left: 0.6rem;
+        top: 50%;
+        transform: translateY(-50%);
         color: var(--muted);
-        white-space: nowrap;
+        width: 18px;
+        height: 18px;
     }
-    .notif-dots {
-        display: flex;
-        justify-content: center;
-        gap: 0.4rem;
-        margin-top: 0.3rem;
-    }
-    .notif-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: rgba(148,163,184,0.4);
-        transition: var(--transition);
-        cursor: pointer;
-    }
-    .notif-dot.active {
-        background: var(--primary);
-        width: 20px;
-        border-radius: 4px;
-    }
-    .notif-empty {
-        text-align: center;
+    .form-field small {
+        display: block;
+        font-size: 0.7rem;
         color: var(--muted);
-        font-size: 0.85rem;
-        padding: 0.3rem 0;
+        margin-top: 0.25rem;
     }
-
-    /* ===== KPI STRIP ===== */
-    .kpi-strip {
+    .extra-charges-section {
+        margin-top: 1.5rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+    }
+    .charge-item {
         display: flex;
-        gap: 0.6rem;
-        overflow-x: auto;
-        padding: 0.2rem 0 0.8rem;
-        -webkit-overflow-scrolling: touch;
-        scroll-snap-type: x mandatory;
+        gap: 0.5rem;
+        align-items: center;
         margin-bottom: 0.5rem;
     }
-    .kpi-card {
-        flex: 0 0 140px;
-        background: var(--glass-bg);
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border-radius: var(--card-radius);
-        padding: 0.8rem 0.7rem;
-        border: 1px solid var(--glass-border);
-        scroll-snap-align: start;
-        box-shadow: var(--shadow-soft);
-        text-align: center;
-        transition: var(--transition);
+    .charge-item input {
+        flex: 1;
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
     }
-    .kpi-card:active { transform: scale(0.96); }
-    .kpi-card .label {
-        font-size: 0.55rem;
-        text-transform: uppercase;
-        color: var(--muted);
-        letter-spacing: 0.05em;
-        font-weight: 600;
-    }
-    .kpi-card .value {
-        font-size: 1.4rem;
-        font-weight: 700;
-        color: var(--text);
-        margin-top: 0.1rem;
-    }
-    .kpi-card .trend {
-        font-size: 0.6rem;
-        color: var(--muted);
-        margin-top: 0.05rem;
-    }
-
-    /* ===== QUICK ACTIONS ===== */
-    .section-heading {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin: 1.2rem 0 0.6rem;
-    }
-    .section-heading h2 {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--text);
-        letter-spacing: -0.01em;
-    }
-    .section-heading a {
-        color: var(--primary);
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.2rem;
-    }
-    .actions-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 0.6rem;
-    }
-    .action-tile {
-        background: var(--glass-bg);
-        backdrop-filter: blur(8px);
-        border-radius: var(--card-radius);
-        padding: 0.8rem 0.4rem;
-        border: 1px solid var(--glass-border);
-        box-shadow: var(--shadow-soft);
-        text-decoration: none;
-        color: var(--text);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.3rem;
-        transition: var(--transition);
-        text-align: center;
-    }
-    .action-tile:active { transform: scale(0.94); }
-    .action-tile .icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 2rem;
-        background: rgba(79,70,229,0.08);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--primary);
-    }
-    .action-tile .icon svg { width: 20px; height: 20px; }
-    .action-tile strong {
-        font-size: 0.7rem;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    /* ===== ACTIVITY / DEFAULTER CARDS ===== */
-    .activity-card,
-    .defaulter-card {
-        background: var(--glass-bg);
-        backdrop-filter: blur(8px);
-        border-radius: var(--card-radius);
-        border: 1px solid var(--glass-border);
-        box-shadow: var(--shadow-soft);
-        padding: 0.3rem 0.2rem;
-    }
-    .activity-row,
-    .defaulter-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0.6rem;
-        border-bottom: 1px solid rgba(148,163,184,0.10);
-    }
-    .activity-row:last-child,
-    .defaulter-row:last-child { border-bottom: none; }
-    .activity-row .info { flex: 1; min-width: 0; }
-    .activity-row .info .name {
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: var(--text);
-    }
-    .activity-row .info .meta {
-        font-size: 0.65rem;
-        color: var(--muted);
-    }
-    .activity-row .amount {
-        font-weight: 700;
-        color: var(--primary);
-        font-size: 0.9rem;
-        white-space: nowrap;
-    }
-    .defaulter-row .defaulter-info { flex: 1; min-width: 0; }
-    .defaulter-row .defaulter-info .name {
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-    .defaulter-row .defaulter-info .meta {
-        font-size: 0.65rem;
-        color: var(--muted);
-    }
-    .defaulter-row .defaulter-amount {
-        font-weight: 700;
+    .charge-item .remove-charge {
+        background: none;
+        border: none;
         color: var(--danger);
-        font-size: 0.9rem;
-        white-space: nowrap;
+        cursor: pointer;
+        font-size: 1.2rem;
+        padding: 0 0.3rem;
     }
-    .defaulter-row .action-link {
-        color: var(--muted);
-        transition: var(--transition);
+    .charge-item .edit-charge {
+        background: none;
+        border: none;
+        color: var(--primary);
+        cursor: pointer;
+    }
+    .total-extra {
+        font-weight: 700;
+        color: var(--primary);
+        margin: 0.5rem 0;
+    }
+    .btn-add-charge {
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.4rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-add-charge:hover {
+        background: var(--primary-dark);
+    }
+    .automation-status {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin: 1rem 0;
+        flex-wrap: wrap;
+    }
+    .status-indicator {
         display: inline-flex;
-        padding: 0.2rem;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 2rem;
+        font-weight: 600;
     }
-    .defaulter-row .action-link:hover { color: var(--primary); }
-
-    /* ===== UTILITY ===== */
-    .bottom-spacer { height: 90px; }
-    .scroll-x { -webkit-overflow-scrolling: touch; }
-
-    /* ===== RESPONSIVE ===== */
-    @media (max-width: 480px) {
-        .hero-card h1 { font-size: 1.4rem; }
-        .hero-stats {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.4rem;
+    .status-indicator.active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    .status-indicator.inactive {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .btn-toggle {
+        padding: 0.5rem 1.2rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-toggle.start {
+        background: #10b981;
+        color: white;
+    }
+    .btn-toggle.start:hover {
+        background: #059669;
+    }
+    .btn-toggle.stop {
+        background: #ef4444;
+        color: white;
+    }
+    .btn-toggle.stop:hover {
+        background: #dc2626;
+    }
+    .btn-toggle:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    .form-actions {
+        margin-top: 1.5rem;
+        text-align: right;
+    }
+    .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.5rem 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 2rem;
+        padding: 0.5rem 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    .info-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        padding: 1rem;
+        margin-top: 1.5rem;
+    }
+    .info-card h3 {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1rem;
+    }
+    .info-card ul {
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+    }
+    .info-card ul li {
+        margin-bottom: 0.4rem;
+        font-size: 0.85rem;
+    }
+    @media (max-width: 768px) {
+        .settings-grid {
+            grid-template-columns: 1fr;
         }
-        .hero-stat {
-            padding: 0.4rem 0.4rem;
-            font-size: 0.6rem;
-        }
-        .hero-stat strong { font-size: 1.1rem; }
-        .kpi-card {
-            flex: 0 0 110px;
-            padding: 0.5rem 0.4rem;
-        }
-        .kpi-card .value { font-size: 1rem; }
-        .actions-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.4rem;
-        }
-        .action-tile {
-            padding: 0.5rem 0.2rem;
-        }
-        .action-tile .icon {
-            width: 34px;
-            height: 34px;
-        }
-        .action-tile strong { font-size: 0.6rem; }
-        .activity-row,
-        .defaulter-row {
-            padding: 0.4rem 0.4rem;
-            font-size: 0.75rem;
-        }
-        .notif-slide .msg { font-size: 0.75rem; }
     }
 </style>
 {% endblock %}
 
 {% block body %}
-<!-- ===== HERO ===== -->
-<div class="hero-card">
-    <div class="hero-content">
-        <div class="greeting">Welcome back</div>
-        <h1>{{ tenant.name }}</h1>
-        <div class="sub">School overview and quick actions</div>
-        <div class="hero-stats">
-            <div class="hero-stat">
-                Students <strong>{{ total_students|humanize_number }}</strong>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Fee Automation</h1>
+        <p class="page-desc">Configure automated fee generation and default charges</p>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'fee_logs' schema_name=tenant.schema_name %}" class="btn-primary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            View Logs
+        </a>
+    </div>
+</div>
+
+<div class="settings-grid">
+    <!-- Automation Settings Card -->
+    <div class="settings-card">
+        <div class="card-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <h3>Automation Rules</h3>
+        </div>
+        <form method="post" id="settingsForm" class="settings-form">
+            {% csrf_token %}
+            <div class="form-field">
+                <label>Generation Day of Month</label>
+                <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h3l3-9 3 18 3-9h3"/></svg>
+                    {{ form.fee_generation_day }}
+                </div>
+                <small>Fees will be created automatically on this day every month.</small>
             </div>
-            <div class="hero-stat">
-                Collection <strong>{{ collection_rate }}%</strong>
+            <div class="form-field">
+                <label>Due Date Offset (days after generation)</label>
+                <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    {{ form.due_date_offset }}
+                </div>
+                <small>Number of days after generation when fee becomes due.</small>
             </div>
-            <div class="hero-stat">
-                Defaulters <strong>{{ defaulters_count }}</strong>
+            <div class="form-field">
+                <label>Late Fee Amount (₹ per day)</label>
+                <div class="input-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    {{ form.late_fee_penalty }}
+                </div>
+                <small>Fixed amount added per day after due date for overdue fees.</small>
+            </div>
+
+            <!-- Extra Charges Section -->
+            <div class="extra-charges-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <h4 style="margin:0;">Default Extra Charges</h4>
+                    <button type="button" class="btn-add-charge" id="addChargeBtn">+ Add Charge</button>
+                </div>
+                <div id="chargesContainer">
+                    {% for charge in extra_charges %}
+                    <div class="charge-item" data-index="{{ forloop.counter0 }}">
+                        <input type="text" class="charge-title" value="{{ charge.title }}" placeholder="Title">
+                        <input type="number" step="0.01" class="charge-amount" value="{{ charge.amount }}" placeholder="Amount">
+                        <button type="button" class="edit-charge" title="Edit">✎</button>
+                        <button type="button" class="remove-charge" title="Remove">×</button>
+                    </div>
+                    {% empty %}
+                    <div id="noChargesMsg" style="color: var(--muted); font-size: 0.85rem;">No extra charges added yet.</div>
+                    {% endfor %}
+                </div>
+                <div class="total-extra">Total Extra Charges: ₹<span id="totalExtraDisplay">{{ total_extra|floatformat:2 }}</span></div>
+                <input type="hidden" name="extra_charges_json" id="extraChargesJson" value='{{ extra_charges|safe }}'>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
+                    Save Settings
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Automation Status & Controls Card -->
+    <div class="settings-card">
+        <div class="card-header">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <h3>Automation Status</h3>
+        </div>
+        <div style="padding: 1.25rem;">
+            <div class="automation-status">
+                <span class="status-indicator {% if automation_enabled %}active{% else %}inactive{% endif %}">
+                    {% if automation_enabled %}● Active{% else %}● Inactive{% endif %}
+                </span>
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="toggle_automation" value="1">
+                    <button type="submit" class="btn-toggle {% if automation_enabled %}stop{% else %}start{% endif %}"
+                            {% if not automation_enabled %}id="startAutomationBtn"{% else %}id="stopAutomationBtn"{% endif %}>
+                        {% if automation_enabled %}⏹ Stop Automation{% else %}▶ Start Automation{% endif %}
+                    </button>
+                </form>
+            </div>
+            <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--muted);">
+                <p><strong>Current Generation Day:</strong> {{ settings.fee_generation_day }}</p>
+                <p><strong>Due Date Offset:</strong> {{ settings.due_date_offset }} days</p>
+                <p><strong>Late Fee:</strong> ₹{{ settings.late_fee_penalty }} per day</p>
+            </div>
+            <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                <p><strong>Next generation:</strong> <span id="nextGenDate">Calculating...</span></p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- ===== NOTIFICATION CAROUSEL ===== -->
-<div class="notif-carousel-wrapper" id="notifCarouselWrapper">
-    <div class="notif-carousel" id="notifCarousel">
-        <!-- Slides injected by JS -->
-    </div>
-    <div class="notif-dots" id="notifDots"></div>
+<!-- Info Card -->
+<div class="info-card">
+    <h3>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        How Automation Works
+    </h3>
+    <ul>
+        <li><strong>Auto-generation:</strong> On the selected day each month, the system creates fee records for all active students (with a defined fee structure or custom fee).</li>
+        <li><strong>Extra Charges:</strong> The default extra charges are added to every student's fee when generated.</li>
+        <li><strong>Due Date:</strong> Fee becomes due after the offset days from generation.</li>
+        <li><strong>Late Fee:</strong> The fixed amount is added per day for overdue unpaid fees.</li>
+        <li><strong>Start/Stop:</strong> Toggle automation on/off. When stopped, no automatic generation occurs.</li>
+    </ul>
 </div>
 
-<!-- ===== KPI STRIP ===== -->
-<div class="kpi-strip scroll-x">
-    <div class="kpi-card">
-        <div class="label">Revenue</div>
-        <div class="value">₹{{ total_revenue|humanize_number }}</div>
-        <div class="trend">All time</div>
+<!-- Manual Generation Section -->
+<div class="settings-card" style="margin-top: 1.5rem; border-left: 4px solid #10b981;">
+    <div class="card-header">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        <h3 style="margin:0;">Manual Fee Generation</h3>
+        <span style="margin-left:auto; font-size:0.7rem; background:#10b981; color:white; padding:0.15rem 0.6rem; border-radius:2rem;">Current Month</span>
     </div>
-    <div class="kpi-card">
-        <div class="label">Pending</div>
-        <div class="value">₹{{ total_pending|humanize_number }}</div>
-        <div class="trend">All time</div>
-    </div>
-    <div class="kpi-card">
-        <div class="label">Today</div>
-        <div class="value">₹{{ today_collection|humanize_number }}</div>
-        <div class="trend">{{ today|date:"d M" }}</div>
-    </div>
-    <div class="kpi-card">
-        <div class="label">Defaulters</div>
-        <div class="value">{{ defaulters_count }}</div>
-        <div class="trend">Active</div>
-    </div>
-    <div class="kpi-card">
-        <div class="label">Low Stock</div>
-        <div class="value">{{ low_stock_count }}</div>
-        <div class="trend">Items less than 10</div>
-    </div>
-</div>
-
-<!-- ===== QUICK ACTIONS ===== -->
-<div class="section-heading">
-    <h2>Quick actions</h2>
-    <a href="{% url 'mobile_more' schema_name=tenant.schema_name %}">
-        More <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
-    </a>
-</div>
-<div class="actions-grid">
-    <a href="{% url 'add_student_mobile' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg></div>
-        <strong>Add Student</strong>
-    </a>
-    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-        <strong>Fee Settings</strong>
-    </a>
-    <a href="{% url 'mobile_defaulters' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
-        <strong>Defaulters</strong>
-    </a>
-    <a href="{% url 'mobile_reports' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
-        <strong>Reports</strong>
-    </a>
-    <a href="{% url 'mobile_stock_management' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7h-4.18A3 3 0 0016 5.18V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v1.18A3 3 0 008.18 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 12v4m-2-2h4"/></svg></div>
-        <strong>Stock</strong>
-    </a>
-    <a href="{% url 'mobile_vouchers_list' schema_name=tenant.schema_name %}" class="action-tile">
-        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v16h16M8 12h8M12 8v8"/></svg></div>
-        <strong>Vouchers</strong>
-    </a>
-</div>
-
-<!-- ===== RECENT PAYMENTS ===== -->
-<div class="section-heading">
-    <h2>Recent payments</h2>
-    <a href="{% url 'mobile_reports' schema_name=tenant.schema_name %}?type=collection&quick_filter=all">
-        See all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
-    </a>
-</div>
-<div class="activity-card">
-    {% if recent_payments %}
-        {% for p in recent_payments %}
-        <div class="activity-row">
-            <div class="info">
-                <div class="name">{{ p.student.name }}</div>
-                <div class="meta">{{ p.receipt_number }} • {{ p.payment_date|date:"d M" }}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;">
-                <div class="amount">₹{{ p.amount|floatformat:2 }}</div>
-                <a href="{% url 'mobile_fee_receipt' schema_name=tenant.schema_name receipt_id=p.id %}" class="action-link" title="Receipt">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                </a>
-            </div>
+    <div style="padding:1.25rem;">
+        <p style="color:var(--muted); margin-bottom:0.75rem; font-size:0.9rem;">
+            Generate fee records for <strong>all active students</strong> for the current month.
+            <br>Priority: <strong>class fee structure</strong> → <strong>custom fee</strong>.
+            Students who already have a fee for this month will be skipped.
+        </p>
+        <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+            <button id="manualGenerateBtn" class="btn-primary" style="background:#10b981; padding:0.5rem 1.5rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Generate Fees Now
+            </button>
+            <span id="manualGenStatus" style="font-size:0.85rem; color:var(--muted);">Ready</span>
         </div>
-        {% endfor %}
-    {% else %}
-        <div class="activity-row" style="justify-content:center; color:var(--muted); font-size:0.8rem; padding:0.8rem 0;">
-            No recent payments
-        </div>
-    {% endif %}
+        <div id="manualGenResult" style="margin-top:0.75rem; display:none; padding:0.75rem; border-radius:0.5rem; background:var(--surface-alt); font-size:0.85rem;"></div>
+    </div>
 </div>
 
-<!-- ===== TOP DEFAULTERS ===== -->
-<div class="section-heading">
-    <h2>Top defaulters</h2>
-    <a href="{% url 'mobile_defaulters' schema_name=tenant.schema_name %}">
-        View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M9 18l6-6-6-6"/></svg>
-    </a>
-</div>
-<div class="defaulter-card">
-    {% if top_defaulters %}
-        {% for d in top_defaulters %}
-        <div class="defaulter-row">
-            <div class="defaulter-info">
-                <div class="name">{{ d.student.name }}</div>
-                <div class="meta">{{ d.student.father_name }} • {{ d.student.grade }} - {{ d.student.section }}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.4rem;">
-                <div class="defaulter-amount">₹{{ d.pending|floatformat:2 }}</div>
-                <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=d.student.id %}" class="action-link" title="Profile">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                </a>
-            </div>
-        </div>
-        {% endfor %}
-    {% else %}
-        <div class="defaulter-row" style="justify-content:center; color:var(--muted); font-size:0.8rem; padding:0.8rem 0;">
-            No defaulters
-        </div>
-    {% endif %}
-</div>
-
-<div class="bottom-spacer"></div>
-
-<!-- ===== JAVASCRIPT: Notification Carousel ===== -->
 <script>
     (function() {
-        const schema = '{{ tenant.schema_name }}';
-        const carousel = document.getElementById('notifCarousel');
-        const dotsContainer = document.getElementById('notifDots');
+        // ---- Extra Charges Management ----
+        const chargesContainer = document.getElementById('chargesContainer');
+        const noChargesMsg = document.getElementById('noChargesMsg');
+        const totalExtraDisplay = document.getElementById('totalExtraDisplay');
+        const extraChargesJson = document.getElementById('extraChargesJson');
 
-        let notifications = [];
-        let currentSlide = 0;
-        let slideInterval = null;
-        const AUTOPLAY_DELAY = 6000;
-
-        function fetchNotifications() {
-            fetch(`/portal/${schema}/api/notifications/`)
-                .then(res => res.json())
-                .then(data => {
-                    notifications = data.notifications || [];
-                    if (notifications.length === 0) {
-                        carousel.innerHTML = `<div class="notif-empty">No notifications</div>`;
-                        dotsContainer.innerHTML = '';
-                        return;
-                    }
-                    renderCarousel();
-                    startAutoplay();
-                })
-                .catch(err => {
-                    console.error('Notif carousel error:', err);
-                    carousel.innerHTML = `<div class="notif-empty">Could not load notifications</div>`;
-                });
-        }
-
-        function renderCarousel() {
-            let slidesHtml = '';
-            notifications.forEach((n, idx) => {
-                const isUnread = !n.is_read;
-                const icon = isUnread
-                    ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`
-                    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>`;
-                const time = new Date(n.created_at).toLocaleString(undefined, { hour: '2-digit', minute: '2-digit' });
-                slidesHtml += `
-                    <div class="notif-slide" data-id="${n.id}" data-link="${n.link || ''}" data-unread="${isUnread}">
-                        <div class="icon">${icon}</div>
-                        <div class="msg">${n.message}</div>
-                        <div class="time">${time}</div>
-                    </div>
-                `;
+        function updateTotal() {
+            let total = 0;
+            const items = chargesContainer.querySelectorAll('.charge-item');
+            items.forEach(item => {
+                const amountInput = item.querySelector('.charge-amount');
+                if (amountInput) {
+                    total += parseFloat(amountInput.value) || 0;
+                }
             });
-            carousel.innerHTML = slidesHtml;
-
-            let dotsHtml = '';
-            for (let i = 0; i < notifications.length; i++) {
-                dotsHtml += `<span class="notif-dot" data-index="${i}"></span>`;
-            }
-            dotsContainer.innerHTML = dotsHtml;
-            updateDots(0);
-
-            carousel.querySelectorAll('.notif-slide').forEach(slide => {
-                slide.addEventListener('click', function() {
-                    const link = this.dataset.link;
-                    const id = this.dataset.id;
-                    const unread = this.dataset.unread === 'true';
-                    if (link) window.location.href = link;
-                    if (unread && id) {
-                        fetch(`/portal/${schema}/api/notifications/mark-read/`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCsrfToken()
-                            },
-                            body: JSON.stringify({ id: parseInt(id) })
-                        }).catch(err => console.warn('Mark read error:', err));
-                    }
-                });
+            totalExtraDisplay.innerText = total.toFixed(2);
+            // Update hidden JSON
+            const charges = [];
+            items.forEach(item => {
+                const title = item.querySelector('.charge-title').value.trim();
+                const amount = parseFloat(item.querySelector('.charge-amount').value) || 0;
+                if (title || amount) {
+                    charges.push({ title: title || 'Unnamed', amount: amount });
+                }
             });
-
-            dotsContainer.querySelectorAll('.notif-dot').forEach(dot => {
-                dot.addEventListener('click', function() {
-                    const index = parseInt(this.dataset.index);
-                    goToSlide(index);
-                });
-            });
-        }
-
-        function goToSlide(index) {
-            if (notifications.length === 0) return;
-            const total = notifications.length;
-            currentSlide = (index + total) % total;
-            carousel.style.transform = `translateX(-${currentSlide * 100}%)`;
-            updateDots(currentSlide);
-        }
-
-        function updateDots(index) {
-            dotsContainer.querySelectorAll('.notif-dot').forEach((dot, i) => {
-                dot.classList.toggle('active', i === index);
-            });
-        }
-
-        function startAutoplay() {
-            if (slideInterval) clearInterval(slideInterval);
-            if (notifications.length <= 1) return;
-            slideInterval = setInterval(() => {
-                goToSlide(currentSlide + 1);
-            }, AUTOPLAY_DELAY);
-        }
-
-        function stopAutoplay() {
-            if (slideInterval) {
-                clearInterval(slideInterval);
-                slideInterval = null;
+            extraChargesJson.value = JSON.stringify(charges);
+            // Show/hide no charges message
+            if (noChargesMsg) {
+                noChargesMsg.style.display = items.length === 0 ? 'block' : 'none';
             }
         }
 
-        const wrapper = document.getElementById('notifCarouselWrapper');
-        wrapper.addEventListener('mouseenter', stopAutoplay);
-        wrapper.addEventListener('mouseleave', startAutoplay);
-        wrapper.addEventListener('touchstart', stopAutoplay);
-        wrapper.addEventListener('touchend', startAutoplay);
+        // Add charge
+        document.getElementById('addChargeBtn').addEventListener('click', function() {
+            const idx = chargesContainer.querySelectorAll('.charge-item').length;
+            const div = document.createElement('div');
+            div.className = 'charge-item';
+            div.dataset.index = idx;
+            div.innerHTML = `
+                <input type="text" class="charge-title" placeholder="Title">
+                <input type="number" step="0.01" class="charge-amount" placeholder="Amount">
+                <button type="button" class="edit-charge" title="Edit">✎</button>
+                <button type="button" class="remove-charge" title="Remove">×</button>
+            `;
+            // Insert before the "Add Charge" button? Actually we put it inside container before the button? 
+            // The container is the div; we'll append to it.
+            chargesContainer.appendChild(div);
+            attachChargeEvents(div);
+            updateTotal();
+        });
+
+        function attachChargeEvents(container) {
+            const removeBtn = container.querySelector('.remove-charge');
+            const editBtn = container.querySelector('.edit-charge');
+            const titleInput = container.querySelector('.charge-title');
+            const amountInput = container.querySelector('.charge-amount');
+
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    if (confirm('Remove this charge?')) {
+                        container.remove();
+                        updateTotal();
+                    }
+                });
+            }
+            if (editBtn) {
+                editBtn.addEventListener('click', function() {
+                    // Simple edit: just focus the title input
+                    titleInput.focus();
+                });
+            }
+            if (titleInput) {
+                titleInput.addEventListener('input', updateTotal);
+            }
+            if (amountInput) {
+                amountInput.addEventListener('input', updateTotal);
+            }
+        }
+
+        // Attach events to existing charge items
+        document.querySelectorAll('.charge-item').forEach(item => {
+            attachChargeEvents(item);
+        });
+
+        // Initial total update
+        updateTotal();
+
+        // ---- Manual Generate ----
+        const manualBtn = document.getElementById('manualGenerateBtn');
+        const manualStatus = document.getElementById('manualGenStatus');
+        const manualResult = document.getElementById('manualGenResult');
+
+        if (manualBtn) {
+            manualBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const originalText = manualBtn.innerHTML;
+                manualBtn.disabled = true;
+                manualBtn.innerHTML = '⏳ Generating...';
+                manualStatus.textContent = 'Generating...';
+                manualResult.style.display = 'block';
+                manualResult.innerHTML = '⏳ Processing, please wait...';
+                manualResult.style.background = 'var(--surface-alt)';
+                manualResult.style.color = 'var(--text)';
+
+                try {
+                    const csrfToken = getCsrfToken();
+                    const resp = await fetch('/api/manual-generate/', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin'
+                    });
+                    const data = await resp.json();
+                    if (data.error) {
+                        manualResult.innerHTML = '❌ Error: ' + data.error;
+                        manualResult.style.background = '#fee2e2';
+                        manualResult.style.color = '#991b1b';
+                        manualStatus.textContent = 'Failed';
+                    } else {
+                        const msg = data.message || 'Fee generation completed.';
+                        const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
+                        manualResult.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
+                        manualResult.style.background = '#d1fae5';
+                        manualResult.style.color = '#065f46';
+                        manualStatus.textContent = '✅ Done';
+                    }
+                } catch (err) {
+                    manualResult.innerHTML = '❌ Error: ' + err.message;
+                    manualResult.style.background = '#fee2e2';
+                    manualResult.style.color = '#991b1b';
+                    manualStatus.textContent = '❌ Error';
+                } finally {
+                    manualBtn.disabled = false;
+                    manualBtn.innerHTML = originalText;
+                }
+            });
+        }
 
         function getCsrfToken() {
+            let name = 'csrftoken';
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
                 for (let i = 0; i < cookies.length; i++) {
                     const cookie = cookies[i].trim();
-                    if (cookie.startsWith('csrftoken=')) {
-                        cookieValue = decodeURIComponent(cookie.substring('csrftoken='.length));
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                         break;
                     }
                 }
@@ -1040,53 +555,209 @@ NEW_DASHBOARD_HTML = '''{% extends 'mobile/base.html' %}
             return cookieValue;
         }
 
-        fetchNotifications();
-        setInterval(fetchNotifications, 30000);
+        // ---- Next generation date (from server or calculate) ----
+        // Use the existing status API or compute client-side
+        // We'll compute from settings: fee_generation_day
+        const genDayInput = document.querySelector('input[name="fee_generation_day"]');
+        if (genDayInput) {
+            const genDay = parseInt(genDayInput.value) || 1;
+            const today = new Date();
+            let nextDate = new Date(today);
+            if (today.getDate() < genDay) {
+                nextDate.setDate(genDay);
+            } else {
+                nextDate.setMonth(today.getMonth() + 1);
+                nextDate.setDate(genDay);
+            }
+            const nextGenSpan = document.getElementById('nextGenDate');
+            if (nextGenSpan) {
+                nextGenSpan.innerText = nextDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+        }
     })();
 </script>
-
 {% endblock %}
 '''
 
-# -------------------------------------------------------------------
-# PATHS
-# -------------------------------------------------------------------
-FILES = {
-    'base.html': NEW_BASE_HTML,
-    'dashboard.html': NEW_DASHBOARD_HTML,
-}
+# --------------------------------------------------------------------
+# 2. PATCHED auto_generate_fees.py (management command)
+# --------------------------------------------------------------------
+NEW_AUTO_GENERATE_PY = '''from django.core.management.base import BaseCommand
+from django_tenants.utils import schema_context
+from axis_saas.views import create_fee_generation_notification
+from axis_saas.models import SchoolClient, SchoolFeeSettings, Student, FeeRecord, FeeStructure, ManualGenerationLog
+from datetime import date, timedelta
+from decimal import Decimal
 
+class Command(BaseCommand):
+    help = 'Automatically generate monthly fees for tenants with automation enabled'
+
+    def handle(self, *args, **options):
+        tenants = SchoolClient.objects.filter(is_active=True).exclude(schema_name='public')
+        today = date.today()
+        generated_total = 0
+
+        for tenant in tenants:
+            with schema_context(tenant.schema_name):
+                settings, _ = SchoolFeeSettings.objects.get_or_create(pk=1)
+
+                if not settings.automation_enabled:
+                    self.stdout.write(self.style.WARNING(f"{tenant.schema_name}: automation disabled, skipping"))
+                    continue
+
+                if today.day != settings.fee_generation_day:
+                    self.stdout.write(self.style.WARNING(f"{tenant.schema_name}: today {today.day} != generation day {settings.fee_generation_day}, skipping"))
+                    continue
+
+                month, year = today.month, today.year
+                due_date = today + timedelta(days=settings.due_date_offset)
+                students = Student.objects.filter(status='active')
+                created = 0
+                skipped_existing = 0
+                skipped_no_fee = 0
+
+                # Pre-fetch fee structures for efficiency
+                fee_structs = {fs.grade: fs.monthly_fee for fs in FeeStructure.objects.all()}
+
+                extra_charges = settings.default_extra_charges or []
+                total_extra = sum(Decimal(str(ch.get('amount', 0))) for ch in extra_charges)
+
+                for student in students:
+                    if FeeRecord.objects.filter(student=student, month=month, year=year).exists():
+                        skipped_existing += 1
+                        continue
+
+                    base_fee = student.custom_fee if student.custom_fee > 0 else 0
+                    if base_fee == 0:
+                        base_fee = fee_structs.get(student.grade, 0)
+
+                    if base_fee > 0:
+                        total_fee = base_fee + total_extra
+                        FeeRecord.objects.create(
+                            student=student,
+                            month=month,
+                            year=year,
+                            amount=total_fee,          # base + extras
+                            due_date=due_date,
+                            status='pending',
+                            extra_charges=extra_charges,
+                            due_date_offset=settings.due_date_offset,
+                            late_fee_per_day=settings.late_fee_penalty
+                        )
+                        created += 1
+                    else:
+                        skipped_no_fee += 1
+
+                if created > 0 or skipped_existing > 0 or skipped_no_fee > 0:
+                    ManualGenerationLog.objects.create(
+                        month=month,
+                        year=year,
+                        created_count=created,
+                        skipped_existing=skipped_existing,
+                        skipped_no_fee=skipped_no_fee,
+                        triggered_by='system',
+                        log_type='auto'
+                    )
+                    # Create notification (only if fees were created)
+                    if created > 0:
+                        create_fee_generation_notification(tenant.schema_name, month, year, created, 'system', mobile=False)
+
+                    self.stdout.write(
+                        f"{tenant.schema_name}: generated {created}, "
+                        f"already had fee: {skipped_existing}, "
+                        f"skipped (no fee structure): {skipped_no_fee} for {month}/{year}"
+                    )
+                    generated_total += created
+
+        self.stdout.write(self.style.SUCCESS(f"Total fees generated: {generated_total}"))
+'''
+
+# --------------------------------------------------------------------
+# 3. NEW MANAGEMENT COMMAND: check_cron.py
+# --------------------------------------------------------------------
+CHECK_CRON_PY = '''from django.core.management.base import BaseCommand
+from django_tenants.utils import schema_context
+from axis_saas.models import SchoolClient, SchoolFeeSettings
+from datetime import date
+
+class Command(BaseCommand):
+    help = 'Check the status of fee automation cron job'
+
+    def handle(self, *args, **options):
+        tenants = SchoolClient.objects.filter(is_active=True).exclude(schema_name='public')
+        today = date.today()
+        self.stdout.write(f"Today: {today.isoformat()}")
+        self.stdout.write("=" * 50)
+        found_enabled = False
+
+        for tenant in tenants:
+            with schema_context(tenant.schema_name):
+                settings, _ = SchoolFeeSettings.objects.get_or_create(pk=1)
+                enabled = settings.automation_enabled
+                gen_day = settings.fee_generation_day
+                status = "✅" if enabled else "❌"
+                matches = "✅" if enabled and today.day == gen_day else " "
+                self.stdout.write(
+                    f"{status} {tenant.schema_name:20} | Automation: {'ON' if enabled else 'OFF':4} | "
+                    f"Gen day: {gen_day:2} | Today matches: {matches}"
+                )
+                if enabled:
+                    found_enabled = True
+
+        if not found_enabled:
+            self.stdout.write(self.style.WARNING("No tenant has automation enabled."))
+        else:
+            self.stdout.write(self.style.SUCCESS("Automation is enabled for at least one tenant."))
+            self.stdout.write("To test actual generation, run: python manage.py auto_generate_fees")
+'''
+
+# --------------------------------------------------------------------
+# 4. MAIN PATCHER LOGIC
+# --------------------------------------------------------------------
 def backup_file(filepath):
     if filepath.exists():
-        backup_path = BACKUP_DIR / filepath.name
-        backup_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(filepath, backup_path)
-        print(f"Backup created: {backup_path}")
+        backup = filepath.with_suffix(filepath.suffix + '.bak')
+        shutil.copy2(filepath, backup)
+        print(f"✅ Backed up {filepath} -> {backup}")
+    else:
+        print(f"⚠️ File {filepath} not found (skipping backup)")
 
-def apply_patch():
-    print("Starting Premium Theme Patcher v2 – Clean (No Emojis)...")
-    if not TEMPLATES_DIR.exists():
-        print(f"ERROR: {TEMPLATES_DIR} not found. Run this script from the project root.")
-        return
+def write_file(filepath, content):
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print(f"✅ Written {filepath}")
 
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+def main():
+    print("AXIS Fee Automation Patcher")
+    print("============================\n")
 
-    for filename, content in FILES.items():
-        filepath = TEMPLATES_DIR / filename
-        if not filepath.exists():
-            print(f"Warning: {filepath} not found. Skipping.")
-            continue
-        backup_file(filepath)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        print(f"Updated: {filepath}")
+    # 1. Backup and replace fee_settings.html
+    fee_settings_path = PROJECT_ROOT / 'templates' / 'tenant' / 'fee_settings.html'
+    backup_file(fee_settings_path)
+    write_file(fee_settings_path, NEW_FEE_SETTINGS_HTML)
 
-    print("\nAll mobile templates have been patched with the NEW Premium UI/UX (no emojis).")
-    print("   - Hero banner: blue-purple gradient.")
-    print("   - Background: animated blobs.")
-    print("   - Glass-morphism cards everywhere.")
-    print("   - Fresh typography and spacing.")
-    print("\nRun your Django server and visit the mobile dashboard to see the change.")
+    # 2. Backup and replace auto_generate_fees.py
+    auto_gen_path = PROJECT_ROOT / 'axis_saas' / 'management' / 'commands' / 'auto_generate_fees.py'
+    backup_file(auto_gen_path)
+    write_file(auto_gen_path, NEW_AUTO_GENERATE_PY)
 
-if __name__ == "__main__":
-    apply_patch()
+    # 3. Create check_cron.py
+    check_cron_path = PROJECT_ROOT / 'axis_saas' / 'management' / 'commands' / 'check_cron.py'
+    write_file(check_cron_path, CHECK_CRON_PY)
+
+    print("\n✅ Patcher completed successfully!")
+    print("\nNext steps:")
+    print("1. Run database migrations (if any):")
+    print("   python manage.py makemigrations")
+    print("   python manage.py migrate")
+    print("2. Test the cron check:")
+    print("   python manage.py check_cron")
+    print("3. Set up the cron job (if not already):")
+    print("   Add to crontab (runs daily at 2am):")
+    print("   0 2 * * * cd /home/psami/axis_school_sys && /usr/bin/python3 manage.py auto_generate_fees >> /var/log/axis_cron.log 2>&1")
+    print("4. Verify automation is enabled in the UI and the generation day is set correctly.")
+    print("5. Manually test generation: python manage.py auto_generate_fees")
+
+if __name__ == '__main__':
+    main()

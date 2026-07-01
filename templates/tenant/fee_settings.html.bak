@@ -92,7 +92,6 @@
         color: var(--danger);
         cursor: pointer;
         font-size: 1.2rem;
-        padding: 0 0.3rem;
     }
     .charge-item .edit-charge {
         background: none;
@@ -112,7 +111,6 @@
         border-radius: 2rem;
         padding: 0.4rem 1rem;
         cursor: pointer;
-        font-weight: 600;
     }
     .btn-add-charge:hover {
         background: var(--primary-dark);
@@ -195,6 +193,9 @@
         font-weight: 600;
         cursor: pointer;
     }
+    .btn-secondary:hover {
+        background: var(--surface);
+    }
     .info-card {
         background: var(--surface);
         border-radius: var(--radius);
@@ -236,6 +237,7 @@
             View Logs
         </a>
     </div>
+
 </div>
 
 <div class="settings-grid">
@@ -294,6 +296,7 @@
                     {% endfor %}
                 </div>
                 <div class="total-extra">Total Extra Charges: ₹<span id="totalExtraDisplay">{{ total_extra|floatformat:2 }}</span></div>
+                <!-- Hidden field to store charges JSON -->
                 <input type="hidden" name="extra_charges_json" id="extraChargesJson" value='{{ extra_charges|safe }}'>
             </div>
 
@@ -354,8 +357,7 @@
         <li><strong>Start/Stop:</strong> Toggle automation on/off. When stopped, no automatic generation occurs.</li>
     </ul>
 </div>
-
-<!-- Manual Generation Section -->
+<!-- ====== MANUAL GENERATION SECTION ====== -->
 <div class="settings-card" style="margin-top: 1.5rem; border-left: 4px solid #10b981;">
     <div class="card-header">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -381,183 +383,98 @@
     </div>
 </div>
 
+
+
 <script>
-    (function() {
-        // ---- Extra Charges Management ----
-        const chargesContainer = document.getElementById('chargesContainer');
-        const noChargesMsg = document.getElementById('noChargesMsg');
-        const totalExtraDisplay = document.getElementById('totalExtraDisplay');
-        const extraChargesJson = document.getElementById('extraChargesJson');
+(function() {
+    const btn = document.getElementById('manualGenerateBtn');
+    const status = document.getElementById('manualGenStatus');
+    const resultDiv = document.getElementById('manualGenResult');
 
-        function updateTotal() {
-            let total = 0;
-            const items = chargesContainer.querySelectorAll('.charge-item');
-            items.forEach(item => {
-                const amountInput = item.querySelector('.charge-amount');
-                if (amountInput) {
-                    total += parseFloat(amountInput.value) || 0;
-                }
+    if (!btn) {
+        console.error('Button #manualGenerateBtn not found!');
+        return;
+    }
+    console.log('Manual generate button found, attaching click handler.');
+
+    btn.addEventListener('click', async function(e) {
+        e.preventDefault();
+        console.log('Generate button clicked!');
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Generating...';
+        status.textContent = 'Generating fees...';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '⏳ Processing, please wait...';
+        resultDiv.style.background = 'var(--surface-alt)';
+        resultDiv.style.color = 'var(--text)';
+
+        try {
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                throw new Error('CSRF token not found. Please refresh the page and try again.');
+            }
+            const resp = await fetch('/api/manual-generate/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
             });
-            totalExtraDisplay.innerText = total.toFixed(2);
-            // Update hidden JSON
-            const charges = [];
-            items.forEach(item => {
-                const title = item.querySelector('.charge-title').value.trim();
-                const amount = parseFloat(item.querySelector('.charge-amount').value) || 0;
-                if (title || amount) {
-                    charges.push({ title: title || 'Unnamed', amount: amount });
+            console.log('Response status:', resp.status);
+            if (!resp.ok) {
+                if (resp.status === 401) {
+                    throw new Error('You are not logged in. Please log in again.');
                 }
-            });
-            extraChargesJson.value = JSON.stringify(charges);
-            // Show/hide no charges message
-            if (noChargesMsg) {
-                noChargesMsg.style.display = items.length === 0 ? 'block' : 'none';
+                throw new Error('Server returned ' + resp.status);
             }
+            const data = await resp.json();
+            console.log('Response data:', data);
+
+            if (data.error) {
+                resultDiv.innerHTML = '❌ Error: ' + data.error;
+                resultDiv.style.background = '#fee2e2';
+                resultDiv.style.color = '#991b1b';
+                status.textContent = 'Failed';
+                return;
+            }
+
+            const msg = data.message || 'Fee generation completed.';
+            const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
+            resultDiv.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
+            resultDiv.style.background = '#d1fae5';
+            resultDiv.style.color = '#065f46';
+            status.textContent = '✅ Done';
+
+        } catch (err) {
+            console.error('Error:', err);
+            resultDiv.innerHTML = '❌ Error: ' + err.message;
+            resultDiv.style.background = '#fee2e2';
+            resultDiv.style.color = '#991b1b';
+            status.textContent = '❌ Error';
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         }
+    });
 
-        // Add charge
-        document.getElementById('addChargeBtn').addEventListener('click', function() {
-            const idx = chargesContainer.querySelectorAll('.charge-item').length;
-            const div = document.createElement('div');
-            div.className = 'charge-item';
-            div.dataset.index = idx;
-            div.innerHTML = `
-                <input type="text" class="charge-title" placeholder="Title">
-                <input type="number" step="0.01" class="charge-amount" placeholder="Amount">
-                <button type="button" class="edit-charge" title="Edit">✎</button>
-                <button type="button" class="remove-charge" title="Remove">×</button>
-            `;
-            // Insert before the "Add Charge" button? Actually we put it inside container before the button? 
-            // The container is the div; we'll append to it.
-            chargesContainer.appendChild(div);
-            attachChargeEvents(div);
-            updateTotal();
-        });
-
-        function attachChargeEvents(container) {
-            const removeBtn = container.querySelector('.remove-charge');
-            const editBtn = container.querySelector('.edit-charge');
-            const titleInput = container.querySelector('.charge-title');
-            const amountInput = container.querySelector('.charge-amount');
-
-            if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
-                    if (confirm('Remove this charge?')) {
-                        container.remove();
-                        updateTotal();
-                    }
-                });
-            }
-            if (editBtn) {
-                editBtn.addEventListener('click', function() {
-                    // Simple edit: just focus the title input
-                    titleInput.focus();
-                });
-            }
-            if (titleInput) {
-                titleInput.addEventListener('input', updateTotal);
-            }
-            if (amountInput) {
-                amountInput.addEventListener('input', updateTotal);
-            }
-        }
-
-        // Attach events to existing charge items
-        document.querySelectorAll('.charge-item').forEach(item => {
-            attachChargeEvents(item);
-        });
-
-        // Initial total update
-        updateTotal();
-
-        // ---- Manual Generate ----
-        const manualBtn = document.getElementById('manualGenerateBtn');
-        const manualStatus = document.getElementById('manualGenStatus');
-        const manualResult = document.getElementById('manualGenResult');
-
-        if (manualBtn) {
-            manualBtn.addEventListener('click', async function(e) {
-                e.preventDefault();
-                const originalText = manualBtn.innerHTML;
-                manualBtn.disabled = true;
-                manualBtn.innerHTML = '⏳ Generating...';
-                manualStatus.textContent = 'Generating...';
-                manualResult.style.display = 'block';
-                manualResult.innerHTML = '⏳ Processing, please wait...';
-                manualResult.style.background = 'var(--surface-alt)';
-                manualResult.style.color = 'var(--text)';
-
-                try {
-                    const csrfToken = getCsrfToken();
-                    const resp = await fetch('/api/manual-generate/', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': csrfToken,
-                            'Content-Type': 'application/json',
-                        },
-                        credentials: 'same-origin'
-                    });
-                    const data = await resp.json();
-                    if (data.error) {
-                        manualResult.innerHTML = '❌ Error: ' + data.error;
-                        manualResult.style.background = '#fee2e2';
-                        manualResult.style.color = '#991b1b';
-                        manualStatus.textContent = 'Failed';
-                    } else {
-                        const msg = data.message || 'Fee generation completed.';
-                        const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
-                        manualResult.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
-                        manualResult.style.background = '#d1fae5';
-                        manualResult.style.color = '#065f46';
-                        manualStatus.textContent = '✅ Done';
-                    }
-                } catch (err) {
-                    manualResult.innerHTML = '❌ Error: ' + err.message;
-                    manualResult.style.background = '#fee2e2';
-                    manualResult.style.color = '#991b1b';
-                    manualStatus.textContent = '❌ Error';
-                } finally {
-                    manualBtn.disabled = false;
-                    manualBtn.innerHTML = originalText;
-                }
-            });
-        }
-
-        function getCsrfToken() {
-            let name = 'csrftoken';
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
+    function getCsrfToken() {
+        let name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
             }
-            return cookieValue;
         }
-
-        // ---- Next generation date (from server or calculate) ----
-        // Use the existing status API or compute client-side
-        // We'll compute from settings: fee_generation_day
-        const genDayInput = document.querySelector('input[name="fee_generation_day"]');
-        if (genDayInput) {
-            const genDay = parseInt(genDayInput.value) || 1;
-            const today = new Date();
-            let nextDate = new Date(today);
-            if (today.getDate() < genDay) {
-                nextDate.setDate(genDay);
-            } else {
-                nextDate.setMonth(today.getMonth() + 1);
-                nextDate.setDate(genDay);
-            }
-            const nextGenSpan = document.getElementById('nextGenDate');
-            if (nextGenSpan) {
-                nextGenSpan.innerText = nextDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            }
-        }
-    })();
+        console.log('CSRF token:', cookieValue ? 'found' : 'not found');
+        return cookieValue;
+    }
+})();
 </script>
 {% endblock %}
