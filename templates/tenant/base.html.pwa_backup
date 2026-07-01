@@ -748,7 +748,12 @@
                 {% endif %}
 
                 <!-- PWA Install button (sidebar) -->
-                
+                <button id="installAppSidebarBtn" class="nav-item" style="display: flex; width: 100%; background: none; border: none; text-align: left; cursor: pointer;">
+                    <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
+                    </svg>
+                    <span>Install App</span>
+                </button>
             </nav>
 
             <div class="sidebar-footer">
@@ -845,110 +850,6 @@
     </div>
 
     <!-- ===== JAVASCRIPT ===== -->
-<<<<<<< HEAD
-    
-
-    <!-- Floating Install Button -->
-    
-
-    {% include "tenant/voucher_modal.html" %}
-
-    <!-- PWA Install Button (small, bottom‑center) -->
-    
-
-
-    
-
-<!-- PWA Fallback Modal -->
-
-</div>
-<!-- PWA Install Button (clean, always visible unless installed) -->
-
-
-    
-<!-- Install Fallback Modal -->
-<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background: var(--surface, #fff); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-        <h3 style="margin-top:0;">Install AXIS App</h3>
-        <p>To install this app manually:</p>
-        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
-            <li><strong>Chrome/Edge:</strong> Tap the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
-            <li><strong>Firefox:</strong> Menu → "Add to Home screen".</li>
-            <li><strong>Safari (iOS):</strong> Share → "Add to Home Screen".</li>
-        </ul>
-        <button id="closeFallbackModal" style="background: var(--primary, #4F46E5); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer;">Got it</button>
-    </div>
-</div>
-<!-- PWA Install Button -->
-<div id="pwaInstallContainer" style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none;">
-    <button id="installAppBtn" style="background: rgba(79,70,229,0.92); backdrop-filter: blur(8px); color: white; border: none; border-radius: 30px; padding: 8px 18px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg>
-        Install App
-    </button>
-</div>
-
-<script>
-(function() {
-    let deferredPrompt = null;
-    const installBtn = document.getElementById('installAppBtn');
-    const container = document.getElementById('pwaInstallContainer');
-    const fallbackModal = document.getElementById('installFallbackModal');
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        if (container) container.style.display = 'none';
-        return;
-    }
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        console.log('Install prompt captured');
-        if (container) container.style.display = 'flex';
-    });
-
-    window.addEventListener('appinstalled', () => {
-        if (container) container.style.display = 'none';
-        deferredPrompt = null;
-    });
-
-    if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    console.log('User accepted install');
-                    if (container) container.style.display = 'none';
-                } else {
-                    console.log('User dismissed install');
-                    // Still show fallback in case they change mind
-                    if (fallbackModal) fallbackModal.style.display = 'flex';
-                }
-                deferredPrompt = null;
-            } else {
-                // No prompt – show fallback
-                if (fallbackModal) fallbackModal.style.display = 'flex';
-            }
-        });
-    }
-
-    // Fallback modal close
-    document.getElementById('closeFallbackModal')?.addEventListener('click', () => {
-        if (fallbackModal) fallbackModal.style.display = 'none';
-    });
-    fallbackModal?.addEventListener('click', (e) => {
-        if (e.target === fallbackModal) fallbackModal.style.display = 'none';
-    });
-
-    // If after 3 seconds no prompt, still show button
-    setTimeout(() => {
-        if (!window.matchMedia('(display-mode: standalone)').matches && container) {
-            container.style.display = 'flex';
-        }
-    }, 3000);
-})();
-</script>
-=======
     <script>
         // Sidebar collapse / expand (desktop)
         const sidebar = document.getElementById('sidebar');
@@ -1168,7 +1069,17 @@
     </script>
 
     <!-- PWA Install Fallback Modal -->
-    
+    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background: var(--surface); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0;">Install App</h3>
+            <p>To install this app on your device:</p>
+            <ul style="padding-left:1.5rem; margin:0.5rem 0;">
+                <li><strong>Chrome / Edge:</strong> Click the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
+                <li><strong>Firefox:</strong> Tap the menu (☰) → "Add to Home screen".</li>
+                <li><strong>Safari (iOS):</strong> Tap the share button → "Add to Home Screen".</li>
+            </ul>
+            <button id="closeFallbackModal" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer; margin-top: 0.5rem;">Got it</button>
+        </div>
     </div>
     <script>
         document.getElementById('closeFallbackModal')?.addEventListener('click', function() {
@@ -1238,12 +1149,7 @@
     </script>
 
     <!-- Floating Install Button -->
-    
-
-    {% include "tenant/voucher_modal.html" %}
-
-    <!-- PWA Install Button (hidden when installed or not supported) -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: none;">
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex;">
         <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
@@ -1252,70 +1158,6 @@
         </button>
     </div>
 
-    <script>
-        (function() {
-            let deferredPrompt = null;
-            const installBtn = document.getElementById('installAppBtn');
-            const container = document.getElementById('pwaInstallContainer');
-
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                if (container) container.style.display = 'none';
-                return;
-            }
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                console.log('Install prompt captured');
-                if (container) container.style.display = 'flex';
-            });
-
-            window.addEventListener('appinstalled', () => {
-                if (container) container.style.display = 'none';
-                deferredPrompt = null;
-            });
-
-            if (installBtn) {
-                installBtn.addEventListener('click', async () => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        const result = await deferredPrompt.userChoice;
-                        if (result.outcome === 'accepted') {
-                            console.log('User accepted install');
-                            if (container) container.style.display = 'none';
-                        } else {
-                            console.log('User dismissed install');
-                        }
-                        deferredPrompt = null;
-                    } else {
-                        showToast('Installation is not supported in this browser or already installed.');
-                    }
-                });
-            }
-
-            function showToast(msg) {
-                const existing = document.getElementById('installToast');
-                if (existing) existing.remove();
-                const toast = document.createElement('div');
-                toast.id = 'installToast';
-                toast.style.cssText = `
-                    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                    background: #1e293b; color: white; padding: 12px 24px;
-                    border-radius: 30px; font-size: 14px; z-index: 9999;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                    max-width: 90%; text-align: center;
-                    transition: opacity 0.3s;
-                `;
-                toast.textContent = msg;
-                document.body.appendChild(toast);
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 400);
-                }, 4000);
-            }
-        })();
-    </script>
->>>>>>> 7888712 (PWA new)
-
+    {% include "tenant/voucher_modal.html" %}
 </body>
 </html>

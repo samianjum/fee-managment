@@ -338,6 +338,7 @@
 
     <!-- Floating Install Button -->
     
+<<<<<<< HEAD
 
     
 
@@ -368,6 +369,8 @@
         Install App
     </button>
 </div>
+=======
+>>>>>>> 7888712 (PWA new)
 
 <script>
 (function() {
@@ -430,6 +433,81 @@
     }, 3000);
 })();
 </script>
+
+
+    <!-- PWA Install Button (hidden when installed or not supported) -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: none;">
+        <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
+            </svg>
+            Install App
+        </button>
+    </div>
+
+    <script>
+        (function() {
+            let deferredPrompt = null;
+            const installBtn = document.getElementById('installAppBtn');
+            const container = document.getElementById('pwaInstallContainer');
+
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                if (container) container.style.display = 'none';
+                return;
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                console.log('Install prompt captured');
+                if (container) container.style.display = 'flex';
+            });
+
+            window.addEventListener('appinstalled', () => {
+                if (container) container.style.display = 'none';
+                deferredPrompt = null;
+            });
+
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const result = await deferredPrompt.userChoice;
+                        if (result.outcome === 'accepted') {
+                            console.log('User accepted install');
+                            if (container) container.style.display = 'none';
+                        } else {
+                            console.log('User dismissed install');
+                        }
+                        deferredPrompt = null;
+                    } else {
+                        showToast('Installation is not supported in this browser or already installed.');
+                    }
+                });
+            }
+
+            function showToast(msg) {
+                const existing = document.getElementById('installToast');
+                if (existing) existing.remove();
+                const toast = document.createElement('div');
+                toast.id = 'installToast';
+                toast.style.cssText = `
+                    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                    background: #1e293b; color: white; padding: 12px 24px;
+                    border-radius: 30px; font-size: 14px; z-index: 9999;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                    max-width: 90%; text-align: center;
+                    transition: opacity 0.3s;
+                `;
+                toast.textContent = msg;
+                document.body.appendChild(toast);
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    setTimeout(() => toast.remove(), 400);
+                }, 4000);
+            }
+        })();
+    </script>
 
 </body>
 </html>
