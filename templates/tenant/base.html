@@ -867,375 +867,14 @@
 
     
 <!-- Install Fallback Modal -->
-<div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background: var(--surface, #fff); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-        <h3 style="margin-top:0;">Install AXIS App</h3>
-        <p>To install this app manually:</p>
-        <ul style="padding-left:1.5rem; margin:0.5rem 0;">
-            <li><strong>Chrome/Edge:</strong> Tap the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
-            <li><strong>Firefox:</strong> Menu → "Add to Home screen".</li>
-            <li><strong>Safari (iOS):</strong> Share → "Add to Home Screen".</li>
-        </ul>
-        <button id="closeFallbackModal" style="background: var(--primary, #4F46E5); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer;">Got it</button>
-    </div>
+
 </div>
 <!-- PWA Install Button -->
-<div id="pwaInstallContainer" style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none;">
-    <button id="installAppBtn" style="background: rgba(79,70,229,0.92); backdrop-filter: blur(8px); color: white; border: none; border-radius: 30px; padding: 8px 18px; font-weight: 600; box-shadow: 0 4px 16px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg>
-        Install App
-    </button>
-</div>
 
-<script>
-(function() {
-    let deferredPrompt = null;
-    const installBtn = document.getElementById('installAppBtn');
-    const container = document.getElementById('pwaInstallContainer');
-    const fallbackModal = document.getElementById('installFallbackModal');
 
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        if (container) container.style.display = 'none';
-        return;
-    }
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        console.log('Install prompt captured');
-        if (container) container.style.display = 'flex';
-    });
-
-    window.addEventListener('appinstalled', () => {
-        if (container) container.style.display = 'none';
-        deferredPrompt = null;
-    });
-
-    if (installBtn) {
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    console.log('User accepted install');
-                    if (container) container.style.display = 'none';
-                } else {
-                    console.log('User dismissed install');
-                    // Still show fallback in case they change mind
-                    if (fallbackModal) fallbackModal.style.display = 'flex';
-                }
-                deferredPrompt = null;
-            } else {
-                // No prompt – show fallback
-                if (fallbackModal) fallbackModal.style.display = 'flex';
-            }
-        });
-    }
-
-    // Fallback modal close
-    document.getElementById('closeFallbackModal')?.addEventListener('click', () => {
-        if (fallbackModal) fallbackModal.style.display = 'none';
-    });
-    fallbackModal?.addEventListener('click', (e) => {
-        if (e.target === fallbackModal) fallbackModal.style.display = 'none';
-    });
-
-    // If after 3 seconds no prompt, still show button
-    setTimeout(() => {
-        if (!window.matchMedia('(display-mode: standalone)').matches && container) {
-            container.style.display = 'flex';
-        }
-    }, 3000);
-})();
-</script>
 =======
-    <script>
-        // Sidebar collapse / expand (desktop)
-        const sidebar = document.getElementById('sidebar');
-        const toggleBtn = document.getElementById('sidebarToggleBtn');
-        const logoArea = document.getElementById('logoArea');
-        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-        const overlay = document.getElementById('sidebarOverlay');
-
-        const savedState = localStorage.getItem('sidebarCollapsed');
-        if (savedState === 'true') sidebar.classList.add('collapsed');
-
-        function toggleSidebar() {
-            sidebar.classList.toggle('collapsed');
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            const svg = toggleBtn.querySelector('svg');
-            if (isCollapsed) {
-                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>';
-            } else {
-                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>';
-            }
-        }
-
-        if (toggleBtn) toggleBtn.addEventListener('click', toggleSidebar);
-        if (logoArea) logoArea.addEventListener('click', toggleSidebar);
-
-        // Mobile menu open/close
-        function isMobile() {
-            return window.innerWidth < 768;
-        }
-
-        function openMobileSidebar() {
-            if (!isMobile()) return;
-            sidebar.classList.add('mobile-open');
-            overlay.classList.add('active');
-        }
-
-        function closeMobileSidebar() {
-            sidebar.classList.remove('mobile-open');
-            overlay.classList.remove('active');
-        }
-
-        if (mobileMenuBtn) {
-            mobileMenuBtn.addEventListener('click', openMobileSidebar);
-        }
-        if (overlay) {
-            overlay.addEventListener('click', closeMobileSidebar);
-        }
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', function(e) {
-                if (isMobile()) {
-                    e.preventDefault();
-                    closeMobileSidebar();
-                }
-            });
-        }
-        document.querySelectorAll('.nav-item').forEach(link => {
-            link.addEventListener('click', function() {
-                if (isMobile()) closeMobileSidebar();
-            });
-        });
-
-        // Theme toggle
-        const root = document.documentElement;
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') root.setAttribute('data-theme', 'dark');
-        function toggleTheme() {
-            const isDark = root.getAttribute('data-theme') === 'dark';
-            root.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            localStorage.setItem('theme', isDark ? 'light' : 'dark');
-        }
-
-        // Profile dropdown (sidebar)
-        (function() {
-            const profileBtn = document.getElementById('profileBtn');
-            const dropdown = document.getElementById('profileDropdown');
-            if (!profileBtn || !dropdown) return;
-
-            function positionDropdown() {
-                if (!dropdown.classList.contains('show')) return;
-                const rect = profileBtn.getBoundingClientRect();
-                const isCollapsed = sidebar.classList.contains('collapsed');
-                const dropdownHeight = dropdown.offsetHeight;
-                const dropdownWidth = dropdown.offsetWidth;
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-
-                if (isCollapsed) {
-                    dropdown.style.position = 'fixed';
-                    dropdown.style.left = (rect.right + 8) + 'px';
-                    dropdown.style.top = rect.top + 'px';
-                    dropdown.style.bottom = 'auto';
-                    dropdown.style.right = 'auto';
-                    dropdown.style.margin = '0';
-                    if (rect.right + dropdownWidth + 8 > viewportWidth) {
-                        dropdown.style.left = (rect.left - dropdownWidth - 8) + 'px';
-                    }
-                    if (rect.top + dropdownHeight > viewportHeight) {
-                        dropdown.style.top = (viewportHeight - dropdownHeight - 10) + 'px';
-                    }
-                    if (rect.top < 0) {
-                        dropdown.style.top = '10px';
-                    }
-                } else {
-                    dropdown.style.position = 'absolute';
-                    dropdown.style.left = '0';
-                    dropdown.style.right = '0';
-                    dropdown.style.bottom = '100%';
-                    dropdown.style.top = 'auto';
-                    dropdown.style.marginBottom = '0.5rem';
-                    const spaceAbove = rect.top;
-                    if (spaceAbove < dropdownHeight) {
-                        dropdown.style.bottom = 'auto';
-                        dropdown.style.top = '100%';
-                        dropdown.style.marginTop = '0.5rem';
-                        dropdown.style.marginBottom = '0';
-                    } else {
-                        dropdown.style.bottom = '100%';
-                        dropdown.style.marginBottom = '0.5rem';
-                    }
-                }
-            }
-
-            profileBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
-                if (dropdown.classList.contains('show')) setTimeout(positionDropdown, 10);
-            });
-
-            window.addEventListener('resize', function() {
-                if (dropdown.classList.contains('show')) positionDropdown();
-            });
-            window.addEventListener('scroll', function() {
-                if (dropdown.classList.contains('show')) positionDropdown();
-            });
-
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.attributeName === 'class') {
-                        if (dropdown.classList.contains('show')) positionDropdown();
-                    }
-                });
-            });
-            observer.observe(sidebar, { attributes: true });
-
-            document.addEventListener('click', function(e) {
-                if (!profileBtn.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-            dropdown.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-        })();
-
-        // Header profile dropdown
-        (function() {
-            const avatarBtn = document.getElementById('headerProfileBtn');
-            const menu = document.getElementById('headerProfileMenu');
-            if (!avatarBtn || !menu) return;
-
-            avatarBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                menu.classList.toggle('show');
-                if (menu.classList.contains('show')) {
-                    const rect = avatarBtn.getBoundingClientRect();
-                    menu.style.position = 'fixed';
-                    menu.style.top = (rect.bottom + 6) + 'px';
-                    menu.style.right = (window.innerWidth - rect.right) + 'px';
-                    menu.style.left = 'auto';
-                    menu.style.bottom = 'auto';
-                    menu.style.margin = '0';
-                    menu.style.width = '200px';
-                }
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!avatarBtn.contains(e.target) && !menu.contains(e.target)) {
-                    menu.classList.remove('show');
-                }
-            });
-        })();
-
-        // Notification bell
-        (function() {
-            const bell = document.getElementById('notificationBell');
-            const dropdown = document.getElementById('notificationDropdown');
-            if (!bell || !dropdown) return;
-
-            bell.addEventListener('click', function(e) {
-                e.stopPropagation();
-                dropdown.classList.toggle('show');
-                if (dropdown.classList.contains('show')) {
-                    const rect = bell.getBoundingClientRect();
-                    dropdown.style.position = 'fixed';
-                    dropdown.style.top = (rect.bottom + 6) + 'px';
-                    dropdown.style.right = (window.innerWidth - rect.right) + 'px';
-                    dropdown.style.left = 'auto';
-                    dropdown.style.bottom = 'auto';
-                    dropdown.style.margin = '0';
-                }
-            });
-
-            document.addEventListener('click', function(e) {
-                if (!bell.contains(e.target) && !dropdown.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
-        })();
-
-        // Service Worker
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('Service Worker registered'))
-                .catch(err => console.log('Service Worker registration failed:', err));
-        }
-    </script>
-
-    <!-- PWA Install Fallback Modal -->
     
-    </div>
-    <script>
-        document.getElementById('closeFallbackModal')?.addEventListener('click', function() {
-            document.getElementById('installFallbackModal').style.display = 'none';
-        });
-        document.getElementById('installFallbackModal')?.addEventListener('click', function(e) {
-            if (e.target === this) this.style.display = 'none';
-        });
-    </script>
-
-    <!-- PWA Install Buttons -->
-    <script>
-        (function() {
-            let deferredPrompt;
-            const floatingBtn = document.getElementById('installAppBtn');
-            const sidebarBtn = document.getElementById('installAppSidebarBtn');
-            const fallbackModal = document.getElementById('installFallbackModal');
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                console.log('beforeinstallprompt fired');
-            });
-
-            async function triggerInstall() {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
-                        if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
-                        if (sidebarBtn) sidebarBtn.style.display = 'none';
-                    } else {
-                        console.log('User dismissed install');
-                    }
-                    deferredPrompt = null;
-                } else {
-                    if (fallbackModal) fallbackModal.style.display = 'flex';
-                }
-            }
-
-            if (floatingBtn) {
-                floatingBtn.addEventListener('click', triggerInstall);
-            }
-            if (sidebarBtn) {
-                sidebarBtn.addEventListener('click', triggerInstall);
-            }
-
-            window.addEventListener('appinstalled', () => {
-                console.log('App installed');
-                if (floatingBtn) floatingBtn.closest('#pwaInstallContainer').style.display = 'none';
-                if (sidebarBtn) sidebarBtn.style.display = 'none';
-            });
-
-            const closeFallback = document.getElementById('closeFallbackModal');
-            if (closeFallback) {
-                closeFallback.addEventListener('click', () => {
-                    if (fallbackModal) fallbackModal.style.display = 'none';
-                });
-            }
-            if (fallbackModal) {
-                fallbackModal.addEventListener('click', (e) => {
-                    if (e.target === fallbackModal) fallbackModal.style.display = 'none';
-                });
-            }
-        })();
-    </script>
 
     <!-- Floating Install Button -->
     
@@ -1243,7 +882,14 @@
     {% include "tenant/voucher_modal.html" %}
 
     <!-- PWA Install Button (hidden when installed or not supported) -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: none;">
+    
+
+    
+>>>>>>> 7888712 (PWA new)
+
+
+    <!-- PWA Install Button – always visible (if not installed) -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
         <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
@@ -1252,17 +898,34 @@
         </button>
     </div>
 
+    <!-- Install Fallback Modal -->
+    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="background: var(--surface, #fff); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0;">Install AXIS App</h3>
+            <p>To install this app manually:</p>
+            <ul style="padding-left:1.5rem; margin:0.5rem 0;">
+                <li><strong>Chrome/Edge:</strong> Tap the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
+                <li><strong>Firefox:</strong> Menu → "Add to Home screen".</li>
+                <li><strong>Safari (iOS):</strong> Share → "Add to Home Screen".</li>
+            </ul>
+            <button id="closeFallbackModal" style="background: var(--primary, #4F46E5); color: white; border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer;">Got it</button>
+        </div>
+    </div>
+
     <script>
         (function() {
             let deferredPrompt = null;
             const installBtn = document.getElementById('installAppBtn');
             const container = document.getElementById('pwaInstallContainer');
+            const fallbackModal = document.getElementById('installFallbackModal');
 
+            // Hide if already installed
             if (window.matchMedia('(display-mode: standalone)').matches) {
                 if (container) container.style.display = 'none';
                 return;
             }
 
+            // Listen for beforeinstallprompt
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
@@ -1275,47 +938,31 @@
                 deferredPrompt = null;
             });
 
-            if (installBtn) {
-                installBtn.addEventListener('click', async () => {
-                    if (deferredPrompt) {
-                        deferredPrompt.prompt();
-                        const result = await deferredPrompt.userChoice;
-                        if (result.outcome === 'accepted') {
-                            console.log('User accepted install');
-                            if (container) container.style.display = 'none';
-                        } else {
-                            console.log('User dismissed install');
-                        }
-                        deferredPrompt = null;
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        console.log('User accepted install');
+                        if (container) container.style.display = 'none';
                     } else {
-                        showToast('Installation is not supported in this browser or already installed.');
+                        console.log('User dismissed install');
+                        if (fallbackModal) fallbackModal.style.display = 'flex';
                     }
-                });
-            }
+                    deferredPrompt = null;
+                } else {
+                    if (fallbackModal) fallbackModal.style.display = 'flex';
+                }
+            });
 
-            function showToast(msg) {
-                const existing = document.getElementById('installToast');
-                if (existing) existing.remove();
-                const toast = document.createElement('div');
-                toast.id = 'installToast';
-                toast.style.cssText = `
-                    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                    background: #1e293b; color: white; padding: 12px 24px;
-                    border-radius: 30px; font-size: 14px; z-index: 9999;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                    max-width: 90%; text-align: center;
-                    transition: opacity 0.3s;
-                `;
-                toast.textContent = msg;
-                document.body.appendChild(toast);
-                setTimeout(() => {
-                    toast.style.opacity = '0';
-                    setTimeout(() => toast.remove(), 400);
-                }, 4000);
-            }
+            document.getElementById('closeFallbackModal')?.addEventListener('click', () => {
+                if (fallbackModal) fallbackModal.style.display = 'none';
+            });
+            fallbackModal?.addEventListener('click', (e) => {
+                if (e.target === fallbackModal) fallbackModal.style.display = 'none';
+            });
         })();
     </script>
->>>>>>> 7888712 (PWA new)
 
 </body>
 </html>

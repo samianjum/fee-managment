@@ -2,7 +2,6 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django_tenants.utils import schema_context
 from .models import SchoolClient
-import json
 
 def manifest(request, schema_name):
     with schema_context('public'):
@@ -39,7 +38,7 @@ def manifest(request, schema_name):
     return JsonResponse(manifest_data)
 
 def service_worker(request):
-    sw_js = '''// AXIS PWA Service Worker
+    sw_js = """// AXIS PWA Service Worker
 const CACHE_NAME = 'axis-pwa-v3';
 const STATIC_EXTENSIONS = ['css', 'js', 'png', 'jpg', 'svg', 'ico', 'json', 'woff2'];
 const STATIC_URLS = [
@@ -92,5 +91,5 @@ self.addEventListener('fetch', event => {
         );
     }
 });
-'''
+"""
     return HttpResponse(sw_js, content_type='application/javascript')
