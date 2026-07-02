@@ -845,51 +845,133 @@
     </div>
 
     <!-- ===== JAVASCRIPT ===== -->
-<<<<<<< HEAD
-    
 
-    <!-- Floating Install Button -->
-    
-
+<!-- ===== JAVASCRIPT ===== -->
     {% include "tenant/voucher_modal.html" %}
 
-    <!-- PWA Install Button (small, bottom‑center) -->
-    
+    <script>
+        (function() {
+            // ----- Sidebar toggle (with persistence) -----
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggleBtn');
+            const mainContent = document.getElementById('mainContent');
+            const overlay = document.getElementById('sidebarOverlay');
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 
+            function setSidebarState(collapsed) {
+                if (collapsed) {
+                    sidebar.classList.add('collapsed');
+                    localStorage.setItem('sidebarCollapsed', 'true');
+                } else {
+                    sidebar.classList.remove('collapsed');
+                    localStorage.setItem('sidebarCollapsed', 'false');
+                }
+            }
 
-    
+            // Restore saved state
+            const savedCollapse = localStorage.getItem('sidebarCollapsed');
+            if (savedCollapse === 'true') {
+                setSidebarState(true);
+            }
 
-<!-- PWA Fallback Modal -->
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isCollapsed = !sidebar.classList.contains('collapsed');
+                    setSidebarState(isCollapsed);
+                });
+            }
 
-</div>
-<!-- PWA Install Button (clean, always visible unless installed) -->
+            // ----- Mobile menu -----
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('mobile-open');
+                    overlay.classList.toggle('active');
+                });
+            }
 
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('mobile-open');
+                    overlay.classList.remove('active');
+                });
+            }
 
-    
-<!-- Install Fallback Modal -->
+            // Close mobile menu on nav link click (for better UX)
+            document.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('mobile-open');
+                        overlay.classList.remove('active');
+                    }
+                });
+            });
 
-</div>
-<!-- PWA Install Button -->
+            // ----- Dropdown toggles (Profile & Notification) -----
+            function toggleDropdown(dropdownId, buttonId) {
+                const dropdown = document.getElementById(dropdownId);
+                const button = document.getElementById(buttonId);
+                if (!dropdown || !button) return;
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Close other dropdowns
+                    document.querySelectorAll('.dropdown-menu.show').forEach(d => {
+                        if (d.id !== dropdownId) d.classList.remove('show');
+                    });
+                    dropdown.classList.toggle('show');
+                });
+            }
+            toggleDropdown('profileDropdown', 'profileBtn');
+            toggleDropdown('headerProfileMenu', 'headerProfileBtn');
 
+            // Notification bell
+            const notifBell = document.getElementById('notificationBell');
+            const notifDropdown = document.getElementById('notificationDropdown');
+            if (notifBell && notifDropdown) {
+                notifBell.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    notifDropdown.classList.toggle('show');
+                });
+            }
 
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                const allOpen = document.querySelectorAll('.dropdown-menu.show');
+                allOpen.forEach(d => {
+                    // check if click is inside the dropdown or its trigger
+                    const trigger = d.id === 'profileDropdown' ? document.getElementById('profileBtn') :
+                                   d.id === 'headerProfileMenu' ? document.getElementById('headerProfileBtn') :
+                                   d.id === 'notificationDropdown' ? document.getElementById('notificationBell') : null;
+                    if (!d.contains(e.target) && (!trigger || !trigger.contains(e.target))) {
+                        d.classList.remove('show');
+                    }
+                });
+            });
 
-=======
-    
+            // ----- Theme toggle -----
+            function toggleTheme() {
+                const html = document.documentElement;
+                const current = html.getAttribute('data-theme');
+                const next = current === 'light' ? 'dark' : 'light';
+                html.setAttribute('data-theme', next);
+                localStorage.setItem('theme', next);
+            }
+            // Restore theme
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            }
+            // Expose globally for inline onclick
+            window.toggleTheme = toggleTheme;
 
-    <!-- Floating Install Button -->
-    
+            // Also handle theme toggle from dropdown items (they call toggleTheme)
+            // Additional: if any dropdown item has onclick="toggleTheme()", it will work.
+        })();
+    </script>
 
-    {% include "tenant/voucher_modal.html" %}
+    <!-- PWA Install Button (kept from original) -->
 
-    <!-- PWA Install Button (hidden when installed or not supported) -->
-    
-
-    
->>>>>>> 7888712 (PWA new)
-
-
-    <!-- PWA Install Button – always visible (if not installed) -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
+<div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
         <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
