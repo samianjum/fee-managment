@@ -244,20 +244,19 @@
             min-height: 100vh;
             flex: 1;
             margin-left: 280px;
-            padding: 0;  /* remove all padding so header touches edges */
+            padding: 0;
             transition: var(--transition);
         }
         .sidebar.collapsed ~ .main-content {
             margin-left: 80px;
         }
 
-        /* Content area for the rest (messages + body) */
         .content-area {
             padding: 2rem;
-            padding-top: 1rem;  /* some spacing below header */
+            padding-top: 1rem;
         }
 
-        /* ===== TOP HEADER – RECTANGULAR, FLUSH ===== */
+        /* ===== TOP HEADER ===== */
         .top-header {
             display: flex;
             align-items: center;
@@ -269,9 +268,8 @@
             -webkit-backdrop-filter: blur(8px);
             border-bottom: 1px solid var(--border);
             box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            /* no border-radius */
             border-radius: 0;
-            margin: 0;  /* no margin, flush */
+            margin: 0;
             width: 100%;
             transition: var(--transition);
         }
@@ -368,7 +366,6 @@
             border: 2px solid var(--surface);
         }
 
-        /* Notification dropdown */
         .notification-dropdown {
             position: absolute;
             top: calc(100% + 8px);
@@ -746,9 +743,6 @@
                     <span>Settings</span>
                 </a>
                 {% endif %}
-
-                <!-- PWA Install button (sidebar) -->
-                
             </nav>
 
             <div class="sidebar-footer">
@@ -792,7 +786,7 @@
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main-content" id="mainContent">
 
-            <!-- ===== TOP HEADER (Flush, rectangular) ===== -->
+            <!-- ===== TOP HEADER ===== -->
             <header class="top-header">
                 <div class="header-left">
                     <!-- Left side intentionally empty -->
@@ -836,7 +830,7 @@
                 </div>
             </header>
 
-            <!-- Content area with padding for messages and body -->
+            <!-- Content area -->
             <div class="content-area">
                 {% include "tenant/messages.html" %}
                 {% block body %}{% endblock %}
@@ -845,19 +839,18 @@
     </div>
 
     <!-- ===== JAVASCRIPT ===== -->
-
-<!-- ===== JAVASCRIPT ===== -->
     {% include "tenant/voucher_modal.html" %}
 
     <script>
         (function() {
-            // ----- Sidebar toggle (with persistence) -----
+            // ----- DOM references -----
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('sidebarToggleBtn');
-            const mainContent = document.getElementById('mainContent');
+            const logoArea = document.getElementById('logoArea');
             const overlay = document.getElementById('sidebarOverlay');
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
 
+            // ----- Sidebar state persistence -----
             function setSidebarState(collapsed) {
                 if (collapsed) {
                     sidebar.classList.add('collapsed');
@@ -874,11 +867,21 @@
                 setSidebarState(true);
             }
 
+            // ----- Toggle button -----
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     const isCollapsed = !sidebar.classList.contains('collapsed');
                     setSidebarState(isCollapsed);
+                });
+            }
+
+            // ----- Logo click: expand if collapsed -----
+            if (logoArea) {
+                logoArea.addEventListener('click', function(e) {
+                    if (sidebar.classList.contains('collapsed')) {
+                        setSidebarState(false);
+                    }
                 });
             }
 
@@ -897,7 +900,7 @@
                 });
             }
 
-            // Close mobile menu on nav link click (for better UX)
+            // Close mobile menu on nav link click
             document.querySelectorAll('.nav-item').forEach(link => {
                 link.addEventListener('click', function() {
                     if (window.innerWidth <= 768) {
@@ -921,6 +924,7 @@
                     dropdown.classList.toggle('show');
                 });
             }
+
             toggleDropdown('profileDropdown', 'profileBtn');
             toggleDropdown('headerProfileMenu', 'headerProfileBtn');
 
@@ -934,14 +938,16 @@
                 });
             }
 
-            // Close dropdowns when clicking outside
+            // ----- Close dropdowns on outside click -----
             document.addEventListener('click', function(e) {
-                const allOpen = document.querySelectorAll('.dropdown-menu.show');
-                allOpen.forEach(d => {
-                    // check if click is inside the dropdown or its trigger
-                    const trigger = d.id === 'profileDropdown' ? document.getElementById('profileBtn') :
-                                   d.id === 'headerProfileMenu' ? document.getElementById('headerProfileBtn') :
-                                   d.id === 'notificationDropdown' ? document.getElementById('notificationBell') : null;
+                document.querySelectorAll('.dropdown-menu.show').forEach(d => {
+                    // Check if click is inside the dropdown or its trigger
+                    const triggerMap = {
+                        'profileDropdown': document.getElementById('profileBtn'),
+                        'headerProfileMenu': document.getElementById('headerProfileBtn'),
+                        'notificationDropdown': document.getElementById('notificationBell')
+                    };
+                    const trigger = triggerMap[d.id] || null;
                     if (!d.contains(e.target) && (!trigger || !trigger.contains(e.target))) {
                         d.classList.remove('show');
                     }
@@ -956,22 +962,21 @@
                 html.setAttribute('data-theme', next);
                 localStorage.setItem('theme', next);
             }
+
             // Restore theme
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme) {
                 document.documentElement.setAttribute('data-theme', savedTheme);
             }
+
             // Expose globally for inline onclick
             window.toggleTheme = toggleTheme;
 
-            // Also handle theme toggle from dropdown items (they call toggleTheme)
-            // Additional: if any dropdown item has onclick="toggleTheme()", it will work.
         })();
     </script>
 
-    <!-- PWA Install Button (kept from original) -->
-
-<div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
+    <!-- PWA Install Button & Fallback Modal -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
         <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
@@ -980,7 +985,6 @@
         </button>
     </div>
 
-    <!-- Install Fallback Modal -->
     <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
         <div style="background: var(--surface, #fff); border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <h3 style="margin-top:0;">Install AXIS App</h3>
@@ -1007,11 +1011,9 @@
                 return;
             }
 
-            // Listen for beforeinstallprompt
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                console.log('Install prompt captured');
                 if (container) container.style.display = 'flex';
             });
 
@@ -1025,10 +1027,8 @@
                     deferredPrompt.prompt();
                     const result = await deferredPrompt.userChoice;
                     if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
                         if (container) container.style.display = 'none';
                     } else {
-                        console.log('User dismissed install');
                         if (fallbackModal) fallbackModal.style.display = 'flex';
                     }
                     deferredPrompt = null;
