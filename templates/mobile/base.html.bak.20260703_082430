@@ -445,8 +445,5 @@
         })();
     </script>
 
-
-        {% include "tenant/voucher_modal.html" %}
-    <!-- VOUCHER MODAL INCLUDED -->
 </body>
 </html>
