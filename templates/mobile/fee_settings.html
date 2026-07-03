@@ -4,110 +4,106 @@
 
 {% block extra_head %}
 <style>
-    /* Same styles as desktop, but adjusted for mobile */
-    .settings-card {
-        background: var(--surface);
-        border-radius: var(--radius);
-        padding: 1.25rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid var(--border);
-        box-shadow: var(--shadow);
-    }
-    .card-header {
+    /* ===== All styles use base CSS variables ===== */
+
+    .page-header {
         display: flex;
+        justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.5rem;
         margin-bottom: 1rem;
     }
-    .card-header h3 {
+    .page-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+    }
+    .page-desc {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin: 0;
+    }
+    .header-btn {
+        background: var(--accent);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: background 0.2s, transform 0.15s;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .header-btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+    .header-btn svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+    }
+
+    /* ---- Main Card ---- */
+    .main-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .card-section {
+        margin-bottom: 1.25rem;
+    }
+    .card-section:last-child {
+        margin-bottom: 0;
+    }
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .section-title svg {
+        width: 20px;
+        height: 20px;
+        stroke: var(--accent);
+        fill: none;
+        stroke-width: 2;
+        flex-shrink: 0;
+    }
+    .section-title h3 {
         font-size: 1.1rem;
         font-weight: 700;
         margin: 0;
+        color: var(--text);
     }
-    .form-field {
-        margin-bottom: 1rem;
-    }
-    .form-field label {
-        display: block;
-        font-weight: 600;
-        font-size: 0.85rem;
-        margin-bottom: 0.25rem;
-    }
-    .form-field input, .form-field select {
-        width: 100%;
-        padding: 0.6rem 0.75rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--border);
-        background: var(--surface-alt);
-        font-size: 0.95rem;
-    }
-    .form-field small {
-        display: block;
-        font-size: 0.7rem;
-        color: var(--muted);
-        margin-top: 0.25rem;
-    }
-    .extra-charges-section {
-        margin-top: 1.5rem;
-        border-top: 1px solid var(--border);
-        padding-top: 1rem;
-    }
-    .charge-item {
+
+    /* ---- Status Row ---- */
+    .status-row {
         display: flex;
-        gap: 0.5rem;
-        align-items: center;
-        margin-bottom: 0.5rem;
-    }
-    .charge-item input {
-        flex: 1;
-        padding: 0.4rem 0.6rem;
-        border-radius: 0.5rem;
-        border: 1px solid var(--border);
-        background: var(--surface-alt);
-    }
-    .charge-item .remove-charge {
-        background: none;
-        border: none;
-        color: var(--danger);
-        cursor: pointer;
-        font-size: 1.2rem;
-    }
-    .charge-item .edit-charge {
-        background: none;
-        border: none;
-        color: var(--accent);
-        cursor: pointer;
-    }
-    .total-extra {
-        font-weight: 700;
-        color: var(--accent);
-        margin: 0.5rem 0;
-    }
-    .btn-add-charge {
-        background: var(--accent);
-        color: white;
-        border: none;
-        border-radius: var(--radius);
-        padding: 0.4rem 1rem;
-        cursor: pointer;
-        font-size: 0.85rem;
-    }
-    .btn-add-charge:hover {
-        background: var(--accent-hover);
-    }
-    .automation-status {
-        display: flex;
+        flex-wrap: wrap;
         gap: 1rem;
         align-items: center;
-        margin: 1rem 0;
-        flex-wrap: wrap;
+        margin-bottom: 1rem;
     }
     .status-indicator {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
         padding: 0.3rem 0.8rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-weight: 600;
         font-size: 0.85rem;
     }
@@ -120,12 +116,13 @@
         color: #991b1b;
     }
     .btn-toggle {
-        padding: 0.5rem 1.2rem;
-        border-radius: var(--radius);
+        padding: 0.4rem 1.2rem;
+        border-radius: 2rem;
         font-weight: 600;
         border: none;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+        transition: background 0.2s, transform 0.15s;
     }
     .btn-toggle.start {
         background: #10b981;
@@ -133,6 +130,7 @@
     }
     .btn-toggle.start:hover {
         background: #059669;
+        transform: translateY(-1px);
     }
     .btn-toggle.stop {
         background: #ef4444;
@@ -140,274 +138,671 @@
     }
     .btn-toggle.stop:hover {
         background: #dc2626;
+        transform: translateY(-1px);
     }
-    .btn-toggle:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+    .edit-toggle-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 0.3rem 0.8rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
     }
+    .edit-toggle-btn:hover {
+        background: var(--surface-alt);
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+    .edit-toggle-btn svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+    }
+
+    /* ---- Settings Grid (grey cards) ---- */
+    .settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        margin: 0.5rem 0;
+    }
+    .settings-grid .item {
+        display: flex;
+        flex-direction: column;
+        background: var(--surface-alt);
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        transition: background 0.25s, border-color 0.25s;
+    }
+    .settings-grid .item .label {
+        font-weight: 400;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        color: var(--muted);
+    }
+    .settings-grid .item .value {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.95rem;
+    }
+    .settings-grid .item .value-input {
+        display: none;
+        width: 100%;
+        padding: 0.2rem 0.3rem;
+        border-radius: 0.4rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 0.9rem;
+        color: var(--text);
+        margin-top: 0.1rem;
+    }
+    .settings-grid .item .value-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    /* Edit mode: hide value, show input */
+    .settings-grid .item.editing .value {
+        display: none;
+    }
+    .settings-grid .item.editing .value-input {
+        display: block;
+    }
+
+    /* Extra charges in grid */
+    .settings-grid .item.charges-item .charges-list {
+        font-size: 0.8rem;
+        color: var(--text);
+        margin-top: 0.1rem;
+    }
+    .settings-grid .item.charges-item .charges-list .charge-entry {
+        display: inline-block;
+        background: var(--surface);
+        padding: 0.05rem 0.4rem;
+        border-radius: 0.3rem;
+        border: 1px solid var(--border);
+        margin: 0.1rem 0.2rem 0.1rem 0;
+        font-size: 0.7rem;
+        font-weight: 500;
+    }
+    .settings-grid .item.charges-item .charges-list .charge-entry .ch-amount {
+        color: var(--accent);
+        font-weight: 700;
+    }
+    /* Edit mode for charges */
+    .settings-grid .item.charges-item.editing .charges-list {
+        display: none;
+    }
+    .settings-grid .item.charges-item.editing .charges-edit-area {
+        display: block !important;
+    }
+    .charges-edit-area {
+        display: none;
+        margin-top: 0.2rem;
+        width: 100%;
+    }
+    .charge-edit-row {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+        margin-bottom: 0.2rem;
+    }
+    .charge-edit-row input {
+        flex: 1;
+        padding: 0.15rem 0.3rem;
+        border-radius: 0.3rem;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        font-size: 0.75rem;
+        color: var(--text);
+        min-width: 40px;
+    }
+    .charge-edit-row input:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+    .charge-edit-row .remove-charge-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 0.9rem;
+        padding: 0 0.2rem;
+        transition: color 0.2s;
+    }
+    .charge-edit-row .remove-charge-btn:hover {
+        color: #ef4444;
+    }
+    .add-charge-btn-small {
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.1rem 0.6rem;
+        font-size: 0.65rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+        margin-top: 0.2rem;
+    }
+    .add-charge-btn-small:hover {
+        background: var(--accent-hover);
+    }
+
+    /* ---- Form Actions (Save/Cancel) ---- */
     .form-actions {
-        margin-top: 1.5rem;
-        text-align: right;
+        display: none;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    .form-actions.visible {
+        display: flex;
     }
     .btn-primary {
         background: var(--accent);
         color: white;
         border: none;
-        border-radius: var(--radius);
-        padding: 0.6rem 1.2rem;
+        border-radius: 2rem;
+        padding: 0.4rem 1.2rem;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.2s, transform 0.15s;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.4rem;
+        font-size: 0.85rem;
     }
     .btn-primary:hover {
         background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+    .btn-primary svg {
+        width: 16px;
+        height: 16px;
+        stroke: white;
+        fill: none;
+        stroke-width: 2;
     }
     .btn-secondary {
         background: var(--surface-alt);
         color: var(--text);
         border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 0.5rem 1.2rem;
+        border-radius: 2rem;
+        padding: 0.4rem 1.2rem;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.2s;
+        font-size: 0.85rem;
     }
+    .btn-secondary:hover {
+        background: var(--surface);
+    }
+
+    /* ---- Manual Generation ---- */
+    .manual-divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 1rem 0;
+    }
+    .manual-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .manual-header svg {
+        width: 20px;
+        height: 20px;
+        stroke: #10b981;
+        fill: none;
+        stroke-width: 2;
+        flex-shrink: 0;
+    }
+    .manual-header h4 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+    }
+    .manual-header .badge {
+        margin-left: auto;
+        font-size: 0.6rem;
+        background: #10b981;
+        color: white;
+        padding: 0.1rem 0.5rem;
+        border-radius: 2rem;
+        font-weight: 600;
+    }
+    .manual-desc {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-bottom: 0.75rem;
+    }
+    .manual-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    .btn-generate {
+        background: #10b981;
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.4rem 1.2rem;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: background 0.2s, transform 0.15s;
+    }
+    .btn-generate:hover {
+        background: #059669;
+        transform: translateY(-1px);
+    }
+    .btn-generate:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    .btn-generate svg {
+        width: 16px;
+        height: 16px;
+        stroke: white;
+        fill: none;
+        stroke-width: 2;
+    }
+    .manual-status {
+        font-size: 0.8rem;
+        color: var(--muted);
+    }
+    .manual-result {
+        margin-top: 0.5rem;
+        display: none;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        background: var(--surface-alt);
+        font-size: 0.8rem;
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+
+    /* ---- Info Card ---- */
     .info-card {
         background: var(--surface-alt);
         border-radius: var(--radius);
         padding: 1rem;
-        margin-top: 1rem;
+        margin-top: 1.25rem;
+        border: 1px solid var(--border);
     }
     .info-card h3 {
         font-size: 1rem;
-        margin-bottom: 0.5rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text);
+    }
+    .info-card h3 svg {
+        width: 20px;
+        height: 20px;
+        stroke: var(--accent);
+        fill: none;
+        stroke-width: 2;
     }
     .info-card ul {
         padding-left: 1.2rem;
         margin: 0;
         font-size: 0.85rem;
+        color: var(--text);
     }
     .info-card ul li {
         margin-bottom: 0.3rem;
     }
+
     .bottom-spacer {
         height: 80px;
+    }
+
+    @media (max-width: 480px) {
+        .settings-grid {
+            grid-template-columns: 1fr;
+        }
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .header-btn {
+            align-self: flex-start;
+        }
+        .status-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .manual-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .btn-generate {
+            justify-content: center;
+        }
+        .form-actions {
+            flex-direction: column;
+        }
+        .form-actions .btn-primary,
+        .form-actions .btn-secondary {
+            width: 100%;
+            justify-content: center;
+        }
+        .charge-edit-row {
+            flex-wrap: wrap;
+        }
+        .charge-edit-row input {
+            flex: 1 1 100%;
+        }
     }
 </style>
 {% endblock %}
 
 {% block body %}
 <div class="page-header">
-    <h1 class="page-title">Fee Automation</h1>
-    <p class="page-desc">Configure automated fee generation and default charges</p>
-
-    <div style="display:flex; justify-content:flex-end; margin-top:0.5rem;">
-        <a href="/portal/{{ tenant.schema_name }}/fee/logs/mobile/" class="btn-primary" style="padding:0.3rem 0.8rem; font-size:0.8rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            View Logs
-        </a>
-    </div>
-</div>
-
-<div class="settings-card">
-    <div class="card-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-        <h3>Automation Rules</h3>
-    </div>
-    <form method="post" id="settingsForm">
-        {% csrf_token %}
-        <div class="form-field">
-            <label>Generation Day of Month</label>
-            {{ form.fee_generation_day }}
-            <small>Fees will be created automatically on this day every month.</small>
-        </div>
-        <div class="form-field">
-            <label>Due Date Offset (days after generation)</label>
-            {{ form.due_date_offset }}
-            <small>Number of days after generation when fee becomes due.</small>
-        </div>
-        <div class="form-field">
-            <label>Late Fee Amount (₹ per day)</label>
-            {{ form.late_fee_penalty }}
-            <small>Fixed amount added per day after due date for overdue fees.</small>
-        </div>
-
-        <!-- Extra Charges Section -->
-        <div class="extra-charges-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h4 style="margin:0;">Default Extra Charges</h4>
-                <button type="button" class="btn-add-charge" id="addChargeBtn">+ Add</button>
-            </div>
-            <div id="chargesContainer">
-                {% for charge in extra_charges %}
-                <div class="charge-item" data-index="{{ forloop.counter0 }}">
-                    <input type="text" class="charge-title" value="{{ charge.title }}" placeholder="Title">
-                    <input type="number" step="0.01" class="charge-amount" value="{{ charge.amount }}" placeholder="Amount">
-                    <button type="button" class="edit-charge" title="Edit">✎</button>
-                    <button type="button" class="remove-charge" title="Remove">×</button>
-                </div>
-                {% empty %}
-                <div id="noChargesMsg" style="color: var(--muted); font-size: 0.85rem;">No extra charges added yet.</div>
-                {% endfor %}
-            </div>
-            <div class="total-extra">Total Extra Charges: ₹<span id="totalExtraDisplay">{{ total_extra|floatformat:2 }}</span></div>
-            <input type="hidden" name="extra_charges_json" id="extraChargesJson" value='{{ extra_charges|safe }}'>
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 13l4 4L19 7"/></svg>
-                Save Settings
-            </button>
-        </div>
-    </form>
-</div>
-
-<!-- Status & Controls -->
-<div class="settings-card">
-    <div class="card-header">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-        </svg>
-        <h3>Automation Status</h3>
-    </div>
     <div>
-        <div class="automation-status">
+        <h1 class="page-title">Fee Automation</h1>
+        <p class="page-desc">Manage automated fee generation & default charges</p>
+    </div>
+    <a href="{% url 'mobile_fee_logs' schema_name=tenant.schema_name %}" class="header-btn">
+        <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        View Logs
+    </a>
+</div>
+
+<!-- ===== SINGLE MAIN CARD ===== -->
+<div class="main-card">
+    <!-- Status & Controls -->
+    <div class="card-section">
+        <div class="section-title">
+            <svg viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            <h3>Status & Controls</h3>
+        </div>
+
+        <!-- Status row -->
+        <div class="status-row">
             <span class="status-indicator {% if automation_enabled %}active{% else %}inactive{% endif %}">
                 {% if automation_enabled %}● Active{% else %}● Inactive{% endif %}
             </span>
             <form method="post" style="display: inline;">
                 {% csrf_token %}
                 <input type="hidden" name="toggle_automation" value="1">
-                <button type="submit" class="btn-toggle {% if automation_enabled %}stop{% else %}start{% endif %}"
-                        {% if not automation_enabled %}id="startAutomationBtn"{% else %}id="stopAutomationBtn"{% endif %}>
-                    {% if automation_enabled %}⏹ Stop{% else %}▶ Start{% endif %}
+                <button type="submit" class="btn-toggle {% if automation_enabled %}stop{% else %}start{% endif %}">
+                    {% if automation_enabled %}Stop Automation{% else %}Start Automation{% endif %}
                 </button>
             </form>
+            <button class="edit-toggle-btn" id="toggleEditBtn">
+                <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg>
+                Edit Settings
+            </button>
         </div>
-        <div style="margin-top: 1rem; font-size: 0.85rem; color: var(--muted);">
-            <p><strong>Generation Day:</strong> {{ settings.fee_generation_day }}</p>
-            <p><strong>Due Date Offset:</strong> {{ settings.due_date_offset }} days</p>
-            <p><strong>Late Fee:</strong> ₹{{ settings.late_fee_penalty }} / day</p>
-            <p><strong>Next generation:</strong> <span id="nextGenDate">Calculating...</span></p>
+
+        <!-- Settings Grid (grey cards) -->
+        <div class="settings-grid" id="settingsGrid">
+            <!-- Generation Day -->
+            <div class="item" data-field="fee_generation_day">
+                <span class="label">Generation Day</span>
+                <span class="value">{{ settings.fee_generation_day }}</span>
+                <input type="number" class="value-input" name="fee_generation_day" value="{{ settings.fee_generation_day }}" min="1" max="31">
+            </div>
+
+            <!-- Due Date Offset -->
+            <div class="item" data-field="due_date_offset">
+                <span class="label">Due Date Offset</span>
+                <span class="value">{{ settings.due_date_offset }} days</span>
+                <input type="number" class="value-input" name="due_date_offset" value="{{ settings.due_date_offset }}" min="0">
+            </div>
+
+            <!-- Late Fee -->
+            <div class="item" data-field="late_fee_penalty">
+                <span class="label">Late Fee</span>
+                <span class="value">₹{{ settings.late_fee_penalty }} / day</span>
+                <input type="number" step="0.01" class="value-input" name="late_fee_penalty" value="{{ settings.late_fee_penalty }}" min="0">
+            </div>
+
+            <!-- Extra Charges -->
+            <div class="item charges-item" data-field="extra_charges">
+                <span class="label">Extra Charges</span>
+                <div class="charges-list" id="chargesDisplay">
+                    {% if extra_charges %}
+                        {% for charge in extra_charges %}
+                            <span class="charge-entry">{{ charge.title }} <span class="ch-amount">₹{{ charge.amount|floatformat:2 }}</span></span>
+                        {% endfor %}
+                    {% else %}
+                        <span style="color:var(--muted); font-size:0.75rem;">No extra charges</span>
+                    {% endif %}
+                </div>
+                <div class="charges-edit-area" id="chargesEditArea">
+                    <div id="editChargesContainer">
+                        {% for charge in extra_charges %}
+                        <div class="charge-edit-row" data-index="{{ forloop.counter0 }}">
+                            <input type="text" class="edit-charge-title" value="{{ charge.title }}" placeholder="Title">
+                            <input type="number" step="0.01" class="edit-charge-amount" value="{{ charge.amount }}" placeholder="Amount">
+                            <button type="button" class="remove-charge-btn" title="Remove">×</button>
+                        </div>
+                        {% empty %}
+                        <div style="color:var(--muted); font-size:0.75rem; margin-bottom:0.2rem;" id="noEditChargesMsg">No extra charges added yet.</div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="add-charge-btn-small" id="addEditChargeBtn">+ Add Charge</button>
+                </div>
+            </div>
+
+            <!-- Next Generation -->
+            <div class="item" style="grid-column: span 2;" data-field="next_gen">
+                <span class="label">Next Generation</span>
+                <span class="value" id="nextGenDate">Calculating...</span>
+                <input type="text" class="value-input" disabled style="background:var(--surface-alt); color:var(--muted);">
+            </div>
         </div>
+
+        <!-- Form Actions (Save/Cancel) -->
+        <div class="form-actions" id="formActions">
+            <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
+            <button type="button" class="btn-primary" id="saveSettingsBtn">
+                <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+                Save Settings
+            </button>
+        </div>
+    </div>
+
+    <!-- Divider -->
+    <hr class="manual-divider">
+
+    <!-- Manual Generation (inside same card) -->
+    <div class="card-section">
+        <div class="manual-header">
+            <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <h4>Manual Fee Generation</h4>
+            <span class="badge">Current Month</span>
+        </div>
+        <p class="manual-desc">
+            Generate fees for <strong>all active students</strong> for the current month.
+            Priority: <strong>class fee structure</strong> → <strong>custom fee</strong>.
+            <br>All configured charges will be applied automatically.
+        </p>
+        <div class="manual-actions">
+            <button id="manualGenerateBtnMobile" class="btn-generate">
+                <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Generate Fees Now
+            </button>
+            <span class="manual-status" id="manualGenStatusMobile">Ready</span>
+        </div>
+        <div class="manual-result" id="manualGenResultMobile"></div>
     </div>
 </div>
 
-<!-- Info Card -->
+<!-- ===== INFO CARD (How it works) – at the very end ===== -->
 <div class="info-card">
-    <h3>ℹ️ How Automation Works</h3>
+    <h3>
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        How Automation Works
+    </h3>
     <ul>
-        <li><strong>Auto-generation:</strong> On the selected day each month, fees are created for active students.</li>
-        <li><strong>Extra Charges:</strong> Added to every student's fee.</li>
-        <li><strong>Due Date:</strong> Fee becomes due after offset days.</li>
-        <li><strong>Late Fee:</strong> Fixed amount added per day for overdue.</li>
-        <li><strong>Start/Stop:</strong> Toggle automation on/off.</li>
+        <li><strong>Auto-generation:</strong> On the selected day each month, fees are created for all active students.</li>
+        <li><strong>Extra Charges:</strong> Default extra charges are automatically added to every student's fee.</li>
+        <li><strong>Due Date:</strong> Fee becomes due after the offset days from generation.</li>
+        <li><strong>Late Fee:</strong> Fixed amount added per day for overdue fees.</li>
+        <li><strong>Start/Stop:</strong> Toggle automation on/off anytime.</li>
     </ul>
 </div>
-<!-- ====== MANUAL GENERATION SECTION (MOBILE) ====== -->
-<div class="settings-card" style="margin-top: 1.5rem; border-left: 4px solid #10b981; padding: 1rem 1rem 1.25rem;">
-    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-        </svg>
-        <h3 style="margin:0; font-size:1rem;">Manual Fee Generation</h3>
-        <span style="margin-left:auto; font-size:0.6rem; background:#10b981; color:white; padding:0.1rem 0.5rem; border-radius: var(--radius);">Current Month</span>
-    </div>
-    <p style="color:var(--muted); font-size:0.85rem; margin-bottom:0.75rem;">
-        Generate fees for <strong>all active students</strong> for the current month.
-        <br>Priority: <strong>class fee structure</strong> → <strong>custom fee</strong>.
-    </p>
-    <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
-        <button id="manualGenerateBtnMobile" class="btn-primary" style="background:#10b981; padding:0.4rem 1.2rem; font-size:0.85rem; border:none; border-radius: var(--radius); color:white; cursor:pointer; display:inline-flex; align-items:center; gap:0.4rem;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Generate Fees Now
-        </button>
-        <span id="manualGenStatusMobile" style="font-size:0.8rem; color:var(--muted);">Ready</span>
-    </div>
-    <div id="manualGenResultMobile" style="margin-top:0.75rem; display:none; padding:0.6rem; border-radius:0.5rem; background:var(--surface-alt); font-size:0.8rem;"></div>
-</div>
-
 
 <div class="bottom-spacer"></div>
 
-
 <script>
 (function() {
-    const btn = document.getElementById('manualGenerateBtnMobile');
-    const status = document.getElementById('manualGenStatusMobile');
-    const resultDiv = document.getElementById('manualGenResultMobile');
+    // ===== INLINE EDITING =====
+    const toggleBtn = document.getElementById('toggleEditBtn');
+    const formActions = document.getElementById('formActions');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const settingsGrid = document.getElementById('settingsGrid');
+    const editMode = { active: false };
 
-    if (!btn) {
-        console.error('Button #manualGenerateBtnMobile not found!');
-        return;
-    }
-    console.log('Manual generate button found, attaching click handler.');
-
-    btn.addEventListener('click', async function(e) {
-        e.preventDefault();
-        console.log('Generate button clicked!');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Generating...';
-        status.textContent = 'Generating fees...';
-        resultDiv.style.display = 'block';
-        resultDiv.innerHTML = '⏳ Processing, please wait...';
-        resultDiv.style.background = 'var(--surface-alt)';
-        resultDiv.style.color = 'var(--text)';
-
-        try {
-            const csrfToken = getCsrfToken();
-            if (!csrfToken) {
-                throw new Error('CSRF token not found. Please refresh the page and try again.');
-            }
-            const resp = await fetch('/api/manual-generate/', {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': csrfToken,
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'same-origin'
-            });
-            console.log('Response status:', resp.status);
-            if (!resp.ok) {
-                if (resp.status === 401) {
-                    throw new Error('You are not logged in. Please log in again.');
-                }
-                throw new Error('Server returned ' + resp.status);
-            }
-            const data = await resp.json();
-            console.log('Response data:', data);
-
-            if (data.error) {
-                resultDiv.innerHTML = '❌ Error: ' + data.error;
-                resultDiv.style.background = '#fee2e2';
-                resultDiv.style.color = '#991b1b';
-                status.textContent = 'Failed';
-                return;
-            }
-
-            const msg = data.message || 'Fee generation completed.';
-            const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
-            resultDiv.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
-            resultDiv.style.background = '#d1fae5';
-            resultDiv.style.color = '#065f46';
-            status.textContent = '✅ Done';
-
-        } catch (err) {
-            console.error('Error:', err);
-            resultDiv.innerHTML = '❌ Error: ' + err.message;
-            resultDiv.style.background = '#fee2e2';
-            resultDiv.style.color = '#991b1b';
-            status.textContent = '❌ Error';
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+    // Toggle edit mode
+    toggleBtn.addEventListener('click', function() {
+        editMode.active = !editMode.active;
+        const items = settingsGrid.querySelectorAll('.item');
+        items.forEach(item => {
+            if (!item.dataset.field || item.dataset.field === 'next_gen') return;
+            item.classList.toggle('editing', editMode.active);
+        });
+        // Charges item is special
+        const chargesItem = document.querySelector('.charges-item');
+        if (chargesItem) {
+            chargesItem.classList.toggle('editing', editMode.active);
         }
+        // Show/hide actions
+        formActions.classList.toggle('visible', editMode.active);
+        toggleBtn.innerHTML = editMode.active ?
+            '✕ Close' :
+            '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg> Edit Settings';
+    });
+
+    // Cancel edit
+    cancelBtn.addEventListener('click', function() {
+        // Reload page to reset all values
+        window.location.reload();
+    });
+
+    // ===== Extra Charges in edit mode =====
+    const editChargesContainer = document.getElementById('editChargesContainer');
+    const addChargeBtn = document.getElementById('addEditChargeBtn');
+    const noEditChargesMsg = document.getElementById('noEditChargesMsg');
+
+    function updateNoChargesMsg() {
+        const rows = editChargesContainer.querySelectorAll('.charge-edit-row');
+        if (rows.length === 0) {
+            if (!document.getElementById('noEditChargesMsg')) {
+                const msg = document.createElement('div');
+                msg.id = 'noEditChargesMsg';
+                msg.style.cssText = 'color:var(--muted); font-size:0.75rem; margin-bottom:0.2rem;';
+                msg.textContent = 'No extra charges added yet.';
+                editChargesContainer.appendChild(msg);
+            }
+        } else {
+            const existing = document.getElementById('noEditChargesMsg');
+            if (existing) existing.remove();
+        }
+    }
+
+    function addChargeRow(title = '', amount = '') {
+        const row = document.createElement('div');
+        row.className = 'charge-edit-row';
+        row.innerHTML = `
+            <input type="text" class="edit-charge-title" value="${title}" placeholder="Title">
+            <input type="number" step="0.01" class="edit-charge-amount" value="${amount}" placeholder="Amount">
+            <button type="button" class="remove-charge-btn" title="Remove">×</button>
+        `;
+        editChargesContainer.appendChild(row);
+        const removeBtn = row.querySelector('.remove-charge-btn');
+        removeBtn.addEventListener('click', function() {
+            row.remove();
+            updateNoChargesMsg();
+        });
+        updateNoChargesMsg();
+    }
+
+    // Attach remove events to existing rows
+    document.querySelectorAll('.charge-edit-row').forEach(row => {
+        const removeBtn = row.querySelector('.remove-charge-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                row.remove();
+                updateNoChargesMsg();
+            });
+        }
+    });
+    updateNoChargesMsg();
+
+    addChargeBtn.addEventListener('click', function() {
+        addChargeRow('', '');
+    });
+
+    // ===== Save Settings =====
+    saveBtn.addEventListener('click', function() {
+        // Collect data from all inputs
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCsrfToken());
+
+        // Get values from editable fields
+        const genDay = document.querySelector('input[name="fee_generation_day"]');
+        const dueOffset = document.querySelector('input[name="due_date_offset"]');
+        const lateFee = document.querySelector('input[name="late_fee_penalty"]');
+
+        if (genDay) formData.append('fee_generation_day', genDay.value);
+        if (dueOffset) formData.append('due_date_offset', dueOffset.value);
+        if (lateFee) formData.append('late_fee_penalty', lateFee.value);
+
+        // Collect extra charges
+        const charges = [];
+        document.querySelectorAll('.charge-edit-row').forEach(row => {
+            const title = row.querySelector('.edit-charge-title')?.value?.trim() || 'Unnamed';
+            const amount = parseFloat(row.querySelector('.edit-charge-amount')?.value) || 0;
+            if (amount > 0) {
+                charges.push({ title, amount });
+            }
+        });
+        formData.append('extra_charges_json', JSON.stringify(charges));
+
+        // Submit via fetch
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(res => {
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Error saving settings. Please try again.');
+            }
+        })
+        .catch(err => {
+            alert('Network error: ' + err.message);
+        });
     });
 
     function getCsrfToken() {
@@ -423,9 +818,86 @@
                 }
             }
         }
-        console.log('CSRF token:', cookieValue ? 'found' : 'not found');
         return cookieValue;
     }
+
+    // ===== Next generation date via API =====
+    fetch('/api/fee-status/')
+        .then(res => res.json())
+        .then(data => {
+            const el = document.getElementById('nextGenDate');
+            if (el && data.next_generation) {
+                const d = new Date(data.next_generation);
+                el.textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+        })
+        .catch(() => {
+            const el = document.getElementById('nextGenDate');
+            if (el) el.textContent = '—';
+        });
+
+    // ===== Manual Generation =====
+    const genBtn = document.getElementById('manualGenerateBtnMobile');
+    const genStatus = document.getElementById('manualGenStatusMobile');
+    const genResult = document.getElementById('manualGenResultMobile');
+
+    if (genBtn) {
+        genBtn.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const originalText = genBtn.innerHTML;
+            genBtn.disabled = true;
+            genBtn.innerHTML = '⏳ Generating...';
+            genStatus.textContent = 'Generating fees...';
+            genResult.style.display = 'block';
+            genResult.innerHTML = '⏳ Processing, please wait...';
+            genResult.style.background = 'var(--surface-alt)';
+            genResult.style.color = 'var(--text)';
+
+            try {
+                const csrfToken = getCsrfToken();
+                if (!csrfToken) {
+                    throw new Error('CSRF token not found. Please refresh the page and try again.');
+                }
+                const resp = await fetch('/api/manual-generate/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                });
+                if (!resp.ok) {
+                    if (resp.status === 401) {
+                        throw new Error('You are not logged in. Please log in again.');
+                    }
+                    throw new Error('Server returned ' + resp.status);
+                }
+                const data = await resp.json();
+                if (data.error) {
+                    genResult.innerHTML = '❌ Error: ' + data.error;
+                    genResult.style.background = '#fee2e2';
+                    genResult.style.color = '#991b1b';
+                    genStatus.textContent = 'Failed';
+                    return;
+                }
+                const msg = data.message || 'Fee generation completed.';
+                const details = `Created: ${data.created || 0} | Skipped (already exist): ${data.skipped_existing || 0} | Skipped (no fee structure): ${data.skipped_no_fee || 0}`;
+                genResult.innerHTML = '✅ ' + msg + '<br><small>' + details + '</small>';
+                genResult.style.background = '#d1fae5';
+                genResult.style.color = '#065f46';
+                genStatus.textContent = '✅ Done';
+            } catch (err) {
+                genResult.innerHTML = '❌ Error: ' + err.message;
+                genResult.style.background = '#fee2e2';
+                genResult.style.color = '#991b1b';
+                genStatus.textContent = '❌ Error';
+            } finally {
+                genBtn.disabled = false;
+                genBtn.innerHTML = originalText;
+            }
+        });
+    }
+
 })();
 </script>
 {% endblock %}

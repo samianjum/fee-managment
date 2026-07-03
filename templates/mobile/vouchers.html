@@ -4,43 +4,116 @@
 
 {% block extra_head %}
 <style>
+    /* ===== All styles use base CSS variables ===== */
+
+    /* ---- Page Header with button on right ---- */
+    .page-header-with-btn {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .page-header-with-btn .header-left {
+        flex: 1;
+        min-width: 140px;
+    }
+    .page-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+    }
+    .page-desc {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin: 0;
+    }
+    .header-btn {
+        background: var(--accent);
+        color: white;
+        padding: 0.4rem 1rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        transition: background 0.2s, transform 0.15s;
+        border: none;
+        cursor: pointer;
+        white-space: nowrap;
+        margin-left: auto;  /* <-- pushes button to right */
+        flex-shrink: 0;
+    }
+    .header-btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+    }
+    .header-btn svg {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+        fill: none;
+        stroke-width: 2;
+    }
+
+    /* ---- Filter Bar ---- */
     .filter-bar {
         display: flex;
         flex-wrap: wrap;
         gap: 0.5rem;
         align-items: center;
         background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: var(--radius);
         padding: 0.5rem 1rem;
         margin-bottom: 1rem;
-        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s;
     }
     .filter-bar select, .filter-bar input {
         flex: 1;
         padding: 0.4rem 0.6rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         border: 1px solid var(--border);
         background: var(--surface-alt);
         font-size: 0.8rem;
         min-width: 60px;
+        color: var(--text);
+        transition: border-color 0.2s;
+    }
+    .filter-bar select:focus, .filter-bar input:focus {
+        outline: none;
+        border-color: var(--accent);
     }
     .filter-bar button {
         padding: 0.4rem 1rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         background: var(--accent);
         color: white;
         border: none;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.2s;
+    }
+    .filter-bar button:hover {
+        background: var(--accent-hover);
     }
     .filter-bar .reset-link {
         padding: 0.4rem 0.8rem;
         color: var(--muted);
         text-decoration: none;
         font-size: 0.8rem;
+        transition: color 0.2s;
+    }
+    .filter-bar .reset-link:hover {
+        color: var(--text);
     }
 
-    /* Mobile Tab Bar */
+    /* ---- Mobile Tab Bar ---- */
     .tab-bar {
         display: flex;
         gap: 0.4rem;
@@ -54,18 +127,20 @@
         border: 1px solid var(--border);
         padding: 0.5rem;
         flex-wrap: nowrap;
+        box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s;
     }
     .tab-bar .tab-btn {
         flex: 0 0 auto;
         background: transparent;
         border: none;
         padding: 0.4rem 1rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-weight: 600;
         font-size: 0.75rem;
         color: var(--muted);
         cursor: pointer;
-        transition: var(--transition);
+        transition: background 0.2s, color 0.2s;
         scroll-snap-align: start;
         white-space: nowrap;
         display: flex;
@@ -75,13 +150,13 @@
     .tab-bar .tab-btn.active {
         background: var(--accent);
         color: white;
-        box-shadow: var(--shadow);
+        box-shadow: 0 2px 8px rgba(37,99,235,0.2);
     }
     .tab-bar .tab-btn .badge {
         background: var(--surface-alt);
         color: var(--text);
         padding: 0.05rem 0.4rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-size: 0.6rem;
         font-weight: 600;
     }
@@ -90,6 +165,7 @@
         color: white;
     }
 
+    /* ---- Section Cards ---- */
     .section-card {
         background: var(--surface);
         border-radius: var(--radius);
@@ -97,6 +173,8 @@
         margin-bottom: 1.25rem;
         overflow: hidden;
         display: none;
+        box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s;
     }
     .section-card.active {
         display: block;
@@ -113,23 +191,26 @@
         margin: 0;
         font-size: 0.95rem;
         font-weight: 600;
+        color: var(--text);
     }
     .section-header .badge {
         background: var(--accent);
         color: white;
         padding: 0.1rem 0.6rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-size: 0.7rem;
         font-weight: 600;
     }
 
+    /* ---- Voucher Card ---- */
     .voucher-card {
         background: var(--surface);
-        border-radius: 1rem;
+        border-radius: var(--radius);
         padding: 0.75rem;
         margin: 0.5rem 0.75rem;
         border: 1px solid var(--border);
         box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
     }
     .voucher-card .top-row {
         display: flex;
@@ -139,6 +220,7 @@
     .voucher-card .student-name {
         font-weight: 700;
         font-size: 1rem;
+        color: var(--text);
     }
     .voucher-card .student-meta {
         font-size: 0.8rem;
@@ -151,7 +233,7 @@
     .status-badge {
         display: inline-block;
         padding: 0.2rem 0.6rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-size: 0.65rem;
         font-weight: 600;
     }
@@ -160,6 +242,7 @@
     .status-paid { background: #d1fae5; color: #065f46; }
     .status-overdue { background: #fee2e2; color: #991b1b; }
     .status-missing { background: #e5e7eb; color: #374151; }
+
     .voucher-card .actions {
         display: flex;
         gap: 0.5rem;
@@ -168,64 +251,128 @@
     }
     .voucher-card .actions a, .voucher-card .actions button {
         padding: 0.2rem 0.8rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         font-size: 0.7rem;
         font-weight: 600;
         text-decoration: none;
         border: none;
         cursor: pointer;
+        transition: background 0.2s;
     }
     .btn-view { background: var(--accent); color: white; }
-    .btn-collect { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
-    .btn-generate { background: #f59e0b; color: white; }
-    .missing-reason { font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; }
+    .btn-view:hover { background: var(--accent-hover); }
+    .btn-collect {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--accent);
+    }
+    .btn-collect:hover { background: var(--accent-light); }
+    .btn-generate {
+        background: #f59e0b;
+        color: white;
+    }
+    .btn-generate:hover { background: #d97706; }
 
+    .missing-reason {
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-top: 0.2rem;
+    }
+
+    /* ---- Pagination ---- */
     .pagination {
         display: flex;
         justify-content: center;
         gap: 0.3rem;
         margin: 0.5rem 0;
+        flex-wrap: wrap;
     }
     .page-link {
         padding: 0.3rem 0.7rem;
-        border-radius: var(--radius);
+        border-radius: 2rem;
         border: 1px solid var(--border);
         background: var(--surface);
         text-decoration: none;
         color: var(--text);
         font-size: 0.7rem;
+        font-weight: 500;
+        transition: 0.2s;
     }
-    .page-link.active { background: var(--accent); color: white; }
-    .empty-state { text-align: center; padding: 1.5rem; color: var(--muted); }
-
-    .mobile-header-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-    .mobile-header-actions a {
-        padding: 0.4rem 0.8rem;
-        border-radius: var(--radius);
+    .page-link:hover {
         background: var(--accent);
         color: white;
-        text-decoration: none;
-        font-size: 0.8rem;
-        font-weight: 600;
+        border-color: var(--accent);
+    }
+    .page-link.active {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 1.5rem;
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
+
+    /* ---- Responsive ---- */
+    @media (max-width: 480px) {
+        .page-header-with-btn {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .header-btn {
+            margin-left: 0;  /* reset on small screens, but button stays right due to flex */
+            align-self: flex-end;
+        }
+        .filter-bar {
+            padding: 0.4rem 0.6rem;
+            gap: 0.3rem;
+        }
+        .filter-bar select, .filter-bar input {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.4rem;
+        }
+        .filter-bar button {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.6rem;
+        }
+        .tab-bar {
+            padding: 0.3rem;
+        }
+        .tab-bar .tab-btn {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.6rem;
+        }
+        .voucher-card {
+            padding: 0.5rem;
+            margin: 0.3rem 0.5rem;
+        }
+        .voucher-card .student-name {
+            font-size: 0.9rem;
+        }
+        .voucher-card .student-meta {
+            font-size: 0.7rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="page-header">
-    <h1 class="page-title">Fee Vouchers</h1>
-    <p class="page-desc">All generated vouchers</p>
+<!-- ===== Page Header with Generate All button on right ===== -->
+<div class="page-header-with-btn">
+    <div class="header-left">
+        <h1 class="page-title">Fee Vouchers</h1>
+        <p class="page-desc">All generated vouchers</p>
+    </div>
+    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}" class="header-btn">
+        <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Generate All
+    </a>
 </div>
 
-<div class="mobile-header-actions">
-    <a href="{% url 'mobile_fee_settings' schema_name=tenant.schema_name %}">⚙️ Generate All</a>
-</div>
-
-<!-- Filter -->
+<!-- Filter Bar -->
 <div class="filter-bar">
     <form method="get" style="display: flex; flex-wrap: wrap; gap: 0.4rem; width: 100%; align-items: center;">
         <select name="month">
