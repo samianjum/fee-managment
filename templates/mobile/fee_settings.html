@@ -4,8 +4,7 @@
 
 {% block extra_head %}
 <style>
-    /* ===== All styles use base CSS variables ===== */
-
+    /* ===== Base ===== */
     .page-header {
         display: flex;
         justify-content: space-between;
@@ -90,31 +89,56 @@
         color: var(--text);
     }
 
-    /* ---- Status Row ---- */
+    /* ---- Status Row with centered button ---- */
     .status-row {
         display: flex;
         flex-wrap: wrap;
         gap: 1rem;
         align-items: center;
         margin-bottom: 1rem;
+        justify-content: center;
     }
     .status-indicator {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.6rem;
         padding: 0.3rem 0.8rem;
         border-radius: 2rem;
         font-weight: 600;
         font-size: 0.85rem;
+        background: var(--surface-alt);
+        border: 1px solid var(--border);
     }
-    .status-indicator.active {
-        background: #d1fae5;
-        color: #065f46;
+    .status-dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: background 0.3s;
     }
-    .status-indicator.inactive {
-        background: #fee2e2;
-        color: #991b1b;
+    .status-dot.active {
+        background: #10b981;
+        animation: pulse-green 1.5s infinite;
     }
+    .status-dot.inactive {
+        background: #ef4444;
+        animation: pulse-red 1.5s infinite;
+    }
+    @keyframes pulse-green {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+        50% { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+    }
+    @keyframes pulse-red {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+        50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+    .status-text {
+        font-weight: 600;
+    }
+    .status-text.active { color: #065f46; }
+    .status-text.inactive { color: #991b1b; }
+
     .btn-toggle {
         padding: 0.4rem 1.2rem;
         border-radius: 2rem;
@@ -140,6 +164,12 @@
         background: #dc2626;
         transform: translateY(-1px);
     }
+    .btn-toggle:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
     .edit-toggle-btn {
         background: transparent;
         border: 1px solid var(--border);
@@ -167,7 +197,7 @@
         stroke-width: 2;
     }
 
-    /* ---- Settings Grid (grey cards) ---- */
+    /* ---- Settings Grid ---- */
     .settings-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -210,7 +240,6 @@
         border-color: var(--accent);
         box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
     }
-    /* Edit mode: hide value, show input */
     .settings-grid .item.editing .value {
         display: none;
     }
@@ -218,7 +247,7 @@
         display: block;
     }
 
-    /* Extra charges in grid */
+    /* Extra charges */
     .settings-grid .item.charges-item .charges-list {
         font-size: 0.8rem;
         color: var(--text);
@@ -238,7 +267,6 @@
         color: var(--accent);
         font-weight: 700;
     }
-    /* Edit mode for charges */
     .settings-grid .item.charges-item.editing .charges-list {
         display: none;
     }
@@ -298,7 +326,6 @@
         background: var(--accent-hover);
     }
 
-    /* ---- Form Actions (Save/Cancel) ---- */
     .form-actions {
         display: none;
         gap: 0.5rem;
@@ -349,7 +376,7 @@
         background: var(--surface);
     }
 
-    /* ---- Manual Generation ---- */
+    /* ---- Manual Generation (themed) ---- */
     .manual-divider {
         border: none;
         border-top: 1px solid var(--border);
@@ -364,7 +391,7 @@
     .manual-header svg {
         width: 20px;
         height: 20px;
-        stroke: #10b981;
+        stroke: var(--accent);
         fill: none;
         stroke-width: 2;
         flex-shrink: 0;
@@ -378,16 +405,21 @@
     .manual-header .badge {
         margin-left: auto;
         font-size: 0.6rem;
-        background: #10b981;
-        color: white;
+        background: var(--accent-light);
+        color: var(--accent);
         padding: 0.1rem 0.5rem;
         border-radius: 2rem;
         font-weight: 600;
+        border: 1px solid var(--border);
     }
     .manual-desc {
         color: var(--muted);
         font-size: 0.85rem;
         margin-bottom: 0.75rem;
+        line-height: 1.5;
+    }
+    .manual-desc strong {
+        color: var(--text);
     }
     .manual-actions {
         display: flex;
@@ -396,7 +428,7 @@
         align-items: center;
     }
     .btn-generate {
-        background: #10b981;
+        background: var(--accent);
         color: white;
         border: none;
         border-radius: 2rem;
@@ -410,7 +442,7 @@
         transition: background 0.2s, transform 0.15s;
     }
     .btn-generate:hover {
-        background: #059669;
+        background: var(--accent-hover);
         transform: translateY(-1px);
     }
     .btn-generate:disabled {
@@ -473,6 +505,90 @@
     .info-card ul li {
         margin-bottom: 0.3rem;
     }
+    .info-card ul li strong {
+        color: var(--text);
+    }
+
+    /* ---- Custom Modal ---- */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal-box {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        border: 1px solid var(--border);
+    }
+    .modal-box h3 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .modal-box h3 svg {
+        width: 24px;
+        height: 24px;
+        stroke: var(--accent);
+        fill: none;
+        stroke-width: 2;
+    }
+    .modal-box p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        margin: 0.5rem 0 1.2rem;
+        line-height: 1.5;
+    }
+    .modal-box .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+    .modal-box .btn-confirm {
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 2rem;
+        padding: 0.4rem 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .modal-box .btn-confirm:hover {
+        background: var(--accent-hover);
+    }
+    .modal-box .btn-cancel-modal {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 2rem;
+        padding: 0.4rem 1.2rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .modal-box .btn-cancel-modal:hover {
+        background: var(--surface);
+    }
 
     .bottom-spacer {
         height: 80px;
@@ -514,11 +630,29 @@
         .charge-edit-row input {
             flex: 1 1 100%;
         }
+        .modal-box {
+            margin: 0.5rem;
+        }
     }
 </style>
 {% endblock %}
 
 {% block body %}
+<!-- Custom Modal -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+        <h3>
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span id="modalTitle">Confirm Action</span>
+        </h3>
+        <p id="modalMessage">Are you sure you want to proceed?</p>
+        <div class="modal-actions">
+            <button class="btn-cancel-modal" id="modalCancelBtn">Cancel</button>
+            <button class="btn-confirm" id="modalConfirmBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
 <div class="page-header">
     <div>
         <h1 class="page-title">Fee Automation</h1>
@@ -530,57 +664,53 @@
     </a>
 </div>
 
-<!-- ===== SINGLE MAIN CARD ===== -->
+<!-- Main Card -->
 <div class="main-card">
-    <!-- Status & Controls -->
     <div class="card-section">
         <div class="section-title">
             <svg viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
             <h3>Status & Controls</h3>
         </div>
 
-        <!-- Status row -->
+        <!-- Status Row -->
         <div class="status-row">
-            <span class="status-indicator {% if automation_enabled %}active{% else %}inactive{% endif %}">
-                {% if automation_enabled %}● Active{% else %}● Inactive{% endif %}
+            <span class="status-indicator">
+                <span class="status-dot {% if automation_enabled %}active{% else %}inactive{% endif %}"></span>
+                <span class="status-text {% if automation_enabled %}active{% else %}inactive{% endif %}">
+                    {% if automation_enabled %}Active{% else %}Inactive{% endif %}
+                </span>
             </span>
-            <form method="post" style="display: inline;">
-                {% csrf_token %}
-                <input type="hidden" name="toggle_automation" value="1">
-                <button type="submit" class="btn-toggle {% if automation_enabled %}stop{% else %}start{% endif %}">
-                    {% if automation_enabled %}Stop Automation{% else %}Start Automation{% endif %}
-                </button>
-            </form>
+
+            <button class="btn-toggle {% if automation_enabled %}stop{% else %}start{% endif %}" id="toggleAutomationBtn">
+                {% if automation_enabled %}Stop Automation{% else %}Start Automation{% endif %}
+            </button>
+
             <button class="edit-toggle-btn" id="toggleEditBtn">
                 <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg>
                 Edit Settings
             </button>
         </div>
 
-        <!-- Settings Grid (grey cards) -->
+        <!-- Settings Grid -->
         <div class="settings-grid" id="settingsGrid">
-            <!-- Generation Day -->
             <div class="item" data-field="fee_generation_day">
                 <span class="label">Generation Day</span>
                 <span class="value">{{ settings.fee_generation_day }}</span>
                 <input type="number" class="value-input" name="fee_generation_day" value="{{ settings.fee_generation_day }}" min="1" max="31">
             </div>
 
-            <!-- Due Date Offset -->
             <div class="item" data-field="due_date_offset">
                 <span class="label">Due Date Offset</span>
                 <span class="value">{{ settings.due_date_offset }} days</span>
                 <input type="number" class="value-input" name="due_date_offset" value="{{ settings.due_date_offset }}" min="0">
             </div>
 
-            <!-- Late Fee -->
             <div class="item" data-field="late_fee_penalty">
                 <span class="label">Late Fee</span>
                 <span class="value">₹{{ settings.late_fee_penalty }} / day</span>
                 <input type="number" step="0.01" class="value-input" name="late_fee_penalty" value="{{ settings.late_fee_penalty }}" min="0">
             </div>
 
-            <!-- Extra Charges -->
             <div class="item charges-item" data-field="extra_charges">
                 <span class="label">Extra Charges</span>
                 <div class="charges-list" id="chargesDisplay">
@@ -608,7 +738,6 @@
                 </div>
             </div>
 
-            <!-- Next Generation -->
             <div class="item" style="grid-column: span 2;" data-field="next_gen">
                 <span class="label">Next Generation</span>
                 <span class="value" id="nextGenDate">Calculating...</span>
@@ -616,7 +745,7 @@
             </div>
         </div>
 
-        <!-- Form Actions (Save/Cancel) -->
+        <!-- Form Actions -->
         <div class="form-actions" id="formActions">
             <button type="button" class="btn-secondary" id="cancelEditBtn">Cancel</button>
             <button type="button" class="btn-primary" id="saveSettingsBtn">
@@ -626,10 +755,9 @@
         </div>
     </div>
 
-    <!-- Divider -->
     <hr class="manual-divider">
 
-    <!-- Manual Generation (inside same card) -->
+    <!-- Manual Generation -->
     <div class="card-section">
         <div class="manual-header">
             <svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -638,8 +766,8 @@
         </div>
         <p class="manual-desc">
             Generate fees for <strong>all active students</strong> for the current month.
-            Priority: <strong>class fee structure</strong> → <strong>custom fee</strong>.
-            <br>All configured charges will be applied automatically.
+            Fees will be generated using the <strong>class fee structure</strong> (or custom fee if set).
+            <br><strong>All configured extra charges will be applied automatically.</strong>
         </p>
         <div class="manual-actions">
             <button id="manualGenerateBtnMobile" class="btn-generate">
@@ -652,7 +780,7 @@
     </div>
 </div>
 
-<!-- ===== INFO CARD (How it works) – at the very end ===== -->
+<!-- Info Card -->
 <div class="info-card">
     <h3>
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -663,6 +791,7 @@
         <li><strong>Extra Charges:</strong> Default extra charges are automatically added to every student's fee.</li>
         <li><strong>Due Date:</strong> Fee becomes due after the offset days from generation.</li>
         <li><strong>Late Fee:</strong> Fixed amount added per day for overdue fees.</li>
+        <li><strong>Manual Generation:</strong> You can also generate fees instantly for the current month using the button above – all extra charges will be applied.</li>
         <li><strong>Start/Stop:</strong> Toggle automation on/off anytime.</li>
     </ul>
 </div>
@@ -671,183 +800,85 @@
 
 <script>
 (function() {
-    // ===== INLINE EDITING =====
-    const toggleBtn = document.getElementById('toggleEditBtn');
-    const formActions = document.getElementById('formActions');
-    const cancelBtn = document.getElementById('cancelEditBtn');
-    const saveBtn = document.getElementById('saveSettingsBtn');
-    const settingsGrid = document.getElementById('settingsGrid');
-    const editMode = { active: false };
+    // ===== Custom Modal =====
+    const modal = document.getElementById('confirmModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalMessage = document.getElementById('modalMessage');
+    const modalConfirm = document.getElementById('modalConfirmBtn');
+    const modalCancel = document.getElementById('modalCancelBtn');
+    let pendingAction = null;
 
-    // Toggle edit mode
+    function showModal(title, message, onConfirm) {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modal.classList.add('active');
+        pendingAction = onConfirm;
+    }
+
+    function closeModal() {
+        modal.classList.remove('active');
+        pendingAction = null;
+    }
+
+    modalCancel.addEventListener('click', closeModal);
+    modalConfirm.addEventListener('click', function() {
+        if (pendingAction) {
+            pendingAction();
+        }
+        closeModal();
+    });
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) closeModal();
+    });
+
+    // ===== Toggle Automation with fetch =====
+    const toggleBtn = document.getElementById('toggleAutomationBtn');
     toggleBtn.addEventListener('click', function() {
-        editMode.active = !editMode.active;
-        const items = settingsGrid.querySelectorAll('.item');
-        items.forEach(item => {
-            if (!item.dataset.field || item.dataset.field === 'next_gen') return;
-            item.classList.toggle('editing', editMode.active);
-        });
-        // Charges item is special
-        const chargesItem = document.querySelector('.charges-item');
-        if (chargesItem) {
-            chargesItem.classList.toggle('editing', editMode.active);
-        }
-        // Show/hide actions
-        formActions.classList.toggle('visible', editMode.active);
-        toggleBtn.innerHTML = editMode.active ?
-            '✕ Close' :
-            '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg> Edit Settings';
-    });
-
-    // Cancel edit
-    cancelBtn.addEventListener('click', function() {
-        // Reload page to reset all values
-        window.location.reload();
-    });
-
-    // ===== Extra Charges in edit mode =====
-    const editChargesContainer = document.getElementById('editChargesContainer');
-    const addChargeBtn = document.getElementById('addEditChargeBtn');
-    const noEditChargesMsg = document.getElementById('noEditChargesMsg');
-
-    function updateNoChargesMsg() {
-        const rows = editChargesContainer.querySelectorAll('.charge-edit-row');
-        if (rows.length === 0) {
-            if (!document.getElementById('noEditChargesMsg')) {
-                const msg = document.createElement('div');
-                msg.id = 'noEditChargesMsg';
-                msg.style.cssText = 'color:var(--muted); font-size:0.75rem; margin-bottom:0.2rem;';
-                msg.textContent = 'No extra charges added yet.';
-                editChargesContainer.appendChild(msg);
-            }
-        } else {
-            const existing = document.getElementById('noEditChargesMsg');
-            if (existing) existing.remove();
-        }
-    }
-
-    function addChargeRow(title = '', amount = '') {
-        const row = document.createElement('div');
-        row.className = 'charge-edit-row';
-        row.innerHTML = `
-            <input type="text" class="edit-charge-title" value="${title}" placeholder="Title">
-            <input type="number" step="0.01" class="edit-charge-amount" value="${amount}" placeholder="Amount">
-            <button type="button" class="remove-charge-btn" title="Remove">×</button>
-        `;
-        editChargesContainer.appendChild(row);
-        const removeBtn = row.querySelector('.remove-charge-btn');
-        removeBtn.addEventListener('click', function() {
-            row.remove();
-            updateNoChargesMsg();
-        });
-        updateNoChargesMsg();
-    }
-
-    // Attach remove events to existing rows
-    document.querySelectorAll('.charge-edit-row').forEach(row => {
-        const removeBtn = row.querySelector('.remove-charge-btn');
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function() {
-                row.remove();
-                updateNoChargesMsg();
-            });
-        }
-    });
-    updateNoChargesMsg();
-
-    addChargeBtn.addEventListener('click', function() {
-        addChargeRow('', '');
-    });
-
-    // ===== Save Settings =====
-    saveBtn.addEventListener('click', function() {
-        // Collect data from all inputs
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCsrfToken());
-
-        // Get values from editable fields
-        const genDay = document.querySelector('input[name="fee_generation_day"]');
-        const dueOffset = document.querySelector('input[name="due_date_offset"]');
-        const lateFee = document.querySelector('input[name="late_fee_penalty"]');
-
-        if (genDay) formData.append('fee_generation_day', genDay.value);
-        if (dueOffset) formData.append('due_date_offset', dueOffset.value);
-        if (lateFee) formData.append('late_fee_penalty', lateFee.value);
-
-        // Collect extra charges
-        const charges = [];
-        document.querySelectorAll('.charge-edit-row').forEach(row => {
-            const title = row.querySelector('.edit-charge-title')?.value?.trim() || 'Unnamed';
-            const amount = parseFloat(row.querySelector('.edit-charge-amount')?.value) || 0;
-            if (amount > 0) {
-                charges.push({ title, amount });
-            }
-        });
-        formData.append('extra_charges_json', JSON.stringify(charges));
-
-        // Submit via fetch
-        fetch(window.location.href, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-        })
-        .then(res => {
-            if (res.ok) {
-                window.location.reload();
-            } else {
-                alert('Error saving settings. Please try again.');
-            }
-        })
-        .catch(err => {
-            alert('Network error: ' + err.message);
-        });
-    });
-
-    function getCsrfToken() {
-        let name = 'csrftoken';
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+        const isActive = this.classList.contains('stop');
+        const action = isActive ? 'stop' : 'start';
+        const title = isActive ? 'Stop Automation?' : 'Start Automation?';
+        const message = isActive ?
+            'Are you sure you want to stop automated fee generation?' :
+            'Are you sure you want to start automated fee generation?';
+        showModal(title, message, function() {
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = 'Processing...';
+            const formData = new FormData();
+            formData.append('toggle_automation', '1');
+            formData.append('csrfmiddlewaretoken', getCsrfToken());
+            fetch(window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            .then(res => {
+                if (res.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error toggling automation. Please try again.');
+                    toggleBtn.disabled = false;
+                    toggleBtn.textContent = isActive ? 'Stop Automation' : 'Start Automation';
                 }
-            }
-        }
-        return cookieValue;
-    }
-
-    // ===== Next generation date via API =====
-    fetch('/api/fee-status/')
-        .then(res => res.json())
-        .then(data => {
-            const el = document.getElementById('nextGenDate');
-            if (el && data.next_generation) {
-                const d = new Date(data.next_generation);
-                el.textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-            }
-        })
-        .catch(() => {
-            const el = document.getElementById('nextGenDate');
-            if (el) el.textContent = '—';
+            })
+            .catch(err => {
+                alert('Network error: ' + err.message);
+                toggleBtn.disabled = false;
+                toggleBtn.textContent = isActive ? 'Stop Automation' : 'Start Automation';
+            });
         });
+    });
 
-    // ===== Manual Generation =====
+    // ===== Manual Generate with fetch =====
     const genBtn = document.getElementById('manualGenerateBtnMobile');
     const genStatus = document.getElementById('manualGenStatusMobile');
     const genResult = document.getElementById('manualGenResultMobile');
 
-    if (genBtn) {
-        genBtn.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const originalText = genBtn.innerHTML;
+    genBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        showModal('Generate Fees?', 'This will create fee records for all active students for the current month. All configured extra charges will be applied. Continue?', async function() {
             genBtn.disabled = true;
             genBtn.innerHTML = '⏳ Generating...';
-            genStatus.textContent = 'Generating fees...';
+            genStatus.textContent = 'Generating...';
             genResult.style.display = 'block';
             genResult.innerHTML = '⏳ Processing, please wait...';
             genResult.style.background = 'var(--surface-alt)';
@@ -855,9 +886,7 @@
 
             try {
                 const csrfToken = getCsrfToken();
-                if (!csrfToken) {
-                    throw new Error('CSRF token not found. Please refresh the page and try again.');
-                }
+                if (!csrfToken) throw new Error('CSRF token not found.');
                 const resp = await fetch('/api/manual-generate/', {
                     method: 'POST',
                     headers: {
@@ -867,10 +896,8 @@
                     credentials: 'same-origin'
                 });
                 if (!resp.ok) {
-                    if (resp.status === 401) {
-                        throw new Error('You are not logged in. Please log in again.');
-                    }
-                    throw new Error('Server returned ' + resp.status);
+                    if (resp.status === 401) throw new Error('Not logged in.');
+                    throw new Error('Server error: ' + resp.status);
                 }
                 const data = await resp.json();
                 if (data.error) {
@@ -893,10 +920,145 @@
                 genStatus.textContent = '❌ Error';
             } finally {
                 genBtn.disabled = false;
-                genBtn.innerHTML = originalText;
+                genBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Generate Fees Now';
             }
         });
+    });
+
+    function getCsrfToken() {
+        let name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
+
+    // ===== Inline Editing =====
+    const toggleEditBtn = document.getElementById('toggleEditBtn');
+    const formActions = document.getElementById('formActions');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const settingsGrid = document.getElementById('settingsGrid');
+    let editModeActive = false;
+
+    toggleEditBtn.addEventListener('click', function() {
+        editModeActive = !editModeActive;
+        const items = settingsGrid.querySelectorAll('.item');
+        items.forEach(item => {
+            if (!item.dataset.field || item.dataset.field === 'next_gen') return;
+            item.classList.toggle('editing', editModeActive);
+        });
+        document.querySelector('.charges-item').classList.toggle('editing', editModeActive);
+        formActions.classList.toggle('visible', editModeActive);
+        toggleEditBtn.innerHTML = editModeActive ?
+            '✕ Close' :
+            '<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg> Edit Settings';
+    });
+
+    cancelBtn.addEventListener('click', function() {
+        window.location.reload();
+    });
+
+    saveBtn.addEventListener('click', function() {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCsrfToken());
+        const genDay = document.querySelector('input[name="fee_generation_day"]');
+        const dueOffset = document.querySelector('input[name="due_date_offset"]');
+        const lateFee = document.querySelector('input[name="late_fee_penalty"]');
+        if (genDay) formData.append('fee_generation_day', genDay.value);
+        if (dueOffset) formData.append('due_date_offset', dueOffset.value);
+        if (lateFee) formData.append('late_fee_penalty', lateFee.value);
+
+        const charges = [];
+        document.querySelectorAll('.charge-edit-row').forEach(row => {
+            const title = row.querySelector('.edit-charge-title')?.value?.trim() || 'Unnamed';
+            const amount = parseFloat(row.querySelector('.edit-charge-amount')?.value) || 0;
+            if (amount > 0) charges.push({ title, amount });
+        });
+        formData.append('extra_charges_json', JSON.stringify(charges));
+
+        fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+        .then(res => {
+            if (res.ok) window.location.reload();
+            else alert('Error saving settings.');
+        })
+        .catch(err => alert('Network error: ' + err.message));
+    });
+
+    // ===== Extra Charges in edit mode =====
+    const editChargesContainer = document.getElementById('editChargesContainer');
+    const addChargeBtn = document.getElementById('addEditChargeBtn');
+
+    function updateNoChargesMsg() {
+        const rows = editChargesContainer.querySelectorAll('.charge-edit-row');
+        const existing = document.getElementById('noEditChargesMsg');
+        if (rows.length === 0) {
+            if (!existing) {
+                const msg = document.createElement('div');
+                msg.id = 'noEditChargesMsg';
+                msg.style.cssText = 'color:var(--muted); font-size:0.75rem; margin-bottom:0.2rem;';
+                msg.textContent = 'No extra charges added yet.';
+                editChargesContainer.appendChild(msg);
+            }
+        } else {
+            if (existing) existing.remove();
+        }
+    }
+
+    function addChargeRow(title = '', amount = '') {
+        const row = document.createElement('div');
+        row.className = 'charge-edit-row';
+        row.innerHTML = `
+            <input type="text" class="edit-charge-title" value="${title}" placeholder="Title">
+            <input type="number" step="0.01" class="edit-charge-amount" value="${amount}" placeholder="Amount">
+            <button type="button" class="remove-charge-btn" title="Remove">×</button>
+        `;
+        editChargesContainer.appendChild(row);
+        row.querySelector('.remove-charge-btn').addEventListener('click', function() {
+            row.remove();
+            updateNoChargesMsg();
+        });
+        updateNoChargesMsg();
+    }
+
+    document.querySelectorAll('.charge-edit-row').forEach(row => {
+        row.querySelector('.remove-charge-btn').addEventListener('click', function() {
+            row.remove();
+            updateNoChargesMsg();
+        });
+    });
+    updateNoChargesMsg();
+
+    addChargeBtn.addEventListener('click', function() {
+        addChargeRow('', '');
+    });
+
+    // ===== Next generation date =====
+    fetch('/api/fee-status/')
+        .then(res => res.json())
+        .then(data => {
+            const el = document.getElementById('nextGenDate');
+            if (el && data.next_generation) {
+                const d = new Date(data.next_generation);
+                el.textContent = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+        })
+        .catch(() => {
+            const el = document.getElementById('nextGenDate');
+            if (el) el.textContent = '—';
+        });
 
 })();
 </script>

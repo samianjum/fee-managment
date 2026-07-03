@@ -38,6 +38,7 @@
     text-decoration: none;
     color: inherit;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    cursor: pointer;
   }
   .more-card:hover {
     transform: translateY(-2px);
@@ -83,6 +84,139 @@
     height: 80px;
   }
 
+  /* ---- Compact Coming Soon Modal ---- */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeIn 0.25s ease;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    max-width: 380px;
+    width: 100%;
+    padding: 1.5rem 1.25rem 1.25rem;
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+    position: relative;
+    text-align: center;
+  }
+  .modal-box .modal-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.8rem;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--muted);
+    transition: color 0.2s;
+    line-height: 1;
+  }
+  .modal-box .modal-close:hover {
+    color: var(--text);
+  }
+  .modal-box .modal-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.6rem;
+    color: var(--accent);
+  }
+  .modal-box .modal-icon svg {
+    width: 26px;
+    height: 26px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  .modal-box h2 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0 0 0.1rem 0;
+  }
+  .modal-box .sub-head {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .modal-box .message {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0.3rem 0 0.8rem;
+  }
+  .modal-box .message strong {
+    color: var(--text);
+  }
+  .modal-box .badge {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    padding: 0.15rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.6rem;
+  }
+  .modal-box .badge svg {
+    width: 12px;
+    height: 12px;
+    stroke: white;
+    display: inline;
+    vertical-align: middle;
+    margin-right: 0.2rem;
+  }
+  .modal-box .btn-primary {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 2rem;
+    padding: 0.4rem 1.6rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    margin-top: 0.3rem;
+    display: inline-block;
+  }
+  .modal-box .btn-primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+  .modal-box .footer-note {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin: 0.5rem 0 0;
+  }
+
   @media (max-width: 480px) {
     .more-grid {
       gap: 0.6rem;
@@ -105,6 +239,16 @@
     }
     .more-card p {
       font-size: 0.65rem;
+    }
+    .modal-box {
+      padding: 1.25rem 1rem 1rem;
+      max-width: 340px;
+    }
+    .modal-box h2 {
+      font-size: 1.1rem;
+    }
+    .modal-box .message {
+      font-size: 0.8rem;
     }
   }
 </style>
@@ -183,14 +327,14 @@
         <p>Financial analytics and transaction history.</p>
     </a>
 
-    <!-- Family Payment -->
-    <a href="{% url 'family_payment' schema_name=tenant.schema_name %}" class="more-card">
+    <!-- Family Payment (with modal) -->
+    <div class="more-card" id="familyPaymentCard" style="cursor:pointer;">
         <div class="icon-wrapper">
             <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         </div>
         <h3>Family Payment</h3>
-        <p>Pay fees for all children using father's CNIC.</p>
-    </a>
+        <p>Coming soon – pay fees for all siblings.</p>
+    </div>
 
     <!-- Fee Structure -->
     <a href="{% url 'mobile_fee_structure' schema_name=tenant.schema_name %}" class="more-card">
@@ -223,4 +367,73 @@
 </div>
 
 <div class="bottom-spacer"></div>
+
+<!-- ===== Compact Coming Soon Modal ===== -->
+<div class="modal-overlay" id="familyModal">
+    <div class="modal-box">
+        <button class="modal-close" id="modalCloseBtn" aria-label="Close modal">&times;</button>
+        <div class="modal-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <h2>Family Payment</h2>
+        <p class="sub-head">Coming Soon</p>
+        <div class="message">
+            <strong>One payment, multiple siblings.</strong><br>
+            We're building a smarter way to manage family fee payments. 
+            Soon, you'll be able to collect fees for <strong>all children</strong> of a family 
+            in one seamless transaction using the father's CNIC.
+            <br><br>
+            <span style="color:var(--text-secondary); font-size:0.85rem;">
+                Simplifying school fee management – one family at a time.
+            </span>
+        </div>
+        <div>
+            <span class="badge">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Launching Soon
+            </span>
+        </div>
+        <button class="btn-primary" id="modalOkBtn">Got it</button>
+        <p class="footer-note">Stay tuned for updates.</p>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const modal = document.getElementById('familyModal');
+        const closeBtn = document.getElementById('modalCloseBtn');
+        const okBtn = document.getElementById('modalOkBtn');
+        const card = document.getElementById('familyPaymentCard');
+
+        function openModal() {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        card.addEventListener('click', function(e) {
+            e.preventDefault();
+            openModal();
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+        okBtn.addEventListener('click', closeModal);
+
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.classList.contains('active')) {
+                closeModal();
+            }
+        });
+    })();
+</script>
 {% endblock %}

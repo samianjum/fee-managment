@@ -1,480 +1,197 @@
 {% extends 'mobile/base.html' %}
 {% load static %}
-{% load fee_extras %}
-
-{% block title %}Fee Structure | {{ tenant.name }}{% endblock %}
+{% block title %}Settings | {{ tenant.name }}{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* ===== All styles use base CSS variables ===== */
+    /* ===== All styles use base CSS variables ===== */
 
-  .page-header {
-    margin-bottom: 0.75rem;
-  }
-  .page-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 0.1rem;
-  }
-  .page-desc {
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
+    .page-header {
+        margin-bottom: 1rem;
+    }
+    .page-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 0.1rem;
+    }
+    .page-desc {
+        color: var(--muted);
+        font-size: 0.9rem;
+    }
 
-  /* ===== Stats Strip ===== */
-  .stats-strip {
-    display: flex;
-    gap: 0.75rem;
-    overflow-x: auto;
-    padding: 0.25rem 0 0.75rem;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    margin-bottom: 1rem;
-  }
-  .stats-strip .stat-card {
-    flex: 0 0 120px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.75rem 0.9rem;
-    scroll-snap-align: start;
-    box-shadow: var(--shadow);
-    text-align: center;
-    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-  }
-  .stats-strip .stat-card .stat-value {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-  .stats-strip .stat-card .stat-label {
-    font-size: 0.6rem;
-    text-transform: uppercase;
-    color: var(--muted);
-    letter-spacing: 0.3px;
-    margin-top: 0.1rem;
-    font-weight: 600;
-  }
+    /* ---- Settings Card (read-only, grey) ---- */
+    .settings-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: background 0.25s, border-color 0.25s;
+    }
+    .settings-card .card-title {
+        font-size: 1rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        color: var(--text);
+    }
+    .settings-card .card-title svg {
+        color: var(--accent);
+    }
 
-  /* ===== Form Card ===== */
-  .form-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
-    box-shadow: var(--shadow);
-    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.2s;
-  }
-  .form-card:hover {
-    transform: translateY(-2px);
-  }
-  .form-card .form-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--text);
-  }
-  .form-card .form-title svg {
-    color: var(--accent);
-  }
-  .field-group {
-    margin-bottom: 1rem;
-  }
-  .field-group label {
-    display: block;
-    font-weight: 600;
-    font-size: 0.85rem;
-    margin-bottom: 0.3rem;
-    color: var(--text);
-  }
-  .field-group input {
-    width: 100%;
-    padding: 0.7rem 0.9rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--border);
-    background: var(--surface-alt);
-    font-size: 0.95rem;
-    color: var(--text);
-    transition: border-color 0.2s, background 0.25s;
-  }
-  .field-group input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
-  }
-  .form-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    margin-top: 0.5rem;
-  }
-  .btn-primary, .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1.2rem;
-    border-radius: 2rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-    text-decoration: none;
-  }
-  .btn-primary {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 2px 8px rgba(37,99,235,0.2);
-  }
-  .btn-primary:hover {
-    background: var(--accent-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(37,99,235,0.3);
-  }
-  .btn-secondary {
-    background: var(--surface-alt);
-    color: var(--text);
-    border: 1px solid var(--border);
-  }
-  .btn-secondary:hover {
-    background: var(--surface);
-  }
+    /* ---- Read-only field ---- */
+    .info-row {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 0.75rem;
+        padding: 0.4rem 0.6rem;
+        background: var(--surface-alt);
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+    }
+    .info-row .label {
+        font-weight: 400;
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+    }
+    .info-row .value {
+        font-weight: 600;
+        color: var(--text);
+        font-size: 0.95rem;
+        margin-top: 0.05rem;
+        word-break: break-word;
+    }
+    .info-row .value .password-dots {
+        letter-spacing: 0.3rem;
+        font-weight: 700;
+        color: var(--muted);
+    }
 
-  /* ===== Table Card ===== */
-  .table-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.75rem 0.75rem 0.25rem;
-    margin-bottom: 1.25rem;
-    box-shadow: var(--shadow);
-    overflow: hidden;
-    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-  }
-  .table-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 0.5rem 0.75rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-  .table-header h3 {
-    font-size: 1rem;
-    font-weight: 700;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--text);
-  }
-  .table-header .search-wrapper {
-    position: relative;
-    flex: 1;
-    min-width: 140px;
-    max-width: 220px;
-  }
-  .table-header .search-wrapper input {
-    width: 100%;
-    padding: 0.5rem 0.75rem 0.5rem 2rem;
-    border-radius: 2rem;
-    border: 1px solid var(--border);
-    background: var(--surface-alt);
-    font-size: 0.8rem;
-    color: var(--text);
-    transition: border-color 0.2s, background 0.25s;
-  }
-  .table-header .search-wrapper input:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-  .table-header .search-wrapper svg {
-    position: absolute;
-    left: 0.6rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    width: 16px;
-    height: 16px;
-  }
-  .table-responsive {
-    overflow-x: auto;
-    margin-top: 0.25rem;
-  }
-  .data-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-  }
-  .data-table th {
-    text-align: left;
-    padding: 0.6rem 0.5rem;
-    color: var(--muted);
-    font-weight: 600;
-    text-transform: uppercase;
-    font-size: 0.7rem;
-    letter-spacing: 0.3px;
-    border-bottom: 1px solid var(--border);
-  }
-  .data-table td {
-    padding: 0.6rem 0.5rem;
-    border-bottom: 1px solid var(--border);
-    vertical-align: middle;
-    color: var(--text);
-  }
-  .data-table tr:last-child td {
-    border-bottom: none;
-  }
-  .data-table .grade-name {
-    font-weight: 600;
-  }
-  .data-table .fee-amount {
-    font-weight: 700;
-    color: var(--accent);
-  }
-  .data-table .action-btns {
-    display: flex;
-    gap: 0.4rem;
-    align-items: center;
-    justify-content: flex-end;
-  }
-  .data-table .action-btns a {
-    display: inline-flex;
-    padding: 0.3rem;
-    border-radius: 0.5rem;
-    color: var(--muted);
-    transition: all 0.2s;
-    text-decoration: none;
-  }
-  .data-table .action-btns a:hover {
-    color: var(--accent);
-    background: var(--accent-light);
-  }
-  .empty-row {
-    text-align: center;
-    padding: 2rem 0;
-    color: var(--muted);
-    font-size: 0.9rem;
-  }
-  .empty-row svg {
-    margin-bottom: 0.5rem;
-    opacity: 0.3;
-  }
+    /* ---- Logo display ---- */
+    .logo-display {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.4rem 0.6rem;
+        background: var(--surface-alt);
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+    }
+    .logo-display .logo-img {
+        max-height: 60px;
+        max-width: 120px;
+        border-radius: 0.3rem;
+        border: 1px solid var(--border);
+        padding: 0.1rem;
+        background: var(--surface);
+    }
+    .logo-display .no-logo {
+        color: var(--muted);
+        font-size: 0.85rem;
+    }
 
-  /* ===== Info Panel ===== */
-  .info-panel {
-    background: var(--surface-alt);
-    border-radius: var(--radius);
-    padding: 0.75rem 1rem;
-    margin-top: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--muted);
-    border: 1px solid var(--border);
-  }
-  .info-panel svg {
-    flex-shrink: 0;
-    color: var(--accent);
-  }
+    /* ---- Lock icon ---- */
+    .lock-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        color: var(--muted);
+        margin-top: 0.5rem;
+    }
+    .lock-icon svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--muted);
+    }
 
-  /* ===== Responsive ===== */
-  @media (max-width: 480px) {
-    .stats-strip .stat-card {
-      flex: 0 0 100px;
-      padding: 0.5rem 0.6rem;
+    .bottom-spacer {
+        height: 80px;
     }
-    .stats-strip .stat-card .stat-value {
-      font-size: 1rem;
+
+    @media (max-width: 480px) {
+        .logo-display {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .logo-display .logo-img {
+            max-height: 50px;
+            max-width: 100px;
+        }
     }
-    .form-actions {
-      flex-direction: column;
-    }
-    .form-actions .btn-primary,
-    .form-actions .btn-secondary {
-      width: 100%;
-      justify-content: center;
-    }
-    .table-header {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .table-header .search-wrapper {
-      max-width: 100%;
-    }
-    .data-table th, .data-table td {
-      padding: 0.4rem 0.3rem;
-      font-size: 0.75rem;
-    }
-    .data-table .action-btns a {
-      padding: 0.2rem;
-    }
-  }
 </style>
 {% endblock %}
 
 {% block body %}
-<!-- ===== PAGE HEADER ===== -->
 <div class="page-header">
-  <h1 class="page-title">Fee Structure</h1>
-  <p class="page-desc">Manage monthly fees for each grade/class</p>
+    <h1 class="page-title">Settings</h1>
+    <p class="page-desc">View your school profile and credentials</p>
 </div>
 
-<!-- ===== STATS STRIP ===== -->
-<div class="stats-strip">
-  <div class="stat-card">
-    <div class="stat-value">{{ total_structures }}</div>
-    <div class="stat-label">Total</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value">₹{{ avg_fee|floatformat:2 }}</div>
-    <div class="stat-label">Avg Fee</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value">₹{{ min_fee|floatformat:2 }}</div>
-    <div class="stat-label">Min</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value">₹{{ max_fee|floatformat:2 }}</div>
-    <div class="stat-label">Max</div>
-  </div>
-</div>
-
-<!-- ===== ADD/EDIT FORM ===== -->
-<div class="form-card">
-  <div class="form-title">
-    {% if edit_grade %}
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-        <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/>
-      </svg>
-      Edit Fee for {{ edit_grade }}
-    {% else %}
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 4v16m8-8H4"/>
-      </svg>
-      Add New Fee Structure
-    {% endif %}
-  </div>
-  <form method="post" id="feeForm">
-    {% csrf_token %}
-    <div class="field-group">
-      <label for="grade">Class / Grade</label>
-      <input type="text" name="grade" id="grade" value="{{ form.grade.value|default:'' }}" required {% if edit_grade %}readonly{% endif %} placeholder="e.g., Class 5">
-    </div>
-    <div class="field-group">
-      <label for="monthly_fee">Monthly Fee (₹)</label>
-      <input type="number" step="0.01" name="monthly_fee" id="monthly_fee" value="{{ form.monthly_fee.value|default:'' }}" required placeholder="0.00">
-    </div>
-    <div class="form-actions">
-      <button type="submit" class="btn-primary">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+<!-- ===== School Information (Read-Only) ===== -->
+<div class="settings-card">
+    <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
         </svg>
-        {% if edit_grade %}Update Fee{% else %}Save Fee{% endif %}
-      </button>
-      {% if edit_grade %}
-        <a href="{% url 'mobile_fee_structure' schema_name=tenant.schema_name %}" class="btn-secondary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12"/></svg>
-          Cancel
-        </a>
-      {% endif %}
+        <span>School Information</span>
     </div>
-  </form>
+
+    <div class="info-row">
+        <span class="label">School Name</span>
+        <span class="value">{{ tenant.name }}</span>
+    </div>
+
+    <div class="info-row">
+        <span class="label">School Logo</span>
+        <div class="logo-display">
+            {% if logo_url %}
+                <img src="{{ logo_url }}" class="logo-img" alt="School logo">
+            {% else %}
+                <span class="no-logo">No logo uploaded</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="lock-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Read-only – settings are managed by the system administrator
+    </div>
 </div>
 
-<!-- ===== CURRENT STRUCTURES TABLE ===== -->
-<div class="table-card">
-  <div class="table-header">
-    <h3>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M3 6h18M9 12h6M7 18h10"/>
-      </svg>
-      Current Structures
-    </h3>
-    <div class="search-wrapper">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <path d="M21 21l-4.35-4.35"/>
-      </svg>
-      <input type="text" id="searchTable" placeholder="Search grade...">
+<!-- ===== Account Security (Read-Only) ===== -->
+<div class="settings-card">
+    <div class="card-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+        <span>Account Security</span>
     </div>
-  </div>
-  <div class="table-responsive">
-    <table class="data-table" id="feeTable">
-      <thead>
-        <tr>
-          <th>Grade</th>
-          <th>Fee (₹)</th>
-          <th class="text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for fs in fee_structures %}
-        <tr>
-          <td class="grade-name">{{ fs.grade }}</td>
-          <td class="fee-amount">₹{{ fs.monthly_fee|floatformat:2 }}</td>
-          <td class="action-btns">
-            <a href="{% url 'mobile_fee_structure' schema_name=tenant.schema_name %}?edit={{ fs.grade }}" title="Edit">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                <path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/>
-              </svg>
-            </a>
-            <a href="{% url 'student_list' schema_name=tenant.schema_name %}?grade={{ fs.grade }}" target="_blank" title="View Students">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-              </svg>
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="3" class="empty-row">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 8v4m0 4h.01"/>
-            </svg>
-            <p>No fee structures defined yet.</p>
-            <p style="font-size:0.8rem; margin-top:0.25rem;">Use the form above to add your first one.</p>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  <div class="info-panel">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-    <span>Adding a structure automatically updates all students in that grade.</span>
-    {% if debug_count != fee_structures|length %}
-      <span style="color: #f97316; font-size:0.7rem;">(debug: {{ debug_count }})</span>
-    {% endif %}
-  </div>
+
+    <div class="info-row">
+        <span class="label">Admin Username</span>
+        <span class="value">{{ tenant.admin_username }}</span>
+    </div>
+
+    <div class="info-row">
+        <span class="label">Password</span>
+        <span class="value">
+            <span class="password-dots">••••••••</span>
+            <span style="font-size:0.65rem; color:var(--muted); font-weight:400; margin-left:0.5rem;">(secured)</span>
+        </span>
+    </div>
+
+    <div class="lock-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Credentials are managed by the system administrator
+    </div>
 </div>
 
-<script>
-  // Live search in the table
-  (function() {
-    const searchInput = document.getElementById('searchTable');
-    if (!searchInput) return;
-    searchInput.addEventListener('keyup', function() {
-      const filter = this.value.toLowerCase().trim();
-      const rows = document.querySelectorAll('#feeTable tbody tr');
-      rows.forEach(row => {
-        const gradeCell = row.querySelector('.grade-name');
-        if (gradeCell) {
-          const text = gradeCell.textContent.toLowerCase();
-          row.style.display = text.includes(filter) ? '' : 'none';
-        }
-      });
-    });
-  })();
-</script>
-
+<div class="bottom-spacer"></div>
 {% endblock %}
