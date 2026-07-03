@@ -1,197 +1,118 @@
-{% extends 'mobile/base.html' %}
-{% load static %}
-{% block title %}Settings | {{ tenant.name }}{% endblock %}
+#!/usr/bin/env python3
+"""
+Fix sell_separately view: show results when only grade/section filters are applied.
+"""
+import re
+from pathlib import Path
 
-{% block extra_head %}
-<style>
-    /* ===== All styles use base CSS variables ===== */
+VIEWS_PATH = Path('axis_saas/views.py')
 
-    .page-header {
-        margin-bottom: 1rem;
+NEW_SELL_SEPARATELY = '''
+# ==================== SELL SEPARATELY (standalone student search) ====================
+@require_tenant_type(['school'])
+def sell_separately(request, schema_name, mobile=False):
+    """Page to search for a student and then redirect to fee collection for that student."""
+    tenant = get_tenant(request, schema_name)
+    search_query = request.GET.get('search', '').strip()
+    grade_filter = request.GET.get('grade', '')
+    section_filter = request.GET.get('section', '')
+    search_results = []
+
+    with schema_context(schema_name):
+        # Start with all students
+        students = Student.objects.all()
+
+        # Apply grade filter if provided
+        if grade_filter:
+            students = students.filter(grade=grade_filter)
+
+        # Apply section filter if provided
+        if section_filter:
+            students = students.filter(section=section_filter)
+
+        # Apply search (partial matching) if query provided
+        if search_query:
+            students = students.filter(
+                Q(name__icontains=search_query) |
+                Q(roll_number__icontains=search_query) |
+                Q(father_name__icontains=search_query) |
+                Q(father_cnic__icontains=search_query) |
+                Q(parent_mobile__icontains=search_query)
+            )
+
+        # Only fetch results if either search or any filter is present
+        if search_query or grade_filter or section_filter:
+            search_results = list(students.order_by('name')[:20])
+        else:
+            search_results = []
+
+        # Get distinct grades and sections for filter dropdowns
+        grades = list(Student.objects.values_list('grade', flat=True).distinct().order_by('grade'))
+        sections = list(Student.objects.values_list('section', flat=True).distinct().order_by('section'))
+
+    context = {
+        'tenant': tenant,
+        'search_query': search_query,
+        'grade_filter': grade_filter,
+        'section_filter': section_filter,
+        'search_results': search_results,
+        'grades': grades,
+        'sections': sections,
+        'logo_url': tenant.school_logo.url if tenant.school_logo else None,
     }
-    .page-title {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: var(--text);
-        margin-bottom: 0.1rem;
-    }
-    .page-desc {
-        color: var(--muted);
-        font-size: 0.9rem;
-    }
+    template = 'mobile/sell_separately.html' if mobile else 'tenant/sell_separately.html'
+    return render(request, template, context)
 
-    /* ---- Settings Card (read-only, grey) ---- */
-    .settings-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 1.25rem;
-        margin-bottom: 1rem;
-        box-shadow: var(--shadow);
-        transition: background 0.25s, border-color 0.25s;
-    }
-    .settings-card .card-title {
-        font-size: 1rem;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 1rem;
-        color: var(--text);
-    }
-    .settings-card .card-title svg {
-        color: var(--accent);
-    }
+@require_tenant_type(['school'])
+def mobile_sell_separately(request, schema_name):
+    """Mobile version of sell separately page."""
+    return sell_separately(request, schema_name, mobile=True)
+'''
 
-    /* ---- Read-only field ---- */
-    .info-row {
-        display: flex;
-        flex-direction: column;
-        margin-bottom: 0.75rem;
-        padding: 0.4rem 0.6rem;
-        background: var(--surface-alt);
-        border-radius: 0.5rem;
-        border: 1px solid var(--border);
-    }
-    .info-row .label {
-        font-weight: 400;
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        color: var(--muted);
-        letter-spacing: 0.02em;
-    }
-    .info-row .value {
-        font-weight: 600;
-        color: var(--text);
-        font-size: 0.95rem;
-        margin-top: 0.05rem;
-        word-break: break-word;
-    }
-    .info-row .value .password-dots {
-        letter-spacing: 0.3rem;
-        font-weight: 700;
-        color: var(--muted);
-    }
+def patch_views():
+    if not VIEWS_PATH.exists():
+        print(f"❌ File not found: {VIEWS_PATH}")
+        return
 
-    /* ---- Logo display ---- */
-    .logo-display {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.4rem 0.6rem;
-        background: var(--surface-alt);
-        border-radius: 0.5rem;
-        border: 1px solid var(--border);
-    }
-    .logo-display .logo-img {
-        max-height: 60px;
-        max-width: 120px;
-        border-radius: 0.3rem;
-        border: 1px solid var(--border);
-        padding: 0.1rem;
-        background: var(--surface);
-    }
-    .logo-display .no-logo {
-        color: var(--muted);
-        font-size: 0.85rem;
-    }
+    with open(VIEWS_PATH, 'r', encoding='utf-8') as f:
+        content = f.read()
 
-    /* ---- Lock icon ---- */
-    .lock-icon {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.3rem;
-        font-size: 0.7rem;
-        color: var(--muted);
-        margin-top: 0.5rem;
-    }
-    .lock-icon svg {
-        width: 14px;
-        height: 14px;
-        stroke: var(--muted);
-    }
+    # Pattern to match the sell_separately function block.
+    # We'll look for the comment "# ==================== SELL SEPARATELY" and then capture until the next @require_tenant_type or def.
+    pattern = r'(# ==================== SELL SEPARATELY.*?)(@require_tenant_type.*?def mobile_sell_separately.*?return sell_separately.*?)(?=\n\n|$)'
 
-    .bottom-spacer {
-        height: 80px;
-    }
+    if re.search(pattern, content, re.DOTALL):
+        new_content = re.sub(pattern, NEW_SELL_SEPARATELY, content, flags=re.DOTALL)
+        with open(VIEWS_PATH, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        print("✅ Successfully updated sell_separately in views.py")
+    else:
+        # Fallback: try to find the function definition directly
+        func_pattern = r'(@require_tenant_type\(\[.school.\]\)\s*def sell_separately\(request, schema_name, mobile=False\):.*?)(?=@require_tenant_type|def )'
+        match = re.search(func_pattern, content, re.DOTALL)
+        if match:
+            # Also find the mobile wrapper
+            wrapper_pattern = r'(@require_tenant_type\(\[.school.\]\)\s*def mobile_sell_separately.*?return sell_separately.*?)(?=\n\n|$)'
+            wrapper_match = re.search(wrapper_pattern, content, re.DOTALL)
+            if wrapper_match:
+                old_block = match.group(0) + wrapper_match.group(0)
+                new_content = content.replace(old_block, NEW_SELL_SEPARATELY)
+            else:
+                # replace only the function
+                new_content = content.replace(match.group(0), NEW_SELL_SEPARATELY)
+            with open(VIEWS_PATH, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            print("✅ Successfully updated sell_separately in views.py")
+        else:
+            # If not found, append at the end (safe fallback)
+            print("⚠️ Could not locate the sell_separately function. Appending new version at the end.")
+            with open(VIEWS_PATH, 'a', encoding='utf-8') as f:
+                f.write('\n\n' + NEW_SELL_SEPARATELY)
+            print("✅ Appended new sell_separately function at the end of views.py")
 
-    @media (max-width: 480px) {
-        .logo-display {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-        .logo-display .logo-img {
-            max-height: 50px;
-            max-width: 100px;
-        }
-    }
-</style>
-{% endblock %}
 
-{% block body %}
-<div class="page-header">
-    <h1 class="page-title">Settings</h1>
-    <p class="page-desc">View your school profile and credentials</p>
-</div>
-
-<!-- ===== School Information (Read-Only) ===== -->
-<div class="settings-card">
-    <div class="card-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-        </svg>
-        <span>School Information</span>
-    </div>
-
-    <div class="info-row">
-        <span class="label">School Name</span>
-        <span class="value">{{ tenant.name }}</span>
-    </div>
-
-    <div class="info-row">
-        <span class="label">School Logo</span>
-        <div class="logo-display">
-            {% if logo_url %}
-                <img src="{{ logo_url }}" class="logo-img" alt="School logo">
-            {% else %}
-                <span class="no-logo">No logo uploaded</span>
-            {% endif %}
-        </div>
-    </div>
-
-    <div class="lock-icon">
-        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        Read-only – settings are managed by the system administrator
-    </div>
-</div>
-
-<!-- ===== Account Security (Read-Only) ===== -->
-<div class="settings-card">
-    <div class="card-title">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-        </svg>
-        <span>Account Security</span>
-    </div>
-
-    <div class="info-row">
-        <span class="label">Admin Username</span>
-        <span class="value">{{ tenant.admin_username }}</span>
-    </div>
-
-    <div class="info-row">
-        <span class="label">Password</span>
-        <span class="value">
-            <span class="password-dots">••••••••</span>
-            <span style="font-size:0.65rem; color:var(--muted); font-weight:400; margin-left:0.5rem;">(secured)</span>
-        </span>
-    </div>
-
-    <div class="lock-icon">
-        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        Credentials are managed by the system administrator
-    </div>
-</div>
-
-<div class="bottom-spacer"></div>
-{% endblock %}
+if __name__ == '__main__':
+    print("🔧 Applying fix for sell_separately filters...")
+    patch_views()
+    print("\n✅ Done! Now grade/section filters work without search.")
+    print("🔄 Restart your server to see the changes.")

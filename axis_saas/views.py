@@ -2960,6 +2960,7 @@ def delete_product(request, schema_name, product_id):
 # and get_tenant are available. They are already defined at the top of views.py.
 # Also ensure that SchoolClient is imported if needed inside functions. We'll import inside each function.
 
+
 # ==================== SELL SEPARATELY (standalone student search) ====================
 @require_tenant_type(['school'])
 def sell_separately(request, schema_name, mobile=False):
@@ -2968,26 +2969,39 @@ def sell_separately(request, schema_name, mobile=False):
     search_query = request.GET.get('search', '').strip()
     grade_filter = request.GET.get('grade', '')
     section_filter = request.GET.get('section', '')
-    selected_student = None
     search_results = []
 
     with schema_context(schema_name):
+        # Start with all students
+        students = Student.objects.all()
+
+        # Apply grade filter if provided
+        if grade_filter:
+            students = students.filter(grade=grade_filter)
+
+        # Apply section filter if provided
+        if section_filter:
+            students = students.filter(section=section_filter)
+
+        # Apply search (partial matching) if query provided
         if search_query:
-            students = Student.objects.filter(
+            students = students.filter(
                 Q(name__icontains=search_query) |
                 Q(roll_number__icontains=search_query) |
                 Q(father_name__icontains=search_query) |
                 Q(father_cnic__icontains=search_query) |
                 Q(parent_mobile__icontains=search_query)
             )
-            if grade_filter:
-                students = students.filter(grade=grade_filter)
-            if section_filter:
-                students = students.filter(section=section_filter)
-            search_results = list(students.order_by('name')[:20])
 
-        grades = Student.objects.values_list('grade', flat=True).distinct().order_by('grade')
-        sections = Student.objects.values_list('section', flat=True).distinct().order_by('section')
+        # Only fetch results if either search or any filter is present
+        if search_query or grade_filter or section_filter:
+            search_results = list(students.order_by('name')[:20])
+        else:
+            search_results = []
+
+        # Get distinct grades and sections for filter dropdowns
+        grades = list(Student.objects.values_list('grade', flat=True).distinct().order_by('grade'))
+        sections = list(Student.objects.values_list('section', flat=True).distinct().order_by('section'))
 
     context = {
         'tenant': tenant,
@@ -3002,11 +3016,11 @@ def sell_separately(request, schema_name, mobile=False):
     template = 'mobile/sell_separately.html' if mobile else 'tenant/sell_separately.html'
     return render(request, template, context)
 
-
 @require_tenant_type(['school'])
 def mobile_sell_separately(request, schema_name):
     """Mobile version of sell separately page."""
     return sell_separately(request, schema_name, mobile=True)
+
 
 
 # ------------------- Mobile Defaulters -------------------
