@@ -16,17 +16,17 @@
     margin: 0;
   }
   .form-page-header a {
-    color: var(--primary);
+    color: var(--accent);
     text-decoration: none;
     font-weight: 600;
   }
 
   .form-card {
     background: var(--surface);
-    border-radius: 1.5rem;
+    border-radius: var(--radius);
     padding: 1.25rem;
     border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
   }
 
   .form-group {
@@ -53,7 +53,7 @@
   .form-group select:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
   }
   .form-group .help-text {
@@ -69,14 +69,14 @@
   .form-actions button {
     flex: 1;
     padding: 0.7rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     font-weight: 600;
     border: none;
     cursor: pointer;
     font-size: 0.95rem;
   }
   .btn-primary {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
   }
   .btn-secondary {
@@ -110,7 +110,7 @@
     {% endfor %}
     <div class="form-actions">
       <button type="submit" class="btn-primary">{% if student %}Update{% else %}Save{% endif %}</button>
-      <a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}" class="btn-secondary" style="text-align:center; text-decoration:none; padding:0.7rem; border-radius:2rem; border:1px solid var(--border); flex:1;">Cancel</a>
+      <a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}" class="btn-secondary" style="text-align:center; text-decoration:none; padding:0.7rem; border-radius: var(--radius); border:1px solid var(--border); flex:1;">Cancel</a>
     </div>
   </form>
 </div>

@@ -8,7 +8,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    color: var(--primary);
+    color: var(--accent);
     text-decoration: none;
     font-weight: 600;
     margin-bottom: 0.75rem;
@@ -22,11 +22,11 @@
 
   .product-header {
     background: var(--surface);
-    border-radius: 1.5rem;
+    border-radius: var(--radius);
     padding: 1.2rem;
     margin-bottom: 1rem;
     border: 1px solid var(--border);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+    box-shadow: var(--shadow);
   }
   .product-header .sku {
     font-size: 0.7rem;
@@ -43,7 +43,7 @@
   .product-header .category-tag {
     display: inline-block;
     background: rgba(59,130,246,0.12);
-    color: var(--primary);
+    color: var(--accent);
     padding: 0.2rem 0.6rem;
     border-radius: 999px;
     font-size: 0.7rem;
@@ -66,11 +66,11 @@
   }
   .info-card {
     background: var(--surface);
-    border-radius: 1.25rem;
+    border-radius: var(--radius);
     padding: 0.75rem;
     border: 1px solid var(--border);
     text-align: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    box-shadow: var(--shadow);
   }
   .info-card .label {
     font-size: 0.6rem;
@@ -97,11 +97,11 @@
 
   .buyer-list, .sales-list {
     background: var(--surface);
-    border-radius: 1.25rem;
+    border-radius: var(--radius);
     padding: 0.75rem;
     border: 1px solid var(--border);
     margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+    box-shadow: var(--shadow);
   }
   .buyer-item, .sale-item {
     display: flex;
@@ -118,7 +118,7 @@
     font-weight: 600;
   }
   .buyer-item a {
-    color: var(--primary);
+    color: var(--accent);
     text-decoration: none;
   }
   .sale-item .student {
@@ -126,7 +126,7 @@
   }
   .sale-item .amount {
     font-weight: 700;
-    color: var(--primary);
+    color: var(--accent);
   }
   .sale-item .meta {
     color: var(--muted);

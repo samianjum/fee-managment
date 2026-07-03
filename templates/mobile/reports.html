@@ -4,17 +4,15 @@
 
 {% block extra_head %}
 <style>
-  /* ===== Page Header ===== */
+  /* ===== All styles use base CSS variables ===== */
+
   .page-header {
     margin-bottom: 1rem;
   }
   .page-title {
     font-size: 1.6rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--text);
     margin-bottom: 0.1rem;
   }
   .page-desc {
@@ -22,28 +20,26 @@
     font-size: 0.9rem;
   }
 
-  /* ===== Filter Bar (sticky) ===== */
+  /* ===== Filter Bar ===== */
   .filter-section {
     position: sticky;
     top: 0;
     z-index: 20;
     background: var(--bg);
     padding: 0.3rem 0 0.5rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    transition: background 0.25s;
   }
   .filter-row {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 0.2rem 0.5rem 0.2rem 0.8rem;
-    border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .filter-row select,
   .filter-row input {
@@ -60,10 +56,10 @@
   .filter-row select {
     width: auto;
     font-weight: 600;
-    color: var(--primary);
+    color: var(--accent);
   }
   .filter-row button {
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 2rem;
@@ -71,17 +67,26 @@
     font-weight: 700;
     font-size: 0.7rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.15s;
     white-space: nowrap;
+  }
+  .filter-row button:hover {
+    background: var(--accent-hover);
   }
   .filter-row .clear-btn {
     background: transparent;
     color: var(--muted);
     padding: 0.2rem 0.4rem;
     font-size: 0.7rem;
+    cursor: pointer;
+    border: none;
+    transition: color 0.2s;
+  }
+  .filter-row .clear-btn:hover {
+    color: var(--text);
   }
 
-  /* ===== KPI Strip (glass) ===== */
+  /* ===== KPI Strip ===== */
   .kpi-scroll {
     display: flex;
     gap: 0.75rem;
@@ -93,15 +98,14 @@
   }
   .kpi-scroll .kpi-card {
     flex: 0 0 140px;
-    background: rgba(255,255,255,0.6);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-radius: 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 0.75rem 0.9rem;
-    border: 1px solid rgba(255,255,255,0.3);
     scroll-snap-align: start;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
     text-align: center;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .kpi-scroll .kpi-card .kpi-value {
     font-size: 1.2rem;
@@ -114,6 +118,7 @@
     text-transform: uppercase;
     color: var(--muted);
     letter-spacing: 0.3px;
+    font-weight: 600;
   }
 
   /* ===== Tabs ===== */
@@ -135,26 +140,30 @@
     transition: all 0.2s;
     border: none;
   }
+  .tab:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
   .tab.active {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
   }
 
   /* ===== Chart Cards ===== */
   .chart-card {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 1rem;
     margin-bottom: 1rem;
-    border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .chart-card h3 {
     font-size: 0.9rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
+    color: var(--text);
   }
   .chart-card canvas {
     max-height: 140px;
@@ -169,17 +178,16 @@
     margin-bottom: 1rem;
   }
   .transaction-item {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 1.25rem;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.7rem;
+    box-shadow: var(--shadow);
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .transaction-item .info {
     flex: 1;
@@ -196,8 +204,11 @@
   }
   .transaction-item .amount {
     font-weight: 700;
-    color: var(--primary);
+    color: var(--accent);
     white-space: nowrap;
+  }
+  .transaction-item .amount.pending {
+    color: #EF4444;
   }
 
   /* ===== Empty State ===== */
@@ -212,6 +223,9 @@
     stroke: var(--muted);
     opacity: 0.3;
     margin-bottom: 0.5rem;
+  }
+  .empty-state p {
+    margin: 0.2rem 0;
   }
 
   /* ===== Pagination ===== */
@@ -234,28 +248,31 @@
     transition: all 0.2s;
   }
   .pagination a:hover {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
-    border-color: var(--primary);
+    border-color: var(--accent);
   }
   .pagination .active {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
-    border-color: var(--primary);
+    border-color: var(--accent);
   }
   .pagination .disabled {
     opacity: 0.4;
     pointer-events: none;
   }
 
-  /* ===== Bottom Spacer ===== */
-  .bottom-spacer { height: 90px; }
+  .bottom-spacer {
+    height: 90px;
+  }
 
   @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
   }
-  .transaction-list { animation: fadeInUp 0.4s ease; }
+  .transaction-list {
+    animation: fadeInUp 0.4s ease;
+  }
 
   @media (max-width: 480px) {
     .kpi-scroll .kpi-card {
@@ -272,7 +289,7 @@
       font-size: 0.7rem;
     }
     .transaction-item {
-      padding: 0.4rem 0.6rem;
+      padding: 0.3rem 0.5rem;
     }
     .transaction-item .student-name {
       font-size: 0.8rem;
@@ -387,7 +404,7 @@
             <div class="student-name">{{ d.student.name }}</div>
             <div class="meta">{{ d.student.grade }} • {{ d.student.section }} • Overdue: {{ d.days_overdue }} days</div>
           </div>
-          <div class="amount" style="color:var(--danger);">₹{{ d.pending_amount|floatformat:2 }}</div>
+          <div class="amount pending">₹{{ d.pending_amount|floatformat:2 }}</div>
         </div>
       {% empty %}
         <div class="empty-state">
@@ -408,10 +425,8 @@
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', function() {
         const type = this.dataset.type;
-        // Update URL with type and keep other params
         const url = new URL(window.location.href);
         url.searchParams.set('type', type);
-        // Preserve filter params
         const quickFilter = document.getElementById('quickFilter').value;
         if (quickFilter) url.searchParams.set('quick_filter', quickFilter);
         const startDate = document.querySelector('input[name="start_date"]')?.value;
@@ -443,7 +458,7 @@
           datasets: [{
             label: 'Collection (₹)',
             data: monthlyData.map(item => item.total_amount),
-            borderColor: '#3b82f6',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
             backgroundColor: 'rgba(59,130,246,0.1)',
             fill: true,
             tension: 0.3,
@@ -471,7 +486,7 @@
           labels: modeData.map(item => item.name),
           datasets: [{
             data: modeData.map(item => item.total_amount),
-            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444']
+            backgroundColor: ['var(--accent)', '#10b981', '#f59e0b', '#ef4444']
           }]
         },
         options: {

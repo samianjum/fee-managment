@@ -11,10 +11,10 @@
     .page-title {
         font-size: 1.8rem;
         font-weight: 700;
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
+        background: var(--accent);
+        
+        
+        color: var(--text);
         margin-bottom: 0.1rem;
         letter-spacing: -0.02em;
     }
@@ -31,25 +31,25 @@
         z-index: 20;
         background: var(--bg);
         padding: 0.5rem 0 0.75rem;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        ;
+        -webkit-;
     }
     .filter-row {
         display: flex;
         flex-wrap: wrap;
         gap: 0.4rem;
         align-items: center;
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 1.75rem;
+        background: var(--surface);
+        ;
+        -webkit-;
+        border-radius: var(--radius);
         padding: 0.25rem 0.5rem 0.25rem 1rem;
         border: 1px solid rgba(255,255,255,0.7);
-        box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+        box-shadow: var(--shadow);
         transition: box-shadow 0.2s;
     }
     .filter-row:focus-within {
-        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        box-shadow: var(--shadow);
     }
     .filter-row select {
         border: none;
@@ -70,10 +70,10 @@
         cursor: pointer;
     }
     .filter-row select:hover {
-        color: var(--primary);
+        color: var(--accent);
     }
     .filter-row button {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        background: var(--accent);
         color: white;
         border: none;
         border-radius: 2.5rem;
@@ -87,7 +87,7 @@
     }
     .filter-row button:hover {
         transform: scale(1.02);
-        box-shadow: 0 2px 12px rgba(59,130,246,0.3);
+        box-shadow: var(--shadow);
     }
     .filter-row .clear-btn {
         background: transparent;
@@ -107,7 +107,7 @@
         white-space: nowrap;
         padding: 0.2rem 0.4rem;
         background: var(--surface-alt);
-        border-radius: 2rem;
+        border-radius: var(--radius);
         font-weight: 500;
     }
 
@@ -125,13 +125,13 @@
     }
 
     .log-card {
-        background: rgba(255,255,255,0.96);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 1.5rem;
+        background: var(--surface);
+        ;
+        -webkit-;
+        border-radius: var(--radius);
         padding: 0.9rem 1rem;
         border: 1px solid rgba(255,255,255,0.6);
-        box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+        box-shadow: var(--shadow);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         display: flex;
         flex-direction: column;
@@ -141,7 +141,7 @@
         transform: scale(0.98);
     }
     .log-card:hover {
-        box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+        box-shadow: var(--shadow);
     }
 
     .log-card .top-row {
@@ -155,7 +155,7 @@
         align-items: center;
         gap: 0.25rem;
         padding: 0.2rem 0.6rem;
-        border-radius: 2rem;
+        border-radius: var(--radius);
         font-size: 0.6rem;
         font-weight: 700;
         text-transform: uppercase;
@@ -207,7 +207,7 @@
         gap: 0.3rem;
         background: var(--surface-alt);
         padding: 0.15rem 0.6rem;
-        border-radius: 2rem;
+        border-radius: var(--radius);
         border: 1px solid var(--border);
         font-weight: 500;
     }
@@ -253,17 +253,17 @@
         align-items: center;
         gap: 0.3rem;
         padding: 0.3rem 0.9rem;
-        border-radius: 2rem;
+        border-radius: var(--radius);
         font-size: 0.75rem;
         font-weight: 600;
         text-decoration: none;
-        background: var(--primary);
+        background: var(--accent);
         color: white;
         border: none;
         transition: 0.2s;
     }
     .log-card .actions a:hover {
-        background: var(--primary-dark);
+        background: var(--accent-hover);
         transform: translateY(-1px);
     }
     .log-card .actions a svg {
@@ -334,9 +334,9 @@
         background: var(--surface-alt);
     }
     .page-link.active {
-        background: var(--primary);
+        background: var(--accent);
         color: white;
-        border-color: var(--primary);
+        border-color: var(--accent);
     }
     .page-link.disabled {
         opacity: 0.4;
@@ -352,7 +352,7 @@
         align-items: center;
         gap: 0.3rem;
         padding: 0.4rem 1rem;
-        border-radius: 2rem;
+        border-radius: var(--radius);
         background: var(--surface-alt);
         color: var(--text);
         border: 1px solid var(--border);
@@ -364,8 +364,8 @@
     }
     .back-link:hover {
         background: var(--surface);
-        border-color: var(--primary);
-        color: var(--primary);
+        border-color: var(--accent);
+        color: var(--accent);
     }
     .back-link svg {
         width: 18px;

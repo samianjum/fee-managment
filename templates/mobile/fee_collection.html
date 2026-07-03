@@ -4,214 +4,313 @@
 
 {% block extra_head %}
 <style>
-  .hero-panel {
-    background: linear-gradient(180deg, rgba(91,74,224,0.95), rgba(79,70,229,0.92));
-    color: white;
-    border-radius: 1.75rem;
-    padding: 1.4rem 1.25rem;
-    box-shadow: 0 24px 50px rgba(15,23,42,0.14);
-    margin-bottom: 1rem;
-  }
-  .hero-panel h1 {
-    font-size: 1.35rem;
-    margin-bottom: 0.35rem;
-  }
-  .hero-panel p {
-    color: rgba(255,255,255,0.92);
-    font-size: 0.95rem;
-    line-height: 1.5;
-  }
-  .hero-stat {
+  /* ===== All styles use base CSS variables ===== */
+  
+  /* ---- Stats Strip (clean, compact) ---- */
+  .stats-strip {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.85rem;
-    margin-top: 1rem;
-  }
-  .hero-stat .stat-pill {
-    padding: 0.95rem 1rem;
-    border-radius: 1.25rem;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.18);
-    font-size: 0.84rem;
-  }
-  .hero-stat .stat-pill strong {
-    display: block;
-    margin-top: 0.35rem;
-    font-size: 1.1rem;
-  }
-  .search-panel {
-    display: grid;
-    gap: 0.75rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
     margin-bottom: 1rem;
-  }
-  .search-row {
-    display: flex;
-    gap: 0.65rem;
-    align-items: center;
-  }
-  .search-row input,
-  .search-row select,
-  .search-row button {
-    width: 100%;
-    border-radius: 1rem;
-    border: 1px solid rgba(148,163,184,0.2);
-    padding: 0.9rem 1rem;
-    font-size: 0.95rem;
     background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 0.4rem 0.2rem;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
-  .search-row button {
-    background: var(--accent);
-    border-color: transparent;
-    color: white;
-    font-weight: 700;
-    cursor: pointer;
+  .stats-strip .stat-item {
+    text-align: center;
+    padding: 0.2rem 0.1rem;
   }
-  .summary-strip {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(100px, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+  .stats-strip .stat-number {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
   }
-  .summary-card {
-    background: white;
-    border-radius: 1.25rem;
-    padding: 1rem;
-    box-shadow: 0 16px 35px rgba(15,23,42,0.06);
-    border: 1px solid rgba(148,163,184,0.14);
+  .stats-strip .stat-label {
+    font-size: 0.55rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    font-weight: 600;
   }
-  .summary-card .label {
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    margin-bottom: 0.45rem;
+  .stats-strip .stat-item.pending .stat-number {
+    color: #EF4444;
   }
-  .summary-card .value {
-    font-size: 1.15rem;
-    font-weight: 700;
+  .stats-strip .stat-item.collection .stat-number {
+    color: var(--accent);
   }
-  .pending-list {
-    display: grid;
-    gap: 0.9rem;
-    margin-bottom: 1rem;
+
+  /* ---- Search & Filter (compact) ---- */
+  .search-section {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
+    padding: 0.3rem 0 0.5rem;
+    transition: background 0.25s;
   }
-  .pending-card {
-    background: white;
-    border-radius: 1.5rem;
-    padding: 1rem;
-    box-shadow: 0 18px 35px rgba(15,23,42,0.06);
-    border: 1px solid rgba(148,163,184,0.14);
-    text-decoration: none;
-    color: inherit;
-  }
-  .pending-card:hover {
-    transform: translateY(-1px);
-  }
-  .pending-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.7rem;
-    align-items: flex-start;
-    margin-bottom: 0.85rem;
-  }
-  .pending-title {
-    font-weight: 700;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-  }
-  .pending-meta {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-  }
-  .badge-pill {
-    display: inline-flex;
-    border-radius: 999px;
-    background: rgba(91,74,224,0.08);
-    color: #5B4AE0;
-    padding: 0.35rem 0.7rem;
-    font-size: 0.78rem;
-    font-weight: 700;
-  }
-  .pending-summary {
+  .search-fee-bar {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.55rem;
-    margin-top: 0.75rem;
-  }
-  .pending-chip {
-    background: rgba(15,23,42,0.04);
-    color: var(--text-muted);
-    border-radius: 999px;
-    padding: 0.4rem 0.85rem;
-    font-size: 0.78rem;
-  }
-  .history-section {
-    margin-bottom: 1rem;
-  }
-  .history-header {
-    display: flex;
-    justify-content: space-between;
+    gap: 0.4rem;
     align-items: center;
-    margin-bottom: 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3rem;
+    padding: 0.1rem 0.1rem 0.1rem 0.8rem;
+    box-shadow: var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
-  .history-header h2 {
-    font-size: 1rem;
+  .search-fee-bar input {
+    flex: 1;
+    min-width: 120px;
+    border: none;
+    background: transparent;
+    font-size: 0.8rem;
+    padding: 0.3rem 0;
+    outline: none;
+    color: var(--text);
+    font-weight: 500;
   }
-  .history-link {
-    color: var(--accent);
-    text-decoration: none;
+  .search-fee-bar input::placeholder {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .search-fee-bar select {
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 1.8rem;
+    transition: background 0.25s, border-color 0.25s;
+    flex: 0 1 auto;
+  }
+  .search-fee-bar select:focus {
+    border-color: var(--accent);
+  }
+  .search-fee-bar button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 2.5rem;
+    padding: 0.3rem 1rem;
     font-weight: 700;
-    font-size: 0.86rem;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
   }
-  .history-card {
-    background: white;
-    border-radius: 1.35rem;
-    padding: 0.9rem;
-    box-shadow: 0 16px 35px rgba(15,23,42,0.06);
-    border: 1px solid rgba(148,163,184,0.14);
+  .search-fee-bar button:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
   }
-  .history-item {
+
+  /* ---- Student List (compact, minimal) ---- */
+  .student-fee-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    animation: fadeInUp 0.3s ease;
+  }
+  .student-fee-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.7rem 0.3rem 0.7rem;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+    text-decoration: none;
+    color: var(--text);
+    position: relative;
+    overflow: hidden;
+  }
+  .student-fee-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent);
+  }
+  .student-fee-item:active {
+    transform: scale(0.98);
+  }
+  .student-fee-item .top-row {
     display: flex;
     justify-content: space-between;
-    gap: 0.65rem;
-    padding: 0.85rem 0;
-    border-bottom: 1px solid rgba(148,163,184,0.14);
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .student-fee-item .name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .student-fee-item .pending-amount {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #EF4444;
+    white-space: nowrap;
+  }
+  .student-fee-item .meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem 0.5rem;
+  }
+  .student-fee-item .meta span {
+    display: inline-flex;
     align-items: center;
   }
-  .history-item:last-child {
-    border-bottom: none;
+  .student-fee-item .meta .sep {
+    opacity: 0.3;
+    margin: 0 0.1rem;
   }
-  .history-item strong {
-    font-size: 1rem;
+  .student-fee-item .extra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.6rem;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 0.05rem;
   }
+  .student-fee-item .extra .chip {
+    background: var(--surface-alt);
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .student-fee-item .collect-btn {
+    margin-top: 0.1rem;
+    align-self: flex-end;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.15rem 0.8rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .student-fee-item .collect-btn:hover {
+    background: var(--accent-hover);
+  }
+
+  /* ---- Pagination ---- */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 0.3rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  .pagination a, .pagination span {
+    padding: 0.3rem 0.7rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    text-decoration: none;
+    color: var(--text);
+    font-size: 0.7rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .pagination a:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .pagination .active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  .pagination .disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  /* ---- Empty State ---- */
   .empty-state {
     text-align: center;
-    color: var(--text-muted);
-    padding: 1.25rem 0;
+    padding: 2rem 1.5rem;
+    color: var(--muted);
+  }
+  .empty-state svg {
+    width: 60px;
+    height: 60px;
+    stroke: var(--muted);
+    opacity: 0.3;
+    margin-bottom: 0.8rem;
+  }
+  .empty-state h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+  .empty-state p {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+  .empty-state a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  /* ---- Animations ---- */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 </style>
 {% endblock %}
 
 {% block body %}
-<div class="hero-panel">
-  <h1>Fee Collection</h1>
-  <p>Fast fee operations for mobile. Use this screen to pick students, collect payments and review today’s cash flow.</p>
-  <div class="hero-stat">
-    <div class="stat-pill">
-      Collection<br><strong>₹{{ today_collection|default:0|floatformat:2 }}</strong>
-    </div>
-    <div class="stat-pill">
-      Pending<br><strong>₹{{ total_pending_all|default:0|floatformat:2 }}</strong>
-    </div>
-    <div class="stat-pill">
-      Payments<br><strong>{{ total_payments_count }}</strong>
-    </div>
+
+<!-- ===== Stats Strip ===== -->
+<div class="stats-strip">
+  <div class="stat-item collection">
+    <div class="stat-number">₹{{ today_collection|default:0|floatformat:2 }}</div>
+    <div class="stat-label">Today's Collection</div>
+  </div>
+  <div class="stat-item pending">
+    <div class="stat-number">₹{{ total_pending_all|default:0|floatformat:2 }}</div>
+    <div class="stat-label">Total Pending</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number">{{ total_payments_count }}</div>
+    <div class="stat-label">Payments</div>
   </div>
 </div>
 
-<form method="get" class="search-panel">
-  <div class="search-row">
-    <input type="search" name="pending_search" placeholder="Search name, roll or father" value="{{ search_filter }}">
-  </div>
-  <div class="search-row">
+<!-- ===== Search & Filter ===== -->
+<div class="search-section">
+  <form method="get" class="search-fee-bar" id="feeSearchForm">
+    <input type="search" name="pending_search" placeholder="Search name, roll, father..." value="{{ search_filter }}" autocomplete="off">
     <select name="pending_grade">
       <option value="">All grades</option>
       {% for g in grades %}
@@ -224,94 +323,70 @@
       <option value="{{ s }}" {% if section_filter == s %}selected{% endif %}>{{ s }}</option>
       {% endfor %}
     </select>
-  </div>
-  <div class="search-row">
-    <button type="submit">Apply filters</button>
-  </div>
-</form>
+    <button type="submit">Search</button>
+  </form>
+</div>
 
+<!-- ===== Student List ===== -->
 {% if pending_students %}
-<div class="pending-list">
-  {% for student in pending_students %}
-  <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=student.id %}" class="pending-card">
-    <div class="pending-row">
-      <div>
-        <div class="pending-title">{{ student.name }}</div>
-        <div class="pending-meta">{{ student.grade }} • {{ student.section }} • Roll {{ student.roll_number }}</div>
+  <div class="student-fee-list">
+    {% for student in pending_students %}
+    <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name student_id=student.id %}" class="student-fee-item">
+      <div class="top-row">
+        <div class="name">{{ student.name }}</div>
+        <div class="pending-amount">₹{{ student.pending_total|floatformat:2 }}</div>
       </div>
-      <span class="badge-pill">₹{{ student.pending_total|floatformat:2 }}</span>
-    </div>
-    <div class="pending-summary">
-      <span class="pending-chip">Father: {{ student.father_name }}</span>
-      <span class="pending-chip">{{ student.father_cnic|default:'No CNIC' }}</span>
-      <span class="pending-chip">Mobile: {{ student.parent_mobile|default:'N/A' }}</span>
-    </div>
-  </a>
-  {% endfor %}
-</div>
-
-<div class="pagination">
-  {% if pending_students.has_previous %}
-  <a href="?page=1{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">&laquo; First</a>
-  <a href="?page={{ pending_students.previous_page_number }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">Previous</a>
-  {% endif %}
-  <span class="current">Page {{ pending_students.number }} of {{ pending_students.paginator.num_pages }}</span>
-  {% if pending_students.has_next %}
-  <a href="?page={{ pending_students.next_page_number }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">Next</a>
-  <a href="?page={{ pending_students.paginator.num_pages }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">Last</a>
-  {% endif %}
-</div>
-
-<div class="history-section">
-  <div class="history-header">
-    <h2>Recent payments</h2>
-    <a href="{% url 'reports' schema_name=tenant.schema_name %}?type=collection&quick_filter=all" class="history-link">See all</a>
-  </div>
-  <div class="history-card">
-    {% for payment in recent_payments %}
-    <div class="history-item">
-      <div>
-        <strong>{{ payment.student.name }}</strong>
-        <div class="pending-meta">{{ payment.receipt_number }} • {{ payment.payment_date|date:'d MMM' }}</div>
+      <div class="meta">
+        <span>{{ student.grade }}</span>
+        <span class="sep">•</span>
+        <span>{{ student.section }}</span>
+        <span class="sep">•</span>
+        <span>Roll {{ student.roll_number }}</span>
       </div>
-      <div style="font-weight:700;color:var(--accent);">₹{{ payment.amount|floatformat:2 }}</div>
-    </div>
-    {% empty %}
-    <div class="empty-state">No recent payments yet. Collect the first fee from any student card above.</div>
+      <div class="extra">
+        <span class="chip">{{ student.father_name }}</span>
+        {% if student.father_cnic %}
+          <span class="chip">CNIC: {{ student.father_cnic }}</span>
+        {% endif %}
+        {% if student.parent_mobile %}
+          <span class="chip">Mobile: {{ student.parent_mobile }}</span>
+        {% endif %}
+      </div>
+    </a>
     {% endfor %}
   </div>
-</div>
 
-<div class="history-section">
-  <div class="history-header">
-    <h2>Quick actions</h2>
-    <span class="history-link">Premium</span>
-  </div>
-  <div class="history-card">
-    <div class="history-item">
-      <div>
-        <strong>Generate all fees</strong>
-        <div class="pending-meta">Create fee records for the current period for all students.</div>
-      </div>
-      <a href="{% url 'mobile_fee_collection' schema_name=tenant.schema_name %}" class="history-link">Go</a>
-    </div>
-    <div class="history-item">
-      <div>
-        <strong>View full student list</strong>
-        <div class="pending-meta">Open student directory and choose from any class.</div>
-      </div>
-      <a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}" class="history-link">Open</a>
-    </div>
-  </div>
-</div>
+  <!-- Pagination -->
+  <div class="pagination">
+    {% if pending_students.has_previous %}
+      <a href="?page=1{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">First</a>
+      <a href="?page={{ pending_students.previous_page_number }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">‹</a>
+    {% else %}
+      <span class="disabled">First</span>
+      <span class="disabled">‹</span>
+    {% endif %}
 
-<div class="empty-state">End of list.</div>
+    <span class="active">Page {{ pending_students.number }} of {{ pending_students.paginator.num_pages }}</span>
+
+    {% if pending_students.has_next %}
+      <a href="?page={{ pending_students.next_page_number }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">›</a>
+      <a href="?page={{ pending_students.paginator.num_pages }}{% if search_filter %}&pending_search={{ search_filter }}{% endif %}{% if grade_filter %}&pending_grade={{ grade_filter }}{% endif %}{% if section_filter %}&pending_section={{ section_filter }}{% endif %}">Last</a>
+    {% else %}
+      <span class="disabled">›</span>
+      <span class="disabled">Last</span>
+    {% endif %}
+  </div>
 
 {% else %}
-<div class="empty-state">
-  <p>No students currently have pending fee balances.</p>
-  <p>Try opening the student directory or generate month fees to get started.</p>
-  <p><a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}" class="history-link">Student Directory</a></p>
-</div>
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M8 12h8"/>
+    </svg>
+    <h3>No pending students</h3>
+    <p>All students are up to date with their fees.</p>
+    <p><a href="{% url 'mobile_student_list' schema_name=tenant.schema_name %}">View all students</a></p>
+  </div>
 {% endif %}
+
 {% endblock %}

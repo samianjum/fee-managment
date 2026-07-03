@@ -13,10 +13,10 @@
   .page-title {
     font-size: 1.5rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: var(--accent);
+    
+    
+    color: var(--text);
   }
   .page-desc {
     color: var(--muted);
@@ -26,7 +26,7 @@
 
   .search-card {
     background: var(--surface);
-    border-radius: 1.5rem;
+    border-radius: var(--radius);
     padding: 1rem;
     margin-bottom: 1rem;
     box-shadow: var(--shadow);
@@ -65,7 +65,7 @@
   .search-form .form-actions a {
     flex: 1;
     padding: 0.6rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     font-weight: 600;
     text-align: center;
     text-decoration: none;
@@ -73,7 +73,7 @@
     cursor: pointer;
   }
   .btn-primary {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
   }
   .btn-secondary {
@@ -98,7 +98,7 @@
   }
   .student-card {
     background: var(--surface);
-    border-radius: 1.25rem;
+    border-radius: var(--radius);
     padding: 0.75rem 1rem;
     border: 1px solid var(--border);
     display: flex;
@@ -121,10 +121,10 @@
     margin-left: 0.5rem;
   }
   .student-action a {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
     padding: 0.3rem 0.8rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     font-size: 0.7rem;
     font-weight: 600;
     text-decoration: none;
@@ -146,7 +146,7 @@
 
   .info-card {
     background: var(--surface);
-    border-radius: 1.5rem;
+    border-radius: var(--radius);
     padding: 1.25rem;
     border: 1px solid var(--border);
     display: flex;
@@ -156,7 +156,7 @@
   }
   .info-card svg {
     flex-shrink: 0;
-    color: var(--primary);
+    color: var(--accent);
   }
   .info-text {
     font-size: 0.85rem;

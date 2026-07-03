@@ -4,49 +4,33 @@
 
 {% block extra_head %}
 <style>
-  /* ============================================================
-     PREMIUM MOBILE STUDENT CARDS – ultra compact, glassmorphism
-     ============================================================ */
+  /* ===== All styles use base CSS variables ===== */
 
-  :root {
-    --card-shadow: 0 2px 12px rgba(15, 23, 42, 0.06);
-    --card-radius: 1rem;
-    --glass-bg: rgba(255, 255, 255, 0.92);
-    --glass-border: rgba(255, 255, 255, 0.6);
-    --gradient-start: #3b82f6;
-    --gradient-end: #1d4ed8;
-    --status-active: #10b981;
-    --status-suspended: #f59e0b;
-    --status-graduated: #8b5cf6;
-  }
-
-  /* ---- Analytics Strip (glass, clickable) ---- */
+  /* ---- Analytics Strip ---- */
   .analytics-strip {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 0.5rem;
     margin-bottom: 1rem;
-    padding: 0.25rem 0.1rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 1.5rem;
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--card-shadow);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
     text-align: center;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .analytics-strip .stat-item {
     display: flex;
     flex-direction: column;
-    padding: 0.2rem 0;
-    border-radius: 1rem;
+    padding: 0.4rem 0.2rem;
+    border-radius: var(--radius);
     cursor: pointer;
-    transition: background 0.2s;
     text-decoration: none;
-    color: inherit;
+    color: var(--text);
+    transition: background 0.15s;
   }
   .analytics-strip .stat-item:hover {
-    background: rgba(59, 130, 246, 0.06);
+    background: var(--surface-alt);
   }
   .analytics-strip .stat-item:active {
     transform: scale(0.96);
@@ -63,13 +47,12 @@
     letter-spacing: 0.04em;
     color: var(--muted);
     font-weight: 600;
-    margin-top: 0.05rem;
   }
   .analytics-strip .stat-item.pending .stat-number {
-    color: var(--danger);
+    color: #EF4444; /* keep red for danger */
   }
   .analytics-strip .stat-item.active .stat-number {
-    color: var(--primary);
+    color: var(--accent);
   }
   .analytics-strip .stat-item.total .stat-number {
     color: var(--text);
@@ -87,10 +70,7 @@
     font-size: 1.6rem;
     font-weight: 800;
     margin: 0;
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--text);
     letter-spacing: -0.02em;
   }
 
@@ -99,24 +79,25 @@
     position: fixed;
     bottom: 80px;
     right: 1.5rem;
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 999px;
     width: 48px;
     height: 48px;
     font-size: 1.6rem;
-    box-shadow: 0 8px 28px rgba(59, 130, 246, 0.35);
+    box-shadow: var(--shadow);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 30;
-    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, background 0.25s;
   }
   .fab-add:hover {
     transform: scale(1.06);
-    box-shadow: 0 12px 36px rgba(59, 130, 246, 0.45);
+    box-shadow: var(--shadow);
+    background: var(--accent-hover);
   }
   .fab-add:active {
     transform: scale(0.92);
@@ -127,27 +108,25 @@
     stroke-width: 2.5;
   }
 
-  /* ---- Search & Filter (Sticky) ---- */
+  /* ---- Search & Filter ---- */
   .search-section {
     position: sticky;
     top: 0;
     z-index: 20;
     background: var(--bg);
     padding: 0.3rem 0 0.5rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    transition: background 0.25s;
   }
   .search-bar {
     display: flex;
     gap: 0.4rem;
     align-items: center;
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 3rem;
     padding: 0.1rem 0.1rem 0.1rem 0.8rem;
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .search-bar input {
     flex: 1;
@@ -164,7 +143,7 @@
     font-weight: 400;
   }
   .search-bar button {
-    background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+    background: var(--accent);
     color: white;
     border: none;
     border-radius: 2.5rem;
@@ -172,13 +151,14 @@
     font-weight: 700;
     font-size: 0.7rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    box-shadow: var(--shadow);
   }
   .search-bar button:hover {
+    background: var(--accent-hover);
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+    box-shadow: var(--shadow);
   }
   .filter-toggle {
     background: transparent;
@@ -191,11 +171,12 @@
     gap: 0.2rem;
     font-size: 0.7rem;
     font-weight: 500;
-    border-radius: 2rem;
-    transition: background 0.2s;
+    border-radius: var(--radius);
+    transition: background 0.2s, color 0.2s;
   }
   .filter-toggle:hover {
     background: var(--surface-alt);
+    color: var(--text);
   }
   .filter-toggle svg {
     width: 18px;
@@ -209,15 +190,13 @@
     transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.3s;
     opacity: 0;
     padding: 0 0.5rem;
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 0 0 1.5rem 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius) var(--radius);
     margin: 0 0 0.8rem 0;
-    border-left: 1px solid var(--glass-border);
-    border-right: 1px solid var(--glass-border);
-    border-bottom: 1px solid var(--glass-border);
-    box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
+    transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.3s, background 0.25s, border-color 0.25s;
   }
   .filter-drawer.open {
     max-height: 400px;
@@ -233,7 +212,7 @@
   .filter-chips select {
     flex: 1 1 100px;
     padding: 0.3rem 0.6rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface-alt);
     font-size: 0.7rem;
@@ -245,12 +224,16 @@
     background-repeat: no-repeat;
     background-position: right 0.6rem center;
     padding-right: 1.8rem;
+    transition: background 0.25s, border-color 0.25s;
+  }
+  .filter-chips select:focus {
+    border-color: var(--accent);
   }
   .filter-chips .clear-link {
     background: var(--surface-alt);
     color: var(--text);
     padding: 0.3rem 0.8rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     border: 1px solid var(--border);
     font-weight: 600;
     text-decoration: none;
@@ -264,7 +247,7 @@
     background: var(--surface);
   }
 
-  /* ---- Student Cards (ultra‑compact, premium) ---- */
+  /* ---- Student Cards ---- */
   .student-list {
     display: flex;
     flex-direction: column;
@@ -272,21 +255,19 @@
     animation: fadeInUp 0.4s ease;
   }
   .student-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: var(--card-radius);
-    padding: 0.4rem 0.7rem 0.3rem 0.7rem;  /* reduced bottom padding */
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--card-shadow);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.4rem 0.7rem 0.3rem 0.7rem;
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    gap: 0.1rem;  /* minimal gap */
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    gap: 0.1rem;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s, transform 0.2s;
     position: relative;
     overflow: hidden;
   }
-  /* Left accent bar – status color with gradient */
+  /* Left accent bar – status color */
   .student-card::before {
     content: '';
     position: absolute;
@@ -295,23 +276,21 @@
     bottom: 0;
     width: 4px;
     border-radius: 0 2px 2px 0;
-    background: linear-gradient(180deg, var(--status-active), var(--status-active));
+    background: var(--accent);
   }
   .student-card.status-active::before {
-    background: linear-gradient(180deg, var(--status-active), #059669);
+    background: #10B981;
   }
   .student-card.status-suspended::before {
-    background: linear-gradient(180deg, var(--status-suspended), #d97706);
+    background: #F59E0B;
   }
   .student-card.status-graduated::before {
-    background: linear-gradient(180deg, var(--status-graduated), #6d28d9);
+    background: #8B5CF6;
   }
-
   .student-card:active {
     transform: scale(0.98);
   }
 
-  /* Card top row: name left, badge right */
   .card-top {
     display: flex;
     justify-content: space-between;
@@ -335,9 +314,9 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .badge-active { background: #d1fae5; color: #065f46; }
-  .badge-suspended { background: #fef3c7; color: #92400e; }
-  .badge-graduated { background: #ede9fe; color: #5b21b6; }
+  .badge-active { background: #D1FAE5; color: #065F46; }
+  .badge-suspended { background: #FEF3C7; color: #92400E; }
+  .badge-graduated { background: #EDE9FE; color: #5B21B6; }
 
   .student-meta {
     font-size: 0.7rem;
@@ -362,7 +341,6 @@
     stroke: var(--muted);
   }
 
-  /* Pending (only shown when > 0) */
   .student-pending {
     font-weight: 700;
     font-size: 0.7rem;
@@ -376,7 +354,7 @@
     height: 6px;
     border-radius: 50%;
     display: inline-block;
-    background: var(--danger);
+    background: #EF4444;
     animation: pulse 1.5s infinite;
   }
   @keyframes pulse {
@@ -384,20 +362,19 @@
     50% { opacity: 1; transform: scale(1.2); }
   }
   .student-pending .pending-amount {
-    color: var(--danger);
+    color: #EF4444;
   }
 
-  /* Action buttons – moved closer to content */
   .student-actions {
     display: flex;
     gap: 0.2rem;
-    margin-top: 0.1rem;  /* reduced from 0.3rem */
+    margin-top: 0.1rem;
     justify-content: flex-end;
   }
   .student-actions a {
     background: var(--surface-alt);
     border: 1px solid var(--border);
-    border-radius: 2rem;
+    border-radius: var(--radius);
     padding: 0.15rem 0.4rem;
     font-size: 0.6rem;
     font-weight: 600;
@@ -409,9 +386,9 @@
     gap: 0.1rem;
   }
   .student-actions a:hover {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
-    border-color: var(--primary);
+    border-color: var(--accent);
   }
   .student-actions a svg {
     width: 14px;
@@ -428,7 +405,7 @@
   }
   .pagination a, .pagination span {
     padding: 0.3rem 0.7rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     border: 1px solid var(--border);
     background: var(--surface);
     text-decoration: none;
@@ -438,14 +415,14 @@
     transition: all 0.2s;
   }
   .pagination a:hover {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
-    border-color: var(--primary);
+    border-color: var(--accent);
   }
   .pagination .active {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
-    border-color: var(--primary);
+    border-color: var(--accent);
   }
   .pagination .disabled {
     opacity: 0.4;
@@ -476,17 +453,17 @@
     margin-bottom: 0.8rem;
   }
   .empty-state a {
-    color: var(--primary);
+    color: var(--accent);
     font-weight: 600;
     text-decoration: none;
-    border: 1px solid var(--primary);
+    border: 1px solid var(--accent);
     padding: 0.4rem 1rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     display: inline-block;
     transition: all 0.2s;
   }
   .empty-state a:hover {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
   }
 
@@ -552,7 +529,6 @@
 {% block body %}
 <div class="page-header">
   <h1>Students</h1>
-  <!-- total count removed as requested -->
 </div>
 
 <!-- ===== Analytics Strip (clickable) ===== -->
@@ -616,17 +592,14 @@
   {% if students %}
     {% for s in students %}
     <div class="student-card status-{{ s.status }}" data-name="{{ s.name|lower }}" data-roll="{{ s.roll_number|lower }}" data-father="{{ s.father_name|lower }}">
-      <!-- Top row: name + status badge -->
       <div class="card-top">
         <div class="student-name">{{ s.name }}</div>
         <span class="badge badge-{{ s.status }}">{{ s.get_status_display }}</span>
       </div>
-
       <div class="student-meta">
         {{ s.grade }}<span class="separator">•</span>{{ s.section }}
         <span class="separator">•</span>Roll {{ s.roll_number }}
       </div>
-
       <div class="student-father">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -636,15 +609,12 @@
         </svg>
         {{ s.father_name }}
       </div>
-
-      <!-- Pending: shown only if > 0 -->
       {% if s.pending_amount > 0 %}
         <div class="student-pending">
           <span class="pending-dot"></span>
           <span class="pending-amount">Pending: ₹{{ s.pending_amount|floatformat:2 }}</span>
         </div>
       {% endif %}
-
       <div class="student-actions">
         <a href="{% url 'mobile_student_profile' schema_name=tenant.schema_name student_id=s.id %}" title="Profile">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -726,7 +696,6 @@
       window.location.href = buildUrl();
     }
 
-    // Search button & Enter key
     document.getElementById('searchBtn').addEventListener('click', applyFilters);
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
@@ -735,7 +704,6 @@
       }
     });
 
-    // Auto‑submit on select change
     document.getElementById('gradeSelect').addEventListener('change', applyFilters);
     document.getElementById('sectionSelect').addEventListener('change', applyFilters);
     document.getElementById('statusSelect').addEventListener('change', applyFilters);

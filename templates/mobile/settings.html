@@ -11,10 +11,10 @@
   .page-title {
     font-size: 1.6rem;
     font-weight: 700;
-    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    background: var(--accent);
+    
+    
+    color: var(--text);
     margin-bottom: 0.1rem;
   }
   .page-desc {
@@ -24,14 +24,14 @@
 
   /* ===== Settings Card ===== */
   .settings-card {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-radius: 1.5rem;
+    background: var(--surface);
+    ;
+    -webkit-;
+    border-radius: var(--radius);
     padding: 1.25rem;
     margin-bottom: 1rem;
     border: 1px solid rgba(255,255,255,0.6);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    box-shadow: var(--shadow);
   }
   .settings-card .card-title {
     font-size: 1rem;
@@ -43,7 +43,7 @@
     color: var(--text);
   }
   .settings-card .card-title svg {
-    color: var(--primary);
+    color: var(--accent);
   }
 
   .form-group {
@@ -72,7 +72,7 @@
   .form-group select:focus,
   .form-group textarea:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
   }
   .form-group .help-text {
@@ -105,7 +105,7 @@
     padding: 0.4rem 1rem;
     background: var(--surface-alt);
     border: 1px solid var(--border);
-    border-radius: 2rem;
+    border-radius: var(--radius);
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 500;
@@ -125,7 +125,7 @@
   .btn-primary, .btn-secondary {
     flex: 1;
     padding: 0.6rem 1rem;
-    border-radius: 2rem;
+    border-radius: var(--radius);
     font-weight: 600;
     border: none;
     cursor: pointer;
@@ -135,11 +135,11 @@
     transition: all 0.2s;
   }
   .btn-primary {
-    background: var(--primary);
+    background: var(--accent);
     color: white;
   }
   .btn-primary:hover {
-    background: var(--primary-dark);
+    background: var(--accent-hover);
     transform: translateY(-1px);
   }
   .btn-secondary {
