@@ -11,53 +11,50 @@
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
 
-        /* ---- Light Theme (Professional - Slate + Blue) ---- */
+        /* ---- Light Theme (default) ---- */
         :root {
-            --bg: #F8FAFC;
+            --bg: #FFFFFF;
             --surface: #FFFFFF;
-            --surface-alt: #F1F5F9;
-            --text: #0F172A;
-            --text-secondary: #475569;
-            --muted: #94A3B8;
-            --border: #E2E8F0;
-            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-            --accent: #2563EB;
-            --accent-hover: #1D4ED8;
-            --accent-light: #EFF6FF;
-            --radius: 0.75rem;
+            --surface-alt: #F5F5F5;
+            --text: #000000;
+            --muted: #666666;
+            --border: #DDDDDD;
+            --shadow: 0 2px 12px rgba(0,0,0,0.08);
+            --accent: #000000;          /* same as text for pure 2‑color */
+            --accent-hover: #333333;
+            --accent-light: #F0F0F0;
+            --radius: 1rem;
             --safe-bottom: env(safe-area-inset-bottom, 0px);
-            --transition: all 0.15s ease;
+            --transition: all 0.2s ease;
         }
 
-        /* ---- Dark Theme (Professional) ---- */
+        /* ---- Dark Theme ---- */
         html.dark {
-            --bg: #0F172A;
-            --surface: #1E293B;
-            --surface-alt: #334155;
-            --text: #F1F5F9;
-            --text-secondary: #94A3B8;
-            --muted: #64748B;
-            --border: #334155;
-            --shadow: 0 1px 3px rgba(0,0,0,0.3);
-            --accent: #3B82F6;
-            --accent-hover: #60A5FA;
-            --accent-light: #1E293B;
+            --bg: #000000;
+            --surface: #0A0A0A;
+            --surface-alt: #1A1A1A;
+            --text: #FFFFFF;
+            --muted: #AAAAAA;
+            --border: #333333;
+            --shadow: 0 2px 12px rgba(0,0,0,0.6);
+            --accent: #FFFFFF;
+            --accent-hover: #CCCCCC;
+            --accent-light: #1A1A1A;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
-            padding-bottom: 72px;
+            padding-bottom: 80px;
             overflow-x: hidden;
-            transition: background 0.25s, color 0.25s;
-            -webkit-font-smoothing: antialiased;
+            transition: background 0.3s, color 0.3s;
         }
 
         /* ---- Top Bar ---- */
         .top-bar {
             background: var(--surface);
-            padding: 12px 16px 10px;
+            padding: 12px 20px 10px;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -65,55 +62,52 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            transition: background 0.25s, border-color 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            transition: background 0.3s, border-color 0.3s;
         }
         .top-bar .left {
             display: flex;
             align-items: center;
             gap: 12px;
-            cursor: pointer;
-            user-select: none;
+            cursor: pointer;  /* indicate clickable */
         }
         .top-bar .logo {
-            width: 36px;
-            height: 36px;
+            width: 38px;
+            height: 38px;
             background: var(--accent);
-            border-radius: 8px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
-            font-weight: 600;
-            font-size: 14px;
+            color: var(--bg);
+            font-weight: 700;
+            font-size: 15px;
             flex-shrink: 0;
-            transition: background 0.25s;
+            transition: background 0.3s, color 0.3s;
         }
         .top-bar .school-name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1.2;
             color: var(--text);
         }
         .top-bar .school-name small {
             display: block;
             font-weight: 400;
-            font-size: 10px;
+            font-size: 11px;
             color: var(--muted);
-            letter-spacing: 0.01em;
         }
         .top-bar .actions {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 6px;
         }
 
         /* ---- Main Content ---- */
         .main-content {
-            padding: 16px;
+            padding: 16px 16px 20px;
             position: relative;
             z-index: 1;
-            max-width: 480px;
-            margin: 0 auto;
         }
 
         /* ---- Bottom Navigation ---- */
@@ -126,9 +120,10 @@
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-around;
-            padding: 4px 0 calc(4px + var(--safe-bottom));
+            padding: 6px 0 calc(6px + var(--safe-bottom));
             z-index: 30;
-            transition: background 0.25s, border-color 0.25s;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.04);
+            transition: background 0.3s, border-color 0.3s;
         }
         .bottom-nav .nav-item {
             display: flex;
@@ -137,18 +132,18 @@
             font-size: 10px;
             color: var(--muted);
             text-decoration: none;
-            padding: 4px 10px;
-            border-radius: 6px;
+            padding: 4px 8px;
+            border-radius: 8px;
             transition: var(--transition);
-            gap: 1px;
-            min-width: 48px;
+            gap: 2px;
         }
         .bottom-nav .nav-item.active {
             color: var(--accent);
+            background: var(--accent-light);
         }
         .bottom-nav .nav-item svg {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             stroke: currentColor;
             fill: none;
             stroke-width: 1.8;
@@ -161,25 +156,23 @@
 
         /* ---- Messages ---- */
         .message {
-            margin: 8px 0;
+            margin: 8px 16px;
             padding: 10px 14px;
-            border-radius: 6px;
+            border-radius: 8px;
             background: var(--surface);
-            border-left: 3px solid var(--accent);
+            border-left: 4px solid var(--accent);
             font-size: 13px;
             box-shadow: var(--shadow);
-            transition: background 0.25s, border-color 0.25s;
+            transition: background 0.3s, border-color 0.3s;
         }
-        .message.success { border-left-color: #22C55E; }
-        .message.error { border-left-color: #EF4444; }
-        .message.warning { border-left-color: #F59E0B; }
+        .message.success { border-left-color: #2E7D32; }
+        .message.error { border-left-color: #C62828; }
 
         /* ---- Utilities ---- */
         .mt-2 { margin-top: 8px; }
         .mb-2 { margin-bottom: 8px; }
         .text-center { text-align: center; }
         .text-muted { color: var(--muted); }
-        .text-secondary { color: var(--text-secondary); }
         .scroll-x {
             display: flex;
             flex-wrap: nowrap;
@@ -192,37 +185,19 @@
         .scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
 
         /* ---- Cards ---- */
-        .card {
+        .glass-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             padding: 1rem;
-            transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
-        }
-
-        /* ---- Buttons ---- */
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-            border: none;
-            padding: 0.5rem 1.25rem;
-            border-radius: 0.5rem;
-            font-weight: 500;
-            font-size: 0.875rem;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .btn-primary:hover {
-            background: var(--accent-hover);
-        }
-        .btn-primary:active {
-            transform: scale(0.98);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
         }
 
         /* ---- Mobile Search ---- */
         .mobile-search-wrapper {
             margin: 0 0 0.75rem 0;
+            padding: 0 0.25rem;
             width: 100%;
         }
         .mobile-search-wrapper .global-search-wrapper {
@@ -231,19 +206,19 @@
         .mobile-search-wrapper .search-input-container {
             background: var(--surface);
             border-radius: 2rem;
-            padding: 0.15rem 0.6rem;
+            padding: 0.2rem 0.6rem;
             border: 1px solid var(--border);
-            transition: border-color 0.2s, box-shadow 0.2s, background 0.25s;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.3s;
             display: flex;
             align-items: center;
         }
         .mobile-search-wrapper .search-input-container:focus-within {
             border-color: var(--accent);
-            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.1);
         }
         .mobile-search-wrapper .search-input-container input {
-            font-size: 0.9rem;
-            padding: 0.5rem 0.2rem;
+            font-size: 0.95rem;
+            padding: 0.6rem 0.3rem;
             background: transparent;
             border: none;
             outline: none;
@@ -261,13 +236,13 @@
         }
         .mobile-search-wrapper .search-dropdown {
             position: absolute;
-            top: calc(100% + 0.3rem);
+            top: calc(100% + 0.5rem);
             left: 0;
             right: 0;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 0.75rem;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            border-radius: 1rem;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.1);
             max-height: 60vh;
             overflow-y: auto;
             z-index: 1000;
@@ -278,66 +253,40 @@
             display: block;
         }
         .mobile-search-wrapper .search-result-item {
-            padding: 0.5rem 0.8rem;
+            padding: 0.6rem 0.8rem;
             font-size: 0.85rem;
-            min-height: 44px;
+            min-height: 48px;
             align-items: center;
-            border-bottom: 1px solid var(--border);
-        }
-        .mobile-search-wrapper .search-result-item:last-child {
-            border-bottom: none;
         }
         .mobile-search-wrapper .search-result-item .item-title {
             font-weight: 500;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
         .mobile-search-wrapper .search-result-item .item-sub {
             font-size: 0.7rem;
-            color: var(--muted);
         }
         .mobile-search-wrapper .search-result-item .item-badge {
             font-size: 0.6rem;
             padding: 0.1rem 0.4rem;
-            background: var(--accent-light);
-            color: var(--accent);
-            border-radius: 4px;
         }
         .mobile-search-wrapper .search-dropdown .empty-message {
             padding: 1rem;
             font-size: 0.85rem;
-            color: var(--muted);
-            text-align: center;
         }
 
         /* ---- PWA Install Button ---- */
         #installAppBtn {
             background: var(--accent) !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 2rem !important;
-            padding: 0.5rem 1rem !important;
-            font-weight: 500 !important;
-            font-size: 0.8rem !important;
-            box-shadow: 0 2px 12px rgba(37,99,235,0.3) !important;
-            cursor: pointer !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 0.4rem !important;
-            transition: background 0.15s, transform 0.15s !important;
+            color: var(--bg) !important;
+            transition: background 0.3s, color 0.3s;
         }
         #installAppBtn:hover {
             background: var(--accent-hover) !important;
-            transform: scale(1.02) !important;
         }
         .fallback-modal-content {
             background: var(--surface);
             color: var(--text);
             border: 1px solid var(--border);
-        }
-
-        /* ---- Utility: hidden toggle hint (optional, no icon) ---- */
-        .theme-toggle-hint {
-            display: none;
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -393,10 +342,10 @@
         </a>
     </nav>
 
-    <!-- PWA Install Button -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 16px; z-index: 9999; display: flex;">
-        <button id="installAppBtn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <!-- PWA Install Button (hidden if already installed) -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
+        <button id="installAppBtn" style="border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; transition: all 0.2s;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
             </svg>
             Install App
@@ -404,16 +353,16 @@
     </div>
 
     <!-- Install Fallback Modal -->
-    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-        <div class="fallback-modal-content" style="border-radius: 0.75rem; padding: 1.5rem; max-width: 360px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
-            <h3 style="margin-top:0; font-size:1.1rem; color: var(--text);">Install AXIS App</h3>
-            <p style="color: var(--text-secondary); font-size:0.9rem; margin:0.5rem 0;">To install manually:</p>
-            <ul style="padding-left:1.2rem; margin:0.3rem 0; color: var(--text); font-size:0.85rem;">
-                <li><strong>Chrome/Edge:</strong> Tap the <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display:inline;vertical-align:middle;"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in address bar</li>
-                <li><strong>Firefox:</strong> Menu → "Add to Home screen"</li>
-                <li><strong>Safari:</strong> Share → "Add to Home Screen"</li>
+    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div class="fallback-modal-content" style="border-radius: 1rem; padding: 1.5rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; color: var(--text);">Install AXIS App</h3>
+            <p style="color: var(--muted);">To install this app manually:</p>
+            <ul style="padding-left:1.5rem; margin:0.5rem 0; color: var(--text);">
+                <li><strong>Chrome/Edge:</strong> Tap the <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in the address bar.</li>
+                <li><strong>Firefox:</strong> Menu → "Add to Home screen".</li>
+                <li><strong>Safari (iOS):</strong> Share → "Add to Home Screen".</li>
             </ul>
-            <button id="closeFallbackModal" style="background: var(--accent); color: white; border: none; border-radius: 2rem; padding: 0.4rem 1.2rem; font-weight: 500; cursor: pointer; font-size:0.85rem; margin-top:0.5rem;">Got it</button>
+            <button id="closeFallbackModal" style="background: var(--accent); color: var(--bg); border: none; border-radius: 2rem; padding: 0.5rem 1.2rem; font-weight: 600; cursor: pointer;">Got it</button>
         </div>
     </div>
 
@@ -427,7 +376,7 @@
             function setTheme(dark) {
                 if (dark) {
                     html.classList.add('dark');
-                    themeMeta.content = '#0F172A';
+                    themeMeta.content = '#000000';
                     localStorage.setItem('axisTheme', 'dark');
                 } else {
                     html.classList.remove('dark');
@@ -440,11 +389,14 @@
             const savedTheme = localStorage.getItem('axisTheme');
             if (savedTheme === 'dark') {
                 setTheme(true);
+            } else if (savedTheme === 'light') {
+                setTheme(false);
             } else {
+                // Default to light
                 setTheme(false);
             }
 
-            // Toggle on click of the logo area
+            // Toggle on click
             toggleElement.addEventListener('click', function(e) {
                 const isDark = html.classList.contains('dark');
                 setTheme(!isDark);
@@ -497,4 +449,5 @@
 
     {% include "tenant/voucher_modal.html" %}
 </body>
-</html>
+</html>	
+
