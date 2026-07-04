@@ -318,10 +318,7 @@ def get_student_profile_context(request, schema_name, student_id):
         total_fee = Decimal('0')
 
         for fr in fee_records_qs:
-
             total_fee += fr.total_amount
-            for ch in (fr.extra_charges or []):
-                total_fee += Decimal(str(ch.get('amount', 0)))
         fee_records = list(fee_records_qs)
 
         payments_qs_all = student.payments.all().order_by('payment_date')
@@ -761,12 +758,15 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
                         item_breakdown.append((product, qty, line_total))
 
                     pending_records = student.fee_records.filter(status__in=['pending', 'partial', 'overdue']).order_by('due_date')
-                    total_pending = get_overall_pending(student)
-                    total_due = total_pending + product_total
+                    # Compute fee pending from fee records only (exclude items)
+                    fee_pending = sum(r.remaining_total for r in pending_records)
+                    total_due = fee_pending + product_total
 
                     amount_received = amount
-                    fee_to_apply = min(amount_received, Decimal(total_pending)) if total_pending else Decimal('0.00')
+                    # First, pay as much fee as possible
+                    fee_to_apply = min(amount_received, Decimal(fee_pending)) if fee_pending else Decimal('0.00')
                     amount_left = amount_received - fee_to_apply
+                    # Then, use remainder for items
                     item_to_apply = min(amount_left, product_total) if product_total else Decimal('0.00')
 
                     remaining = fee_to_apply
@@ -1154,7 +1154,7 @@ def family_payment(request, schema_name):
                 all_pending_records = []
                 for s in students:
                     records = s.fee_records.filter(status__in=['pending', 'partial', 'overdue']).order_by('due_date')
-                    total_pending += get_overall_pending(s)
+                    total_pending += sum(r.remaining_total for r in records)
                     all_pending_records.extend(records)
                 if amount is None:
                     amount = total_pending
@@ -2960,6 +2960,7 @@ def delete_product(request, schema_name, product_id):
 # and get_tenant are available. They are already defined at the top of views.py.
 # Also ensure that SchoolClient is imported if needed inside functions. We'll import inside each function.
 
+
 # ==================== SELL SEPARATELY (standalone student search) ====================
 @require_tenant_type(['school'])
 def sell_separately(request, schema_name, mobile=False):
@@ -2968,26 +2969,39 @@ def sell_separately(request, schema_name, mobile=False):
     search_query = request.GET.get('search', '').strip()
     grade_filter = request.GET.get('grade', '')
     section_filter = request.GET.get('section', '')
-    selected_student = None
     search_results = []
 
     with schema_context(schema_name):
+        # Start with all students
+        students = Student.objects.all()
+
+        # Apply grade filter if provided
+        if grade_filter:
+            students = students.filter(grade=grade_filter)
+
+        # Apply section filter if provided
+        if section_filter:
+            students = students.filter(section=section_filter)
+
+        # Apply search (partial matching) if query provided
         if search_query:
-            students = Student.objects.filter(
+            students = students.filter(
                 Q(name__icontains=search_query) |
                 Q(roll_number__icontains=search_query) |
                 Q(father_name__icontains=search_query) |
                 Q(father_cnic__icontains=search_query) |
                 Q(parent_mobile__icontains=search_query)
             )
-            if grade_filter:
-                students = students.filter(grade=grade_filter)
-            if section_filter:
-                students = students.filter(section=section_filter)
-            search_results = list(students.order_by('name')[:20])
 
-        grades = Student.objects.values_list('grade', flat=True).distinct().order_by('grade')
-        sections = Student.objects.values_list('section', flat=True).distinct().order_by('section')
+        # Only fetch results if either search or any filter is present
+        if search_query or grade_filter or section_filter:
+            search_results = list(students.order_by('name')[:20])
+        else:
+            search_results = []
+
+        # Get distinct grades and sections for filter dropdowns
+        grades = list(Student.objects.values_list('grade', flat=True).distinct().order_by('grade'))
+        sections = list(Student.objects.values_list('section', flat=True).distinct().order_by('section'))
 
     context = {
         'tenant': tenant,
@@ -3002,11 +3016,11 @@ def sell_separately(request, schema_name, mobile=False):
     template = 'mobile/sell_separately.html' if mobile else 'tenant/sell_separately.html'
     return render(request, template, context)
 
-
 @require_tenant_type(['school'])
 def mobile_sell_separately(request, schema_name):
     """Mobile version of sell separately page."""
     return sell_separately(request, schema_name, mobile=True)
+
 
 
 # ------------------- Mobile Defaulters -------------------
@@ -3401,6 +3415,8 @@ def vouchers_list(request, schema_name):
                 'due_date': fr.due_date,
                 'month': fr.month,
                 'year': fr.year,
+                'total_amount': fr.total_amount,
+                'remaining': fr.remaining_total,
             }
             if fr.status == 'pending':
                 pending_items.append(item)
@@ -3523,6 +3539,8 @@ def mobile_vouchers_list(request, schema_name):
                 'due_date': fr.due_date,
                 'month': fr.month,
                 'year': fr.year,
+                'total_amount': fr.total_amount,
+                'remaining': fr.remaining_total,
             }
             if fr.status == 'pending':
                 pending_items.append(item)
@@ -3745,3 +3763,80 @@ def mark_all_notifications_read_api(request, schema_name):
     with schema_context(schema_name):
         updated = Notification.objects.filter(is_read=False).update(is_read=True)
         return JsonResponse({'success': True, 'updated': updated})
+
+
+# ==================== GLOBAL SEARCH API ====================
+@require_tenant_type(['school'])
+def global_search_api(request, schema_name):
+    mobile = request.GET.get('mobile') == '1'
+    """API endpoint for global search across students, fees, payments, products, categories."""
+    from django.db.models import Q
+    from .models import Student, FeeRecord, PaymentTransaction, Product, ProductCategory
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'error': 'Query too short'}, status=400)
+
+    results = {}
+
+    # Search Students
+    students = Student.objects.filter(
+        Q(name__icontains=q) |
+        Q(roll_number__icontains=q) |
+        Q(father_name__icontains=q) |
+        Q(father_cnic__icontains=q) |
+        Q(parent_mobile__icontains=q)
+    )[:10]
+    results['students'] = [{
+        'title': s.name,
+        'subtitle': f"Roll: {s.roll_number} | {s.grade} - {s.section}",
+        'type': 'Student',
+        'url': f"/portal/{schema_name}/students/{'mobile/' if mobile else ''}{s.id}/",
+    } for s in students]
+
+    # Search FeeRecords (by student name, month/year)
+    fees = FeeRecord.objects.filter(
+        Q(student__name__icontains=q) |
+        Q(month__icontains=q) |
+        Q(year__icontains=q)
+    )[:10]
+    results['fees'] = [{
+        'title': f"{fr.student.name} - {fr.month}/{fr.year}",
+        'subtitle': f"Amount: ₹{fr.total_amount} | Status: {fr.get_status_display()}",
+        'type': 'Fee',
+        'url': f"/portal/{schema_name}/students/{'mobile/' if mobile else ''}{fr.student.id}/",
+    } for fr in fees]
+
+    # Search Payments (by receipt number, student name)
+    payments = PaymentTransaction.objects.filter(
+        Q(receipt_number__icontains=q) |
+        Q(student__name__icontains=q)
+    )[:10]
+    results['payments'] = [{
+        'title': p.receipt_number,
+        'subtitle': f"{p.student.name} - ₹{p.amount} on {p.payment_date}",
+        'type': 'Payment',
+        'url': f"/portal/{schema_name}/fee/receipt/{'mobile/' if mobile else ''}{p.id}/",
+    } for p in payments]
+
+    # Search Products
+    products = Product.objects.filter(
+        Q(name__icontains=q) |
+        Q(sku__icontains=q)
+    )[:10]
+    results['products'] = [{
+        'title': p.name,
+        'subtitle': f"SKU: {p.sku} | Price: ₹{p.selling_price} | Stock: {p.quantity}",
+        'type': 'Product',
+        'url': f"/portal/{schema_name}/stock/product/{p.id}/{'mobile/' if mobile else ''}",
+    } for p in products]
+
+    # Search Categories
+    categories = ProductCategory.objects.filter(name__icontains=q)[:10]
+    results['categories'] = [{
+        'title': c.name,
+        'subtitle': c.description or '',
+        'type': 'Category',
+        'url': f"/portal/{schema_name}/stock/{'mobile/' if mobile else ''}?category={c.id}",
+    } for c in categories]
+
+    return JsonResponse(results)

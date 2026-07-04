@@ -758,12 +758,15 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
                         item_breakdown.append((product, qty, line_total))
 
                     pending_records = student.fee_records.filter(status__in=['pending', 'partial', 'overdue']).order_by('due_date')
-                    total_pending = get_overall_pending(student)
-                    total_due = total_pending + product_total
+                    # Compute fee pending from fee records only (exclude items)
+                    fee_pending = sum(r.remaining_total for r in pending_records)
+                    total_due = fee_pending + product_total
 
                     amount_received = amount
-                    fee_to_apply = min(amount_received, Decimal(total_pending)) if total_pending else Decimal('0.00')
+                    # First, pay as much fee as possible
+                    fee_to_apply = min(amount_received, Decimal(fee_pending)) if fee_pending else Decimal('0.00')
                     amount_left = amount_received - fee_to_apply
+                    # Then, use remainder for items
                     item_to_apply = min(amount_left, product_total) if product_total else Decimal('0.00')
 
                     remaining = fee_to_apply
@@ -771,7 +774,7 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
                     for record in pending_records:
                         if remaining <= 0:
                             break
-                        due = record.remaining
+                        due = record.remaining_total
                         apply_now = min(due, remaining)
                         record.paid_amount += apply_now
                         remaining -= apply_now
@@ -1163,9 +1166,9 @@ def family_payment(request, schema_name):
                 for record in all_pending_records:
                     if remaining <= 0:
                         break
-                    due = record.remaining
+                    due = record.remaining_total
                     if remaining >= due:
-                        record.paid_amount = record.amount
+                        record.paid_amount = record.total_amount
                         remaining -= due
                     else:
                         record.paid_amount += remaining
@@ -2017,9 +2020,9 @@ def gym_payment(request, schema_name, customer_id=None):
                     for sub in pending_subs_list:
                         if remaining <= 0:
                             break
-                        due = sub.remaining
+                        due = sub.remaining_total
                         if remaining >= due:
-                            sub.paid_amount = sub.amount
+                            sub.paid_amount = sub.total_amount
                             remaining -= due
                         else:
                             sub.paid_amount += remaining
@@ -3412,6 +3415,8 @@ def vouchers_list(request, schema_name):
                 'due_date': fr.due_date,
                 'month': fr.month,
                 'year': fr.year,
+                'total_amount': fr.total_amount,
+                'remaining': fr.remaining_total,
             }
             if fr.status == 'pending':
                 pending_items.append(item)
@@ -3534,6 +3539,8 @@ def mobile_vouchers_list(request, schema_name):
                 'due_date': fr.due_date,
                 'month': fr.month,
                 'year': fr.year,
+                'total_amount': fr.total_amount,
+                'remaining': fr.remaining_total,
             }
             if fr.status == 'pending':
                 pending_items.append(item)
