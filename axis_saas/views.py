@@ -318,10 +318,7 @@ def get_student_profile_context(request, schema_name, student_id):
         total_fee = Decimal('0')
 
         for fr in fee_records_qs:
-
             total_fee += fr.total_amount
-            for ch in (fr.extra_charges or []):
-                total_fee += Decimal(str(ch.get('amount', 0)))
         fee_records = list(fee_records_qs)
 
         payments_qs_all = student.payments.all().order_by('payment_date')
@@ -1154,7 +1151,7 @@ def family_payment(request, schema_name):
                 all_pending_records = []
                 for s in students:
                     records = s.fee_records.filter(status__in=['pending', 'partial', 'overdue']).order_by('due_date')
-                    total_pending += get_overall_pending(s)
+                    total_pending += sum(r.remaining_total for r in records)
                     all_pending_records.extend(records)
                 if amount is None:
                     amount = total_pending

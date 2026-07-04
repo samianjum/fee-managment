@@ -53,7 +53,7 @@ class Command(BaseCommand):
                             student=student,
                             month=month,
                             year=year,
-                            amount=total_fee,          # base + extras
+                            amount=base_fee,          # base only – extras stored separately
                             due_date=due_date,
                             status='pending',
                             extra_charges=extra_charges,

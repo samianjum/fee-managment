@@ -148,10 +148,10 @@ class FeeRecord(models.Model):
         return self.amount - self.paid_amount
     @property
     def total_amount(self):
-        """Total fee = base + extra charges"""
+        """Total fee = base + extra charges + late fee accrued"""
         from decimal import Decimal
         extras = sum(Decimal(str(ch.get('amount', 0))) for ch in (self.extra_charges or []))
-        return self.amount + extras
+        return self.amount + extras + getattr(self, "late_fee_accrued", Decimal("0"))
 
     @property
     def remaining_total(self):
@@ -291,10 +291,10 @@ class GymSubscription(models.Model):
         return self.amount - self.paid_amount
     @property
     def total_amount(self):
-        """Total fee = base + extra charges"""
+        """Total fee = base + extra charges + late fee accrued"""
         from decimal import Decimal
         extras = sum(Decimal(str(ch.get('amount', 0))) for ch in (self.extra_charges or []))
-        return self.amount + extras
+        return self.amount + extras + getattr(self, "late_fee_accrued", Decimal("0"))
 
     @property
     def remaining_total(self):
