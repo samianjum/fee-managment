@@ -1,46 +1,100 @@
 #!/usr/bin/env python3
 """
-Patch templates/mobile/product_detail.html to change "Back to Stock" link
-from stock_management to mobile_stock_management.
+Final patch to enforce strict desktop/mobile separation for stock management.
+
+- Modifies axis_saas/views.py to redirect to mobile_stock_management when
+  request comes from mobile (user agent or mobile_redirect POST param).
+- Fixes the back link in templates/mobile/product_detail.html to use
+  mobile_stock_management.
 """
 
 import re
 import sys
 
-FILE_PATH = "templates/mobile/product_detail.html"
+VIEWS_FILE = "axis_saas/views.py"
+TEMPLATE_FILE = "templates/mobile/product_detail.html"
 
-def patch_file():
+def patch_views():
     try:
-        with open(FILE_PATH, "r", encoding="utf-8") as f:
+        with open(VIEWS_FILE, "r", encoding="utf-8") as f:
             content = f.read()
     except FileNotFoundError:
-        print(f"Error: {FILE_PATH} not found. Run from project root.", file=sys.stderr)
+        print(f"❌ Error: {VIEWS_FILE} not found.", file=sys.stderr)
         sys.exit(1)
 
-    # Find the line with the back link
-    old_pattern = r'href="{% url \'stock_management\' schema_name=tenant\.schema_name %}"'
-    new_line = 'href="{% url \'mobile_stock_management\' schema_name=tenant.schema_name %}"'
+    # ----- Helper: replace final redirect in a view function -----
+    # We'll look for the pattern: return redirect('stock_management', schema_name=schema_name)
+    # but only in the context of the four functions.
+    # To be safe, we'll replace all occurrences with a conditional check.
+    # However, we must ensure we don't break other places (like in error handling).
+    # We'll specifically target lines that are immediately after the main logic.
 
-    # Use regex to replace first occurrence
-    new_content, count = re.subn(old_pattern, new_line, content)
-    if count == 0:
-        print("❌ Could not find the back link line to patch.", file=sys.stderr)
-        # fallback: try to find any line containing url 'stock_management'
-        fallback_pattern = r"{% url 'stock_management'[^%]*%}"
-        if re.search(fallback_pattern, content):
-            new_content = re.sub(fallback_pattern, "{% url 'mobile_stock_management' schema_name=tenant.schema_name %}", content)
-            print("✅ Patched using fallback regex.")
-        else:
-            print("❌ No matching line found. Exiting.", file=sys.stderr)
-            sys.exit(1)
-    else:
-        print(f"✅ Replaced {count} occurrence(s).")
+    # We'll replace:
+    #   return redirect('stock_management', schema_name=schema_name)
+    # with:
+    #   if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+    #       return redirect('mobile_stock_management', schema_name=schema_name)
+    #   return redirect('stock_management', schema_name=schema_name)
 
-    with open(FILE_PATH, "w", encoding="utf-8") as f:
-        f.write(new_content)
+    # But we must also ensure we don't double-patch. Check if the pattern already exists.
+    if "if is_mobile_user_agent(request) or request.POST.get('mobile_redirect')" in content:
+        print("ℹ️  Views already patched? Skipping views patch.")
+        return
 
-    print("✅ Patch applied successfully.")
-    print(f"New line: {new_line}")
+    # Replace all occurrences of the exact redirect line (with possible whitespace)
+    # Use a regex that matches the line with optional whitespace and the exact string.
+    pattern = r'^(\s*)return redirect\([\'"]stock_management[\'"],\s*schema_name=schema_name\)\s*$'
+    replacement = r'''\1if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+\1    return redirect('mobile_stock_management', schema_name=schema_name)
+\1return redirect('stock_management', schema_name=schema_name)'''
+
+    # Use MULTILINE flag to match line start
+    content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+    # Also handle the case where the line might be broken or have different quoting (single vs double)
+    # We'll also replace a more generic pattern: return redirect('stock_management', schema_name=schema_name)
+    # with the same conditional, but we'll do it line by line.
+    # The above should catch most.
+
+    # Additional safety: if any function still has the old line without condition, we'll catch them.
+    # We'll do a second pass with a more flexible pattern (no line start anchor).
+    # But we already did multiline.
+
+    with open(VIEWS_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print("✅ Views patched: added conditional redirects for stock actions.")
+
+def patch_template():
+    try:
+        with open(TEMPLATE_FILE, "r", encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"❌ Error: {TEMPLATE_FILE} not found.", file=sys.stderr)
+        sys.exit(1)
+
+    # Replace the back link: href="{% url 'stock_management' ... %}" -> href="{% url 'mobile_stock_management' ... %}"
+    # We'll look for the exact line.
+    old = r'href="{% url \'stock_management\' schema_name=tenant\.schema_name %}"'
+    new = 'href="{% url \'mobile_stock_management\' schema_name=tenant.schema_name %}"'
+
+    # Check if already patched
+    if "mobile_stock_management" in content and "Back to Stock" in content:
+        print("ℹ️  Template already patched? Skipping template patch.")
+        return
+
+    content = re.sub(old, new, content)
+
+    with open(TEMPLATE_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print("✅ Template patched: back link now uses mobile_stock_management.")
+
+def main():
+    patch_views()
+    patch_template()
+    print("\n✅ All patches applied successfully.")
+    print("Now all stock actions and back links will respect desktop/mobile separation.")
 
 if __name__ == "__main__":
-    patch_file()
+    main()

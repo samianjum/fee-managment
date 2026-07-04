@@ -613,6 +613,7 @@
   <h3 id="productSheetTitle">Add Product</h3>
   <form method="post" action="{% url 'add_product' schema_name=tenant.schema_name %}" id="productForm">
     {% csrf_token %}
+        <input type="hidden" name="mobile_redirect" value="1">
     <input type="hidden" name="product_id" id="productId">
     <div class="form-field">
       <label>Category</label>
@@ -668,6 +669,7 @@
     </div>
     <form method="post" action="{% url 'add_category' schema_name=tenant.schema_name %}" id="addCategoryForm" style="margin-top:1rem;">
       {% csrf_token %}
+      <input type="hidden" name="mobile_redirect" value="1">
       <input type="hidden" name="category_id" id="editCatId">
       <div class="add-cat-form">
         <input type="text" name="name" id="newCatName" placeholder="Category name" required>
@@ -769,6 +771,11 @@
         const form = document.createElement('form');
         form.method = 'post';
         form.action = "{% url 'delete_product' schema_name=tenant.schema_name product_id=0 %}".replace('0', id);
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "mobile_redirect";
+        hidden.value = "1";
+        form.appendChild(hidden);
         form.innerHTML = `{% csrf_token %}`;
         document.body.appendChild(form);
         form.submit();
@@ -812,7 +819,12 @@
           const form = document.createElement('form');
           form.method = 'post';
           form.action = "{% url 'delete_category' schema_name=tenant.schema_name category_id=0 %}".replace('0', id);
-          form.innerHTML = `{% csrf_token %}`;
+        const hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "mobile_redirect";
+        hidden.value = "1";
+        form.appendChild(hidden);
+        form.innerHTML = `{% csrf_token %}`;
           document.body.appendChild(form);
           form.submit();
         }

@@ -2837,8 +2837,11 @@ def add_category(request, schema_name):
 
                 return redirect('mobile_stock_management', schema_name=schema_name)
 
-            return redirect('stock_management', schema_name=schema_name)
+            if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
 
+                return redirect('mobile_stock_management', schema_name=schema_name)
+
+            return redirect('stock_management', schema_name=schema_name)
         with schema_context(schema_name):
             if cat_id:
                 category = get_object_or_404(ProductCategory, id=cat_id)
@@ -2852,6 +2855,8 @@ def add_category(request, schema_name):
                 else:
                     ProductCategory.objects.create(name=name, description=description)
                     messages.success(request, f"Category '{name}' added.")
+    if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+        return redirect('mobile_stock_management', schema_name=schema_name)
     return redirect('stock_management', schema_name=schema_name)
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
@@ -2873,9 +2878,11 @@ def delete_category(request, schema_name, category_id):
 
         return redirect('mobile_stock_management', schema_name=schema_name)
 
+    if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+
+        return redirect('mobile_stock_management', schema_name=schema_name)
+
     return redirect('stock_management', schema_name=schema_name)
-
-
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def add_product(request, schema_name):
@@ -2900,15 +2907,19 @@ def add_product(request, schema_name):
 
                 return redirect('mobile_stock_management', schema_name=schema_name)
 
-            return redirect('stock_management', schema_name=schema_name)
+            if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
 
+                return redirect('mobile_stock_management', schema_name=schema_name)
+
+            return redirect('stock_management', schema_name=schema_name)
         try:
             price = Decimal(selling_price)
             qty = int(quantity) if quantity else 0
         except:
             messages.error(request, "Invalid price or quantity.")
+            if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+                return redirect('mobile_stock_management', schema_name=schema_name)
             return redirect('stock_management', schema_name=schema_name)
-
         with schema_context(schema_name):
             category = get_object_or_404(ProductCategory, id=category_id)
             if product_id:
@@ -2929,9 +2940,9 @@ def add_product(request, schema_name):
                     notes=notes
                 )
                 messages.success(request, f"Product '{name}' added. SKU: {product.sku}")
+    if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+        return redirect('mobile_stock_management', schema_name=schema_name)
     return redirect('stock_management', schema_name=schema_name)
-
-
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def delete_product(request, schema_name, product_id):
@@ -2949,12 +2960,11 @@ def delete_product(request, schema_name, product_id):
 
         return redirect('mobile_stock_management', schema_name=schema_name)
 
+    if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+
+        return redirect('mobile_stock_management', schema_name=schema_name)
+
     return redirect('stock_management', schema_name=schema_name)
-
-
-
-
-
 # Ensure all necessary imports are present at the top of views.py (this script will not modify existing imports,
 # but the functions contain their own imports; however, we need to make sure the decorator @require_tenant_type
 # and get_tenant are available. They are already defined at the top of views.py.
