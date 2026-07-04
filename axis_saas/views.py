@@ -3629,7 +3629,7 @@ def fee_logs(request, schema_name):
         # For each log, compute a link to the voucher page for that month/year
         # The voucher page uses month/year filters
         for log in logs_page:
-            log.voucher_url = f'/portal/{schema_name}/vouchers/?month={log.month}&year={log.year}'
+            log.voucher_url = f'/portal/{schema_name}/vouchers/mobile/?month={log.month}&year={log.year}&tab=pending'
 
         context = {
             'tenant': tenant,
@@ -3678,7 +3678,7 @@ def mobile_fee_logs(request, schema_name):
         log_types = ManualGenerationLog.LOG_TYPE_CHOICES
 
         for log in logs_page:
-            log.voucher_url = f'/portal/{schema_name}/vouchers/?month={log.month}&year={log.year}'
+            log.voucher_url = f'/portal/{schema_name}/vouchers/mobile/?month={log.month}&year={log.year}&tab=pending'
 
         context = {
             'tenant': tenant,

@@ -1,34 +1,46 @@
-import shutil
-from pathlib import Path
+#!/usr/bin/env python3
+"""
+Patch templates/mobile/product_detail.html to change "Back to Stock" link
+from stock_management to mobile_stock_management.
+"""
 
-def patch_views():
-    views_path = Path('axis_saas/views.py')
-    if not views_path.exists():
-        print("❌ axis_saas/views.py not found")
-        return
+import re
+import sys
 
-    # Backup original file
-    backup_path = views_path.with_suffix('.py.bak')
-    shutil.copy2(views_path, backup_path)
-    print(f"✅ Backup created: {backup_path}")
+FILE_PATH = "templates/mobile/product_detail.html"
 
-    with open(views_path, 'r') as f:
-        content = f.read()
+def patch_file():
+    try:
+        with open(FILE_PATH, "r", encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError:
+        print(f"Error: {FILE_PATH} not found. Run from project root.", file=sys.stderr)
+        sys.exit(1)
 
-    # 1. Replace record.remaining with record.remaining_total in fee_collection & family_payment
-    content = content.replace('due = record.remaining', 'due = record.remaining_total')
+    # Find the line with the back link
+    old_pattern = r'href="{% url \'stock_management\' schema_name=tenant\.schema_name %}"'
+    new_line = 'href="{% url \'mobile_stock_management\' schema_name=tenant.schema_name %}"'
 
-    # 2. Replace sub.remaining with sub.remaining_total in gym_payment
-    content = content.replace('due = sub.remaining', 'due = sub.remaining_total')
+    # Use regex to replace first occurrence
+    new_content, count = re.subn(old_pattern, new_line, content)
+    if count == 0:
+        print("❌ Could not find the back link line to patch.", file=sys.stderr)
+        # fallback: try to find any line containing url 'stock_management'
+        fallback_pattern = r"{% url 'stock_management'[^%]*%}"
+        if re.search(fallback_pattern, content):
+            new_content = re.sub(fallback_pattern, "{% url 'mobile_stock_management' schema_name=tenant.schema_name %}", content)
+            print("✅ Patched using fallback regex.")
+        else:
+            print("❌ No matching line found. Exiting.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print(f"✅ Replaced {count} occurrence(s).")
 
-    # 3. When a fee is fully paid, set paid_amount to total_amount (not just amount)
-    content = content.replace('record.paid_amount = record.amount', 'record.paid_amount = record.total_amount')
-    content = content.replace('sub.paid_amount = sub.amount', 'sub.paid_amount = sub.total_amount')
+    with open(FILE_PATH, "w", encoding="utf-8") as f:
+        f.write(new_content)
 
-    with open(views_path, 'w') as f:
-        f.write(content)
+    print("✅ Patch applied successfully.")
+    print(f"New line: {new_line}")
 
-    print("✅ Patched axis_saas/views.py successfully. Please restart the server.")
-
-if __name__ == '__main__':
-    patch_views()
+if __name__ == "__main__":
+    patch_file()
