@@ -19,6 +19,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 
+
+
 def require_tenant_type(allowed_types):
     def decorator(view_func):
         def wrapper(request, schema_name, *args, **kwargs):
@@ -32,6 +34,8 @@ def require_tenant_type(allowed_types):
             return view_func(request, schema_name, *args, **kwargs)
         return wrapper
     return decorator
+
+
 
 
 def require_school_feature(feature_key):
@@ -51,6 +55,8 @@ def require_school_feature(feature_key):
 from .models import SchoolClient, Student, FeeStructure, FeeRecord, PaymentTransaction, SchoolFeeSettings, Product, ProductCategory
 
 # --- Helper to create notification for fee generation ---
+
+
 def create_fee_generation_notification(schema_name, month, year, created_count, triggered_by, mobile=False):
     """Create a notification for fee generation."""
     from .models import Notification
@@ -71,6 +77,8 @@ from .models import ManualGenerationLog
 
 
 
+
+
 def get_overall_pending(student):
     """Compute overall remaining balance: total fee + total items cost - total paid."""
     from decimal import Decimal
@@ -87,6 +95,8 @@ def get_overall_pending(student):
     return total_fee + total_items_cost - total_paid
 
 
+
+
 def local_time_str(dt):
     """Convert aware datetime to local timezone and return formatted time string."""
     if not dt:
@@ -96,6 +106,8 @@ def local_time_str(dt):
     return local.strftime('%H:%M')
 
 
+
+
 def get_tenant(request, schema_name):
     from django_tenants.utils import schema_context
     with schema_context('public'):
@@ -103,9 +115,13 @@ def get_tenant(request, schema_name):
 
 MOBILE_AGENT_RE = re.compile(r"Mobile|Android|iP(hone|od|ad)|Opera Mini|IEMobile|BlackBerry|webOS|Fennec|Silk", re.I)
 
+
+
 def is_mobile_user_agent(request):
     ua = request.META.get('HTTP_USER_AGENT', '')
     return bool(MOBILE_AGENT_RE.search(ua))
+
+
 
 def get_dashboard_context(tenant, schema_name):
     with schema_context(schema_name):
@@ -170,12 +186,16 @@ def get_dashboard_context(tenant, schema_name):
     }
 
 # ------------------- Dashboard -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('dashboard')
 def dashboard(request, schema_name):
     tenant = get_tenant(request, schema_name)
     context = get_dashboard_context(tenant, schema_name)
     return render(request, 'tenant/dashboard.html', context)
+
+
 
 @require_tenant_type(['school'])
 @require_school_feature('dashboard')
@@ -225,16 +245,22 @@ def mobile_dashboard(request, schema_name):
     # ---- End banner logic ----
 
     return render(request, 'mobile/dashboard.html', context)
+
+
 @require_tenant_type(['school'])
 @require_school_feature('dashboard')
 def mobile_more(request, schema_name):
     tenant = get_tenant(request, schema_name)
     return render(request, 'mobile/more.html', {'tenant': tenant})
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_collection')
 def mobile_fee_collection(request, schema_name, student_id=None):
     return fee_collection(request, schema_name, student_id, force_mobile=True)
+
+
 
 def get_student_list_context(request, schema_name):
     tenant = get_tenant(request, schema_name)
@@ -292,17 +318,23 @@ def get_student_list_context(request, schema_name):
         'total_active': total_active,
         'logo_url': tenant.school_logo.url if tenant.school_logo else None,
     }
+
+
 def student_list(request, schema_name):
     if is_mobile_user_agent(request):
         return redirect('mobile_student_list', schema_name=schema_name)
     context = get_student_list_context(request, schema_name)
     return render(request, 'tenant/student_list.html', context)
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def mobile_student_list(request, schema_name):
     context = get_student_list_context(request, schema_name)
     return render(request, 'mobile/student_list.html', context)
+
+
 
 def get_student_profile_context(request, schema_name, student_id):
     tenant = get_tenant(request, schema_name)
@@ -398,6 +430,8 @@ def get_student_profile_context(request, schema_name, student_id):
             'search_date': search_date,
         }
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def student_profile(request, schema_name, student_id):
@@ -406,16 +440,22 @@ def student_profile(request, schema_name, student_id):
     context = get_student_profile_context(request, schema_name, student_id)
     return render(request, 'tenant/student_profile.html', context)
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def mobile_student_profile(request, schema_name, student_id):
     context = get_student_profile_context(request, schema_name, student_id)
     return render(request, 'mobile/student_profile.html', context)
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_collection')
 def mobile_fee_receipt(request, schema_name, receipt_id):
     return fee_receipt(request, schema_name, receipt_id, force_mobile=True)
+
+
 
 @require_tenant_type(['school'])
 def fee_receipt(request, schema_name, receipt_id, force_mobile=False):
@@ -455,6 +495,8 @@ def fee_receipt(request, schema_name, receipt_id, force_mobile=False):
         }
     template = 'mobile/receipt.html' if is_mobile_user_agent(request) else 'tenant/receipt.html'
     return render(request, template, context)
+
+
 
 @require_tenant_type(['school'])
 @require_school_feature('defaulters')
@@ -566,6 +608,8 @@ def defaulters(request, schema_name, force_mobile=False):
     }
     template = 'mobile/defaulters.html' if force_mobile else 'tenant/defaulters.html'
     return render(request, template, context)
+
+
 
 @require_tenant_type(['school'])
 @require_school_feature('reports')
@@ -708,6 +752,8 @@ def reports(request, schema_name, force_mobile=False):
         }
         template = 'mobile/reports.html' if force_mobile else 'tenant/reports.html'
     return render(request, template, context)
+
+
 
 @require_tenant_type(['school'])
 @require_school_feature('fee_collection')
@@ -913,6 +959,8 @@ def fee_collection(request, schema_name, student_id=None, force_mobile=False):
         }
         template_name = 'mobile/fee_collection.html' if mobile_mode else 'tenant/fee_collection.html'
         return render(request, template_name, context)
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def debug_payments_api(request):
@@ -937,6 +985,8 @@ def debug_payments_api(request):
         return JsonResponse({'payments': data, 'total': PaymentTransaction.objects.count()})
 
 # ------------------- Settings -------------------
+
+
 @require_tenant_type(['school'])
 def settings(request, schema_name):
     tenant = get_tenant(request, schema_name)
@@ -964,6 +1014,8 @@ def settings(request, schema_name):
     return render(request, 'tenant/settings.html', context)
 
 # ------------------- Fee Structure -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_structure')
 def fee_structure(request, schema_name):
@@ -1026,6 +1078,8 @@ def fee_structure(request, schema_name):
     return render(request, 'tenant/fee_structure.html', context)
 # ------------------- Fee Settings -------------------
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_structure')
 def mobile_fee_structure(request, schema_name):
@@ -1081,6 +1135,8 @@ def mobile_fee_structure(request, schema_name):
     }
     return render(request, 'mobile/fee_structure.html', context)
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_settings')
 def fee_settings(request, schema_name, force_mobile=False):
@@ -1135,6 +1191,8 @@ def fee_settings(request, schema_name, force_mobile=False):
         }
         template = 'mobile/fee_settings.html' if force_mobile else 'tenant/fee_settings.html'
         return render(request, template, context)
+
+
 
 def family_payment(request, schema_name):
     tenant = get_tenant(request, schema_name)
@@ -1192,6 +1250,8 @@ def family_payment(request, schema_name):
     return render(request, 'tenant/family_payment.html', context)
 
 # ------------------- API: Student Search -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def student_search_api(request, schema_name):
@@ -1205,6 +1265,8 @@ def student_search_api(request, schema_name):
 
 
 # ------------------- Add Student -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def add_student(request, schema_name):
@@ -1229,6 +1291,8 @@ def add_student(request, schema_name):
             "logo_url": tenant.school_logo.url if tenant.school_logo else None,
         }
     return render(request, "tenant/student_form.html", context)
+
+
 
 
 @require_tenant_type(['school'])
@@ -1259,6 +1323,8 @@ def add_student_mobile(request, schema_name):
     return render(request, "mobile/student_form.html", context)
 
 # ------------------- Edit Student -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('students')
 def edit_student(request, schema_name, student_id):
@@ -1282,6 +1348,8 @@ def edit_student(request, schema_name, student_id):
             "logo_url": tenant.school_logo.url if tenant.school_logo else None,
         }
     return render(request, "tenant/student_form.html", context)
+
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def fee_status_api(request):
@@ -1311,6 +1379,8 @@ def fee_status_api(request):
 
 
 # ------------------- API: Manual Generate (All Students) -------------------
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def manual_generate_api(request):
@@ -1394,6 +1464,8 @@ def manual_generate_api(request):
         if skipped_no_fee > 0:
             message += f" Skipped {skipped_no_fee} students because no fee structure defined for their grade."
         return JsonResponse({'message': message, 'created': created, 'skipped_existing': skipped_existing, 'skipped_no_fee': skipped_no_fee})
+
+
 def manual_generate_single_api(request):
     if not request.session.get("school_admin_authenticated"):
         return JsonResponse({"error": "Unauthorized"}, status=401)
@@ -1483,6 +1555,8 @@ def manual_generate_single_api(request):
             return JsonResponse({
                 "message": f"Fee record created for {student.name} for {month}/{year} with amount ₹{final_amount} (including extras)."
             })
+
+
 def student_fee_records_api(request, schema_name, student_id):
     """API: Return JSON list of fee records for a student."""
     from django.http import JsonResponse
@@ -1507,6 +1581,8 @@ def student_fee_records_api(request, schema_name, student_id):
             })
         return JsonResponse(records, safe=False)
 
+
+
 @require_tenant_type(['school'])
 def student_payments_api(request, schema_name, student_id):
     """API: Return JSON list of payments for a student."""
@@ -1530,6 +1606,8 @@ def student_payments_api(request, schema_name, student_id):
                 'url': f'/portal/{schema_name}/fee/receipt/{p.id}/'
             })
         return JsonResponse(payments, safe=False)
+
+
 
 @require_tenant_type(['school'])
 def student_current_fee_status_api(request, schema_name, student_id):
@@ -1571,6 +1649,8 @@ def student_current_fee_status_api(request, schema_name, student_id):
                 'grade': student.grade
             }
         return JsonResponse(data)
+
+
 
 def gym_generate_subscription(request, schema_name, customer_id):
     """Generate a new subscription for a gym customer (multi-month)."""
@@ -1654,6 +1734,8 @@ def gym_generate_subscription(request, schema_name, customer_id):
         else:
             return JsonResponse({'message': 'No new subscriptions created (already exist).'})
 
+
+
 @require_tenant_type(['gym'])
 def gym_cancel_subscription(request, schema_name, subscription_id):
     """Cancel a gym subscription with partial refund calculation."""
@@ -1702,7 +1784,7 @@ def gym_cancel_subscription(request, schema_name, subscription_id):
             'refund': float(refund)
         })
 
-@require_tenant_type(['gym'])
+
 
 @require_tenant_type(['gym'])
 def gym_update_subscription(request, schema_name, subscription_id):
@@ -1738,6 +1820,8 @@ def gym_update_subscription(request, schema_name, subscription_id):
         sub.amount = new_amount
         sub.save()
         return JsonResponse({'message': f'Subscription amount updated to ₹{new_amount}'})
+
+
 
 
 
@@ -1797,6 +1881,8 @@ def gym_edit_attendance(request, schema_name, attendance_id):
 
 # ==================== GYM VIEWS (Added by patcher) ====================
 
+
+
 @require_tenant_type(['gym'])
 def gym_dashboard(request, schema_name):
     """Gym dashboard view."""
@@ -1853,6 +1939,8 @@ def gym_dashboard(request, schema_name):
         return render(request, 'tenant/gym_dashboard.html', context)
 
 
+
+
 @require_tenant_type(['gym'])
 def gym_customer_list(request, schema_name):
     """List all gym customers."""
@@ -1885,6 +1973,8 @@ def gym_customer_list(request, schema_name):
         return render(request, 'tenant/gym_customer_list.html', context)
 
 
+
+
 @require_tenant_type(['gym'])
 def gym_customer_add(request, schema_name):
     """Add a new gym customer."""
@@ -1908,6 +1998,8 @@ def gym_customer_add(request, schema_name):
             'logo_url': get_tenant(request, schema_name).school_logo.url if get_tenant(request, schema_name).school_logo else None,
         }
         return render(request, 'tenant/gym_customer_form.html', context)
+
+
 
 
 @require_tenant_type(['gym'])
@@ -1936,6 +2028,8 @@ def gym_customer_edit(request, schema_name, customer_id):
             'logo_url': get_tenant(request, schema_name).school_logo.url if get_tenant(request, schema_name).school_logo else None,
         }
         return render(request, 'tenant/gym_customer_form.html', context)
+
+
 
 
 @require_tenant_type(['gym'])
@@ -1970,6 +2064,8 @@ def gym_customer_profile(request, schema_name, customer_id):
             'logo_url': get_tenant(request, schema_name).school_logo.url if get_tenant(request, schema_name).school_logo else None,
         }
         return render(request, 'tenant/gym_customer_profile.html', context)
+
+
 
 
 @require_tenant_type(['gym'])
@@ -2061,6 +2157,8 @@ def gym_payment(request, schema_name, customer_id=None):
         return render(request, 'tenant/gym_payment.html', context)
 
 
+
+
 @require_tenant_type(['gym'])
 def gym_receipt(request, schema_name, receipt_id):
     """Display gym payment receipt."""
@@ -2079,6 +2177,8 @@ def gym_receipt(request, schema_name, receipt_id):
             'payment_type_display': payment.payment_type,   # added to fix missing method
         }
         return render(request, 'tenant/gym_receipt.html', context)
+
+
 def gym_reports(request, schema_name):
     """Gym reports and analytics page."""
     from django.shortcuts import render
@@ -2110,6 +2210,8 @@ def gym_reports(request, schema_name):
             'logo_url': get_tenant(request, schema_name).school_logo.url if get_tenant(request, schema_name).school_logo else None,
         }
         return render(request, 'tenant/gym_reports.html', context)
+
+
 
 
 @require_tenant_type(['gym'])
@@ -2145,6 +2247,8 @@ def gym_settings(request, schema_name):
 
 
 
+
+
 @require_tenant_type(['gym'])
 def gym_attendance(request, schema_name):
     """Attendance management page."""
@@ -2159,6 +2263,8 @@ def gym_attendance(request, schema_name):
 
 
 # ==================== GYM API VIEWS ====================
+
+
 
 
 
@@ -2211,6 +2317,8 @@ def gym_checkin_api(request):
         })
 
 
+
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def gym_checkout_api(request):
@@ -2255,6 +2363,8 @@ def gym_checkout_api(request):
             'customer_name': customer.name,
             'duration_minutes': attendance.duration_minutes
         })
+
+
 
 
 def gym_revenue_stats_api(request, schema_name):
@@ -2328,6 +2438,8 @@ def gym_revenue_stats_api(request, schema_name):
         })
 
 
+
+
 def gym_attendance_stats_api(request, schema_name):
     """API: Attendance statistics for gym."""
     from django.http import JsonResponse
@@ -2381,6 +2493,8 @@ def gym_attendance_stats_api(request, schema_name):
         })
 
 
+
+
 def gym_customers_list_api(request, schema_name):
     """API: List customers with optional search and status filter."""
     from django.http import JsonResponse
@@ -2415,6 +2529,8 @@ def gym_customers_list_api(request, schema_name):
                 'attendance_count': attendance_count
             })
         return JsonResponse(customers, safe=False)
+
+
 
 
 def gym_customer_detail_api(request, schema_name, customer_id):
@@ -2472,6 +2588,8 @@ def gym_customer_detail_api(request, schema_name, customer_id):
         })
 
 
+
+
 def gym_subscription_status_api(request, schema_name):
     """API: Subscription status counts and expiring lists."""
     from django.http import JsonResponse
@@ -2508,6 +2626,8 @@ def gym_subscription_status_api(request, schema_name):
             'expired_count': expired_count,
             'expired_customers': expired_list
         })
+
+
 
 
 def gym_attendance_data_api(request, schema_name):
@@ -2560,6 +2680,8 @@ def gym_attendance_data_api(request, schema_name):
         })
 
 
+
+
 def gym_eligible_customers_api(request, schema_name):
     """API: Return customers eligible for check-in (active, not already checked in today)."""
     from django.http import JsonResponse
@@ -2573,6 +2695,8 @@ def gym_eligible_customers_api(request, schema_name):
         eligible = GymCustomer.objects.filter(status='active').exclude(id__in=checked_in_ids)
         data = [{'id': c.id, 'name': c.name, 'phone': c.phone} for c in eligible]
         return JsonResponse(data, safe=False)
+
+
 
 
 def gym_search_customer_api(request, schema_name):
@@ -2589,6 +2713,8 @@ def gym_search_customer_api(request, schema_name):
         )[:10]
         data = [{'id': c.id, 'name': c.name, 'phone': c.phone} for c in customers]
         return JsonResponse(data, safe=False)
+
+
 
 
 def gym_export_attendance_api(request, schema_name):
@@ -2622,6 +2748,8 @@ def gym_export_attendance_api(request, schema_name):
                 a.notes or ''
             ])
         return response
+
+
 
 
 
@@ -2661,6 +2789,8 @@ def _extract_item_sales_from_remarks(remarks):
 
 
 # ==================== STOCK MANAGEMENT VIEWS ====================
+
+
 
 @require_tenant_type(['school'])
 def stock_management(request, schema_name, force_mobile=False):
@@ -2758,6 +2888,8 @@ def stock_management(request, schema_name, force_mobile=False):
         template = 'mobile/stock_management.html' if (is_mobile_user_agent(request) or force_mobile) else 'tenant/stock_management.html'
     return render(request, template, context)
 
+
+
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def product_detail(request, schema_name, product_id, force_mobile=False):
@@ -2806,20 +2938,21 @@ def product_detail(request, schema_name, product_id, force_mobile=False):
     return render(request, template, context)
 
 
-@require_tenant_type(['school'])
-@require_school_feature('stock_management')
 
 
-# ==================== MOBILE WRAPPERS ====================
 @require_tenant_type(['school'])
 def mobile_stock_management(request, schema_name):
     """Mobile-only stock management view."""
     return stock_management(request, schema_name, force_mobile=True)
 
+
+
 @require_tenant_type(['school'])
 def mobile_product_detail(request, schema_name, product_id):
     """Mobile-only product detail view."""
     return product_detail(request, schema_name, product_id, force_mobile=True)
+
+
 def add_category(request, schema_name):
     """Add or edit a product category."""
     from django.shortcuts import redirect, get_object_or_404
@@ -2858,6 +2991,8 @@ def add_category(request, schema_name):
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
         return redirect('mobile_stock_management', schema_name=schema_name)
     return redirect('stock_management', schema_name=schema_name)
+
+
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def delete_category(request, schema_name, category_id):
@@ -2883,6 +3018,8 @@ def delete_category(request, schema_name, category_id):
         return redirect('mobile_stock_management', schema_name=schema_name)
 
     return redirect('stock_management', schema_name=schema_name)
+
+
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def add_product(request, schema_name):
@@ -2943,6 +3080,8 @@ def add_product(request, schema_name):
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
         return redirect('mobile_stock_management', schema_name=schema_name)
     return redirect('stock_management', schema_name=schema_name)
+
+
 @require_tenant_type(['school'])
 @require_school_feature('stock_management')
 def delete_product(request, schema_name, product_id):
@@ -2972,6 +3111,8 @@ def delete_product(request, schema_name, product_id):
 
 
 # ==================== SELL SEPARATELY (standalone student search) ====================
+
+
 @require_tenant_type(['school'])
 def sell_separately(request, schema_name, mobile=False):
     """Page to search for a student and then redirect to fee collection for that student."""
@@ -3026,6 +3167,8 @@ def sell_separately(request, schema_name, mobile=False):
     template = 'mobile/sell_separately.html' if mobile else 'tenant/sell_separately.html'
     return render(request, template, context)
 
+
+
 @require_tenant_type(['school'])
 def mobile_sell_separately(request, schema_name):
     """Mobile version of sell separately page."""
@@ -3034,6 +3177,8 @@ def mobile_sell_separately(request, schema_name):
 
 
 # ------------------- Mobile Defaulters -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('defaulters')
 def mobile_defaulters(request, schema_name):
@@ -3042,6 +3187,8 @@ def mobile_defaulters(request, schema_name):
 
 
 # ------------------- Mobile Reports -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('reports')
 def mobile_reports(request, schema_name):
@@ -3050,11 +3197,15 @@ def mobile_reports(request, schema_name):
 
 
 # ------------------- Mobile Fee Settings -------------------
+
+
 @require_tenant_type(['school'])
 @require_school_feature('fee_settings')
 def mobile_fee_settings(request, schema_name):
     """Mobile version of fee settings page."""
     return fee_settings(request, schema_name, force_mobile=True)
+
+
 
 
 def mobile_settings(request, schema_name):
@@ -3084,6 +3235,8 @@ def mobile_settings(request, schema_name):
 
 
 # ------------------- VOUCHER FEATURE VIEWS -------------------
+
+
 def voucher_status_api(request, schema_name, student_id):
     """API: Get current month fee status, default fee, charges, pending totals."""
     from django.http import JsonResponse
@@ -3148,6 +3301,8 @@ def voucher_status_api(request, schema_name, student_id):
             'total_pending': float(pending),
         }
         return JsonResponse(response)
+
+
 
 
 @csrf_exempt
@@ -3305,6 +3460,8 @@ def generate_voucher_api(request, schema_name, student_id):
         return JsonResponse({'success': True, 'voucher': voucher, 'created': created})
 
 
+
+
 def voucher_html_api(request, schema_name, student_id):
     """API: Return HTML of the voucher for the current month (or latest if not exists)."""
     from django.http import HttpResponse
@@ -3352,7 +3509,7 @@ def voucher_html_api(request, schema_name, student_id):
 
 # ==================== VOUCHERS LIST (Central page) ====================
 
-@require_tenant_type(['school'])
+
 
 @require_tenant_type(['school'])
 def vouchers_list(request, schema_name):
@@ -3483,6 +3640,8 @@ def vouchers_list(request, schema_name):
 
 
 
+
+
 @require_tenant_type(['school'])
 def mobile_vouchers_list(request, schema_name):
     """Mobile version of vouchers list grouped by status."""
@@ -3605,6 +3764,8 @@ def mobile_vouchers_list(request, schema_name):
 
 
 # ------------------- Fee Logs View -------------------
+
+
 def fee_logs(request, schema_name):
     """Display fee generation logs with filters."""
     from django.shortcuts import render
@@ -3653,6 +3814,8 @@ def fee_logs(request, schema_name):
             'logo_url': tenant.school_logo.url if tenant.school_logo else None,
         }
         return render(request, 'tenant/fee_logs.html', context)
+
+
 
 
 
@@ -3705,6 +3868,8 @@ def mobile_fee_logs(request, schema_name):
 
 
 # ---- Dismiss notification ----
+
+
 @require_tenant_type(['school'])
 def dismiss_notification(request, schema_name):
     from django.http import JsonResponse
@@ -3718,6 +3883,8 @@ def dismiss_notification(request, schema_name):
 
 
 # ==================== NOTIFICATION API VIEWS ====================
+
+
 @require_tenant_type(['school'])
 def notifications_list_api(request, schema_name):
     """Return list of notifications for the tenant, with unread count."""
@@ -3735,6 +3902,8 @@ def notifications_list_api(request, schema_name):
             'created_at': n.created_at.isoformat(),
         } for n in notifs]
         return JsonResponse({'notifications': data, 'unread_count': unread_count})
+
+
 
 @csrf_exempt
 @require_tenant_type(['school'])
@@ -3761,6 +3930,8 @@ def mark_notification_read_api(request, schema_name):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
+
+
 @csrf_exempt
 @require_tenant_type(['school'])
 def mark_all_notifications_read_api(request, schema_name):
@@ -3776,6 +3947,8 @@ def mark_all_notifications_read_api(request, schema_name):
 
 
 # ==================== GLOBAL SEARCH API ====================
+
+
 @require_tenant_type(['school'])
 def global_search_api(request, schema_name):
     mobile = request.GET.get('mobile') == '1'
@@ -3850,3 +4023,4 @@ def global_search_api(request, schema_name):
     } for c in categories]
 
     return JsonResponse(results)
+
