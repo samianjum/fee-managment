@@ -29,21 +29,23 @@ class Command(BaseCommand):
                 skipped_existing = 0
                 skipped_no_fee = 0
 
+                # Convert extra charges to Decimal safely
                 extra_charges = settings.default_extra_charges or []
-                total_extra = sum((ch.get('amount', 0) for ch in extra_charges), 0)
+                total_extra = sum(
+                    (Decimal(str(ch.get('amount', 0))) for ch in extra_charges),
+                    Decimal('0')
+                )
 
                 for s in students:
-                    # Check if fee already exists for this student
                     if FeeRecord.objects.filter(student=s, month=month, year=year).exists():
                         skipped_existing += 1
                         continue
 
-                    base_fee = s.custom_fee if s.custom_fee > 0 else 0
+                    base_fee = s.custom_fee if s.custom_fee > 0 else Decimal('0')
                     if base_fee == 0:
                         fee_struct = FeeStructure.objects.filter(grade=s.grade).first()
                         if fee_struct:
                             base_fee = fee_struct.monthly_fee
-                            # Update student's custom_fee for future
                             s.custom_fee = base_fee
                             s.save(update_fields=['custom_fee'])
 
