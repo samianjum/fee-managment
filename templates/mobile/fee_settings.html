@@ -433,5 +433,15 @@
             });
         }
     });
+
+    // ----- PATCH: Ensure extra charges JSON is updated on submit -----
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        if (typeof updateTotal === 'function') {
+            updateTotal();  // refresh the hidden input value
+        }
+        // Debug: log the submitted JSON (you can view in browser console)
+        console.log('Submitting extra charges:', document.getElementById('extraChargesJson').value);
+    });
+    
 </script>
 {% endblock %}
