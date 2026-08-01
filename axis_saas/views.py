@@ -1304,7 +1304,7 @@ def manual_generate_api(request):
                     student.save(update_fields=["custom_fee"])
 
             if base_fee > 0:
-                total_fee = base_fee + total_extra
+                total_fee = base_fee  # extra charges stored separately in extra_charges field
                 fee_record = FeeRecord.objects.create(
                     student=student, month=month, year=year,
                     amount=total_fee, due_date=due_date, status='pending',

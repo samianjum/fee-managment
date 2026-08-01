@@ -1,72 +1,91 @@
 #!/usr/bin/env python3
 """
-AXIS Fee Charges Patcher
-Fixes the issue where extra charges vanish after saving in Fee Settings.
-Patches both desktop and mobile templates by adding a submit event listener
-that updates the hidden JSON input before the form is sent.
+AXIS Voucher Double-Count Patcher
+Fixes generation of fee records so that extra charges are NOT added to amount.
+Modifies manual_generate_api and auto_generate_fees command.
+Run once and restart server.
 """
 
 import os
 import re
 
-TEMPLATES = [
-    "templates/tenant/fee_settings.html",
-    "templates/mobile/fee_settings.html",
-]
+# ----- 1. Patch views.py – manual_generate_api -----
+VIEWS_FILE = "axis_saas/views.py"
 
-def patch_template(filepath):
-    """Add a submit handler to the settings form in the given template."""
-    if not os.path.exists(filepath):
-        print(f"⚠️  File not found: {filepath} – skipping.")
+def patch_manual_generate_api():
+    if not os.path.exists(VIEWS_FILE):
+        print(f"❌ Views file not found: {VIEWS_FILE}")
         return False
 
-    with open(filepath, "r") as f:
+    with open(VIEWS_FILE, "r") as f:
         content = f.read()
 
-    # Check if already patched (avoid duplicate)
-    if "document.getElementById('settingsForm').addEventListener('submit'" in content:
-        print(f"✅ Already patched: {filepath}")
+    # Find the block that sets total_fee = base_fee + total_extra
+    # We want to replace it with total_fee = base_fee (and keep extra_charges separate)
+    # Look for the line: total_fee = base_fee + total_extra
+    old_pattern = r'total_fee\s*=\s*base_fee\s*\+\s*total_extra'
+    replacement = 'total_fee = base_fee  # extra charges stored separately in extra_charges field'
+
+    if re.search(old_pattern, content):
+        content = re.sub(old_pattern, replacement, content)
+        with open(VIEWS_FILE, "w") as f:
+            f.write(content)
+        print("✅ Patched views.py: manual_generate_api now stores only base fee in amount.")
         return True
+    else:
+        print("⚠️ Could not find total_fee = base_fee + total_extra in views.py – maybe already patched?")
+        # Check if the line already has no addition
+        if re.search(r'total_fee\s*=\s*base_fee\s*#', content):
+            print("   It seems already patched.")
+            return True
+        return False
 
-    # Find the first </script> tag and insert our script block before it
-    script_block = """
-    // ----- PATCH: Ensure extra charges JSON is updated on submit -----
-    document.getElementById('settingsForm').addEventListener('submit', function(e) {
-        if (typeof updateTotal === 'function') {
-            updateTotal();  // refresh the hidden input value
-        }
-        // Debug: log the submitted JSON (you can view in browser console)
-        console.log('Submitting extra charges:', document.getElementById('extraChargesJson').value);
-    });
-    """
-    # Insert before the first closing script tag
-    pattern = r'(</script>)'
-    replacement = script_block + '\n\\1'
-    content = re.sub(pattern, replacement, content, count=1)
+# ----- 2. Patch auto_generate_fees.py -----
+AUTO_GEN_FILE = "axis_saas/management/commands/auto_generate_fees.py"
 
-    with open(filepath, "w") as f:
-        f.write(content)
+def patch_auto_generate():
+    if not os.path.exists(AUTO_GEN_FILE):
+        print(f"❌ Auto-generate command file not found: {AUTO_GEN_FILE}")
+        return False
 
-    print(f"✅ Patched: {filepath}")
-    return True
+    with open(AUTO_GEN_FILE, "r") as f:
+        content = f.read()
+
+    # Look for the line where total_fee is computed: total_fee = base_fee + total_extra
+    old_pattern = r'total_fee\s*=\s*base_fee\s*\+\s*total_extra'
+    replacement = 'total_fee = base_fee  # extra charges stored separately in extra_charges field'
+
+    if re.search(old_pattern, content):
+        content = re.sub(old_pattern, replacement, content)
+        with open(AUTO_GEN_FILE, "w") as f:
+            f.write(content)
+        print("✅ Patched auto_generate_fees.py: now stores only base fee in amount.")
+        return True
+    else:
+        print("⚠️ Could not find total_fee = base_fee + total_extra in auto_generate_fees.py – maybe already patched?")
+        if re.search(r'total_fee\s*=\s*base_fee\s*#', content):
+            print("   It seems already patched.")
+            return True
+        return False
+
+# ----- 3. Also ensure manual_generate_single_api (already correct) but we can skip -----
 
 def main():
-    print("🚀 AXIS Fee Charges Patcher")
-    print("--------------------------------")
-    success = True
-    for tpl in TEMPLATES:
-        if not patch_template(tpl):
-            success = False
+    print("🚀 AXIS Voucher Double-Count Patcher")
+    print("-------------------------------------")
+    print("This script fixes the generation of fee records to avoid double-counting extra charges in vouchers.\n")
 
-    if success:
-        print("\n🎯 All templates patched successfully.")
-        print("   Restart your server (python manage.py runserver) and test Fee Settings.")
-        print("   Extra charges should now be saved correctly.")
+    success_views = patch_manual_generate_api()
+    success_auto = patch_auto_generate()
+
+    if success_views and success_auto:
+        print("\n✅ All patches applied successfully.")
+        print("   Restart your server: python manage.py runserver")
+        print("   Newly generated fee records will now have the correct base fee and separate extra charges.")
+        print("   Existing records are not modified; you may need to regenerate them if they are incorrect.")
     else:
-        print("\n❌ Some files were not found. Ensure you are in the project root.")
-        print("   Expected paths:")
-        for tpl in TEMPLATES:
-            print(f"      - {tpl}")
+        print("\n⚠️ Some patches may have failed. Check the output above.")
+        print("   If the files are already patched, you can ignore this.")
 
 if __name__ == "__main__":
     main()

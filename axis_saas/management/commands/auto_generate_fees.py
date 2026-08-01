@@ -50,7 +50,7 @@ class Command(BaseCommand):
                             s.save(update_fields=['custom_fee'])
 
                     if base_fee > 0:
-                        total_fee = base_fee + total_extra
+                        total_fee = base_fee  # extra charges stored separately in extra_charges field
                         FeeRecord.objects.create(
                             student=s,
                             month=month,
