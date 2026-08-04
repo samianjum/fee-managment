@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Single patcher to enable offline support for Student Profile pages.
-Usage: python3 patch_student_offline.py
+Single patcher to enable offline support for Receipt pages (fee + gym).
+Usage: python3 patch_receipt_offline.py
 """
 
 import re
 import os
 
 # ----------------------------------------------------------------------
-# 1. Patch static/sw.js – add student profile patterns
+# 1. Patch static/sw.js – add receipt patterns
 # ----------------------------------------------------------------------
 def patch_sw_js():
     path = 'static/sw.js'
@@ -30,13 +30,14 @@ def patch_sw_js():
     suffix = match.group(3)
 
     # Check if already present
-    if '/students/\\d+' in body:
-        print("✅ Student profile patterns already in sw.js, skipping.")
+    if 'fee/receipt' in body and 'gym/receipt' in body:
+        print("✅ Receipt patterns already in sw.js, skipping.")
         return
 
     new_patterns = [
-        "/^\\/portal\\/[^\\/]+\\/students\\/\\d+\\/?$/.test(url.pathname)",
-        "/^\\/portal\\/[^\\/]+\\/students\\/\\d+\\/mobile\\/?$/.test(url.pathname)"
+        "/^\\/portal\\/[^\\/]+\\/fee\\/receipt\\/\\d+\\/?$/.test(url.pathname)",
+        "/^\\/portal\\/[^\\/]+\\/fee\\/receipt\\/mobile\\/\\d+\\/?$/.test(url.pathname)",
+        "/^\\/portal\\/[^\\/]+\\/gym\\/receipt\\/\\d+\\/?$/.test(url.pathname)"
     ]
     body_trim = body.rstrip()
     if body_trim and not body_trim.endswith('||'):
@@ -47,10 +48,10 @@ def patch_sw_js():
 
     with open(path, 'w') as f:
         f.write(content)
-    print("✅ static/sw.js patched (student profile).")
+    print("✅ static/sw.js patched (receipt).")
 
 # ----------------------------------------------------------------------
-# 2. Add student_list_api to views_school.py
+# 2. Add receipt_list_api to views_school.py
 # ----------------------------------------------------------------------
 def patch_views_school():
     path = 'axis_saas/views_school.py'
@@ -61,25 +62,24 @@ def patch_views_school():
     with open(path, 'r') as f:
         content = f.read()
 
-    # Check if already exists
-    if 'def student_list_api' in content:
-        print("✅ student_list_api already exists in views_school.py, skipping.")
+    if 'def receipt_list_api' in content:
+        print("✅ receipt_list_api already exists in views_school.py, skipping.")
         return
 
-    # Find a good insertion point after an existing API function, e.g., after product_list_api
-    marker = 'def product_list_api'
+    # Insert after student_list_api (or product_list_api)
+    marker = 'def student_list_api'
     if marker not in content:
-        # Fallback: insert after global_search_api
-        marker = 'def global_search_api'
+        marker = 'def product_list_api'
         if marker not in content:
-            print("❌ Could not find product_list_api or global_search_api to anchor insertion.")
-            return
+            marker = 'def global_search_api'
+            if marker not in content:
+                print("❌ Could not find a suitable anchor function.")
+                return
 
     lines = content.splitlines(keepends=True)
     insertion_index = None
     for i, line in enumerate(lines):
         if line.strip().startswith(marker):
-            # Find the next function definition or end of file
             for j in range(i+1, len(lines)):
                 if lines[j].strip().startswith('def '):
                     insertion_index = j
@@ -92,21 +92,25 @@ def patch_views_school():
         print("❌ Could not find insertion point.")
         return
 
-    # New function
     new_function = '''
-def student_list_api(request, schema_name):
-    """API: Return list of students with their profile URLs for pre‑caching."""
+def receipt_list_api(request, schema_name):
+    """API: Return list of all receipt URLs (fee + gym) for pre‑caching."""
     from django.http import JsonResponse
-    from .models import Student
+    from .models import PaymentTransaction, GymPayment
     from django_tenants.utils import schema_context
     with schema_context(schema_name):
-        students = Student.objects.filter(status='active').values('id', 'name')
         data = []
-        for s in students:
+        # Fee receipts
+        for p in PaymentTransaction.objects.all().only('id'):
             data.append({
-                'id': s['id'],
-                'desktop_url': f'/portal/{schema_name}/students/{s["id"]}/',
-                'mobile_url': f'/portal/{schema_name}/students/{s["id"]}/mobile/',
+                'desktop_url': f'/portal/{schema_name}/fee/receipt/{p.id}/',
+                'mobile_url': f'/portal/{schema_name}/fee/receipt/mobile/{p.id}/',
+            })
+        # Gym receipts
+        for p in GymPayment.objects.all().only('id'):
+            data.append({
+                'desktop_url': f'/portal/{schema_name}/gym/receipt/{p.id}/',
+                'mobile_url': f'/portal/{schema_name}/gym/receipt/{p.id}/',  # same as desktop (no separate mobile)
             })
         return JsonResponse(data, safe=False)
 
@@ -114,7 +118,7 @@ def student_list_api(request, schema_name):
     lines.insert(insertion_index, new_function)
     with open(path, 'w') as f:
         f.writelines(lines)
-    print("✅ student_list_api added to views_school.py.")
+    print("✅ receipt_list_api added to views_school.py.")
 
 # ----------------------------------------------------------------------
 # 3. Add URL pattern in public_urls.py
@@ -128,25 +132,24 @@ def patch_public_urls():
     with open(path, 'r') as f:
         content = f.read()
 
-    # Check if already added
-    if 'student_list_api' in content:
-        print("✅ student_list_api URL already present, skipping.")
+    if 'receipt_list_api' in content:
+        print("✅ receipt_list_api URL already present, skipping.")
         return
 
-    # Add import
     lines = content.splitlines(keepends=True)
+    # Add import if missing
     for i, line in enumerate(lines):
         if line.strip().startswith('from .views import'):
-            if 'student_list_api' not in line:
+            if 'receipt_list_api' not in line:
                 if line.rstrip().endswith(','):
-                    new_line = line.rstrip() + ' student_list_api'
+                    new_line = line.rstrip() + ' receipt_list_api'
                 else:
-                    new_line = line.rstrip() + ', student_list_api'
+                    new_line = line.rstrip() + ', receipt_list_api'
                 lines[i] = new_line + '\n'
             break
 
     # Add URL pattern
-    url_pattern = "    path('portal/<slug:schema_name>/api/students/', portal_wrapper(login_required_for_schema(student_list_api)), name='student_list_api'),\n"
+    url_pattern = "    path('portal/<slug:schema_name>/api/receipts/', portal_wrapper(login_required_for_schema(receipt_list_api)), name='receipt_list_api'),\n"
     urlpatterns_start = None
     for i, line in enumerate(lines):
         if line.strip() == 'urlpatterns = [':
@@ -160,10 +163,10 @@ def patch_public_urls():
 
     with open(path, 'w') as f:
         f.writelines(lines)
-    print("✅ student_list_api URL added to public_urls.py.")
+    print("✅ receipt_list_api URL added to public_urls.py.")
 
 # ----------------------------------------------------------------------
-# 4. Update base templates to pre‑cache all student profiles
+# 4. Update base templates to pre‑cache all receipts
 # ----------------------------------------------------------------------
 def patch_base_template(template_path):
     if not os.path.exists(template_path):
@@ -173,12 +176,10 @@ def patch_base_template(template_path):
     with open(template_path, 'r') as f:
         content = f.read()
 
-    # Check if already added
-    if '// DYNAMIC_PRECACHE_STUDENTS' in content:
-        print(f"✅ Dynamic student pre-caching already in {template_path}, skipping.")
+    if '// DYNAMIC_PRECACHE_RECEIPTS' in content:
+        print(f"✅ Receipt pre-caching already in {template_path}, skipping.")
         return
 
-    # Insert before </body>
     body_end = content.rfind('</body>')
     if body_end == -1:
         print(f"❌ Could not find </body> tag in {template_path}")
@@ -186,19 +187,19 @@ def patch_base_template(template_path):
 
     new_script = '''
 <script>
-// DYNAMIC_PRECACHE_STUDENTS – fetch and cache all student profile pages
+// DYNAMIC_PRECACHE_RECEIPTS – fetch and cache all receipt pages
 (function() {
     if (!('caches' in window)) return;
     const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/students/`;
+    const apiUrl = `/portal/${schema}/api/receipts/`;
     const cacheName = 'axis-pwa-v4';
 
     window.addEventListener('load', function() {
         fetch(apiUrl, { cache: 'reload' })
             .then(res => res.json())
-            .then(students => {
-                if (!students || students.length === 0) return;
-                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+            .then(receipts => {
+                if (!receipts || receipts.length === 0) return;
+                const urls = receipts.flatMap(r => [r.desktop_url, r.mobile_url]);
                 Promise.all(urls.map(url =>
                     fetch(url, { cache: 'reload' })
                         .then(res => {
@@ -208,7 +209,7 @@ def patch_base_template(template_path):
                             }
                         })
                         .catch(() => {})
-                )).then(() => console.log('[AXIS] Pre‑cached all student profile pages'));
+                )).then(() => console.log('[AXIS] Pre‑cached all receipt pages'));
             })
             .catch(() => {});
     });
@@ -219,20 +220,20 @@ def patch_base_template(template_path):
     content = content[:body_end] + new_script + content[body_end:]
     with open(template_path, 'w') as f:
         f.write(content)
-    print(f"✅ Dynamic student pre-caching added to {template_path}.")
+    print(f"✅ Dynamic receipt pre-caching added to {template_path}.")
 
 # ----------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------
 def main():
-    print("🚀 AXIS Student Profile Offline Patcher")
+    print("🚀 AXIS Receipt Offline Patcher")
     patch_sw_js()
     patch_views_school()
     patch_public_urls()
     patch_base_template('templates/tenant/base.html')
     patch_base_template('templates/mobile/base.html')
     print("\n✅ Done! Restart your server and clear browser cache.")
-    print("   All student profile pages will now be cached on first visit (or via background pre‑caching).")
+    print("   All receipt pages will be pre‑cached in the background on every page load.")
 
 if __name__ == "__main__":
     main()

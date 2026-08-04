@@ -1156,5 +1156,35 @@
     });
 })();
 </script>
+
+<script>
+// DYNAMIC_PRECACHE_RECEIPTS – fetch and cache all receipt pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/receipts/`;
+    const cacheName = 'axis-pwa-v4';
+
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(receipts => {
+                if (!receipts || receipts.length === 0) return;
+                const urls = receipts.flatMap(r => [r.desktop_url, r.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all receipt pages'));
+            })
+            .catch(() => {});
+    });
+})();
+</script>
 </body>
 </html>

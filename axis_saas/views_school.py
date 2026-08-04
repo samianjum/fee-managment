@@ -4059,3 +4059,25 @@ def student_list_api(request, schema_name):
             })
         return JsonResponse(data, safe=False)
 
+
+def receipt_list_api(request, schema_name):
+    """API: Return list of all receipt URLs (fee + gym) for pre‑caching."""
+    from django.http import JsonResponse
+    from .models import PaymentTransaction, GymPayment
+    from django_tenants.utils import schema_context
+    with schema_context(schema_name):
+        data = []
+        # Fee receipts
+        for p in PaymentTransaction.objects.all().only('id'):
+            data.append({
+                'desktop_url': f'/portal/{schema_name}/fee/receipt/{p.id}/',
+                'mobile_url': f'/portal/{schema_name}/fee/receipt/mobile/{p.id}/',
+            })
+        # Gym receipts
+        for p in GymPayment.objects.all().only('id'):
+            data.append({
+                'desktop_url': f'/portal/{schema_name}/gym/receipt/{p.id}/',
+                'mobile_url': f'/portal/{schema_name}/gym/receipt/{p.id}/',  # same as desktop (no separate mobile)
+            })
+        return JsonResponse(data, safe=False)
+
