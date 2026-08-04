@@ -505,7 +505,7 @@
     }
 </script>
 <script>
-    // PRECACHE_PAGES – automatically cache dashboard & student list pages on every load
+    // PRECACHE_PAGES – automatically cache dashboard, student list, and defaulters pages on every load
     (function() {
         if (!('caches' in window)) return;
         const schema = '{{ tenant.schema_name }}';
@@ -513,8 +513,9 @@
             `/portal/${schema}/dashboard/`,
             `/portal/${schema}/dashboard/mobile/`,
             `/portal/${schema}/students/`,
-            `/portal/${schema}/students/mobile/`
-        ];
+            `/portal/${schema}/students/mobile/`,
+            `/portal/${schema}/defaulters/`,
+            `/portal/${schema}/defaulters/mobile/`];
         // Wait for page to be fully loaded
         window.addEventListener('load', function() {
             // Fetch each URL with cache: 'reload' to ensure fresh data

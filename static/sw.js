@@ -48,9 +48,9 @@ self.addEventListener('fetch', event => {
                          /^\/portal\/[^\/]+\/dashboard\/mobile\//.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/dashboard\/?$/.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/students\/?$/.test(url.pathname) ||
-                         /^\/portal\/[^\/]+\/students\/mobile\/?$/.test(url.pathname);
-
-    // For these pages: cache-first (serve from cache if available)
+                         /^\/portal\/[^\/]+\/students\/mobile\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/defaulters\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/defaulters\/mobile\/?$/.test(url.pathname); (serve from cache if available)
     if (isCachedPage) {
         event.respondWith(
             caches.match(event.request)
