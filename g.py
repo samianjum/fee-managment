@@ -1,158 +1,121 @@
 #!/usr/bin/env python3
 """
-Extend offline caching to the Defaulters page (desktop & mobile).
-Updates the service worker to cache‑first for /defaulters/ and /defaulters/mobile/,
-and adds those URLs to the pre‑caching script that runs on every page load.
-Run: python3 defaulters_offline_patcher.py
+Single patcher to enable offline support for Reports page.
+Run: python3 patch_reports_offline.py
 """
 
 import re
-from pathlib import Path
-
-SW_PATH = Path("static/sw.js")
-DESKTOP_BASE = Path("templates/tenant/base.html")
-MOBILE_BASE = Path("templates/mobile/base.html")
+import os
 
 # ----------------------------------------------------------------------
-# 1. Update service worker – add defaulters to cached page regex
+# 1. Patch static/sw.js – add reports patterns to isCachedPage
 # ----------------------------------------------------------------------
-def patch_sw():
-    if not SW_PATH.exists():
-        print("❌ static/sw.js not found. Are you in the project root?")
-        return False
-
-    content = SW_PATH.read_text(encoding="utf-8")
-
-    # Find the isCachedPage regex. It currently looks like:
-    # const isCachedPage = /^\/portal\/[^\/]+\/dashboard\//.test(...) || ... || /^\/portal\/[^\/]+\/students\/mobile\/?$/.test(...);
-    # We need to add defaulters patterns:
-    # /^\/portal\/[^\/]+\/defaulters\/?$/ and /^\/portal\/[^\/]+\/defaulters\/mobile\/?$/
-
-    # We'll search for the line that defines isCachedPage.
-    pattern = re.compile(
-        r'(const isCachedPage\s*=\s*)(.*?)(;)\s*// For these pages: cache-first',
-        re.DOTALL
-    )
-    match = pattern.search(content)
-    if not match:
-        print("❌ Could not find isCachedPage definition in sw.js")
-        return False
-
-    before = match.group(1)
-    body = match.group(2)
-    after = match.group(3)
-
-    # Add new patterns if not already present
-    if "/defaulters/" not in body:
-        # Insert before the existing patterns
-        # We'll append at the end of the OR chain
-        new_patterns = (
-            " /^\\/portal\\/[^\\/]+\\/defaulters\\/?$/.test(url.pathname) ||\n" +
-            "                         /^\\/portal\\/[^\\/]+\\/defaulters\\/mobile\\/?$/.test(url.pathname) ||"
-        )
-        # Insert after the last pattern (before the closing )
-        # We'll find the last part of the body before the closing )
-        # Actually we can just append before the last ')'.
-        # The body ends with a ')'? It ends with ';' after the entire expression.
-        # We'll insert after the last pattern. But easier: we'll replace the whole body with the new one.
-        # Let's extract the existing patterns and add our new ones.
-        # We'll keep the existing body, but we need to add our OR conditions.
-        # We'll use a more robust approach: we'll replace the entire isCachedPage line.
-        # We'll generate a new line with all patterns.
-        new_body = (
-            "/^\\/portal\\/[^\\/]+\\/dashboard\\//.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/dashboard\\/mobile\\//.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/dashboard\\/?$/.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/students\\/?$/.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/students\\/mobile\\/?$/.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/defaulters\\/?$/.test(url.pathname) ||\n"
-            "                         /^\\/portal\\/[^\\/]+\\/defaulters\\/mobile\\/?$/.test(url.pathname)"
-        )
-        # Replace the whole body
-        new_line = before + new_body + after
-        content = pattern.sub(new_line, content)
-        print("✅ Added defaulters to sw.js cache‑first list")
-    else:
-        print("✅ Defaulters already present in sw.js")
-
-    SW_PATH.write_text(content, encoding="utf-8")
-    return True
-
-
-# ----------------------------------------------------------------------
-# 2. Update pre‑caching script in base templates – add defaulters URLs
-# ----------------------------------------------------------------------
-def update_precache_script(template_path):
-    if not template_path.exists():
-        print(f"⚠️  {template_path} not found, skipping")
-        return False
-
-    content = template_path.read_text(encoding="utf-8")
-
-    # Find the pre‑caching script block
-    pattern = re.compile(
-        r'(// PRECACHE_PAGES – automatically cache dashboard & student list pages on every load.*?const urls = \[)(.*?)(\];)',
-        re.DOTALL
-    )
-    match = pattern.search(content)
-    if not match:
-        print(f"⚠️  Could not find pre‑caching script in {template_path}, skipping")
-        return False
-
-    before = match.group(1)
-    urls_block = match.group(2)
-    after = match.group(3)
-
-    # Check if defaulters are already in the urls list
-    if "/defaulters/" in urls_block:
-        print(f"✅ Defaulters already in pre‑cache list for {template_path}")
-        return True
-
-    # Insert new URLs before the closing `]`
-    # We'll add them after the existing ones.
-    new_urls = (
-        urls_block.rstrip() +
-        ",\n            `/portal/${schema}/defaulters/`,\n" +
-        "            `/portal/${schema}/defaulters/mobile/`"
-    )
-    new_block = before + new_urls + after
-    new_content = pattern.sub(new_block, content)
-
-    # Also update the comment to reflect new pages
-    new_content = new_content.replace(
-        "dashboard & student list pages",
-        "dashboard, student list, and defaulters pages"
-    )
-
-    template_path.write_text(new_content, encoding="utf-8")
-    print(f"✅ Added defaulters to pre‑cache list in {template_path}")
-    return True
-
-
-# ----------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------
-def main():
-    print("Defaulters Offline Patcher")
-    print("---------------------------")
-    print("This will add the Defaulters page (desktop & mobile) to the cache‑first strategy")
-    print("and include it in the automatic pre‑caching that runs on every page load.")
-    print()
-
-    sw_ok = patch_sw()
-    if not sw_ok:
-        print("❌ Failed to patch sw.js")
+def patch_sw_js():
+    path = 'static/sw.js'
+    if not os.path.exists(path):
+        print(f"❌ {path} not found")
         return
 
-    desktop_ok = update_precache_script(DESKTOP_BASE)
-    mobile_ok = update_precache_script(MOBILE_BASE)
+    with open(path, 'r') as f:
+        content = f.read()
 
-    if desktop_ok or mobile_ok:
-        print("\n✅ Done! Restart your server and clear browser cache.")
-        print("The Defaulters page will now be cached on every page load,")
-        print("and served from cache when offline (with background updates when online).")
-    else:
-        print("\n❌ No templates were patched. Check that the base templates exist.")
+    # Regex to match the whole isCachedPage declaration
+    pattern = r'(const isCachedPage = )(.*?)(;)'
+    match = re.search(pattern, content, re.DOTALL)
+    if not match:
+        print("❌ Could not find 'const isCachedPage' in sw.js")
+        return
+
+    prefix = match.group(1)
+    body = match.group(2)
+    suffix = match.group(3)
+
+    # Check if already patched
+    if 'reports' in body:
+        print("✅ Reports already present in sw.js, skipping.")
+        return
+
+    # New patterns to add
+    new_patterns = [
+        "/^\\/portal\\/[^\\/]+\\/reports\\/?$/.test(url.pathname)",
+        "/^\\/portal\\/[^\\/]+\\/reports\\/mobile\\/?$/.test(url.pathname)"
+    ]
+
+    # Add them after the last existing pattern (before the closing semicolon)
+    # Remove trailing whitespace and add a separator if needed
+    body_trim = body.rstrip()
+    if body_trim and not body_trim.endswith('||'):
+        body_trim += ' ||'
+    body_trim += '\n                         ' + ' ||\n                         '.join(new_patterns)
+
+    new_line = prefix + body_trim + suffix
+    content = content.replace(match.group(0), new_line)
+
+    with open(path, 'w') as f:
+        f.write(content)
+    print("✅ static/sw.js patched.")
+
+
+# ----------------------------------------------------------------------
+# 2. Patch base templates – add reports URLs to pre‑caching array
+# ----------------------------------------------------------------------
+def patch_base_template(template_path):
+    if not os.path.exists(template_path):
+        print(f"❌ {template_path} not found")
+        return
+
+    with open(template_path, 'r') as f:
+        content = f.read()
+
+    # Find the urls array definition
+    # Matches: const urls = [ ... ];
+    pattern = r'(const urls = \[)([\s\S]*?)(\];)'
+    match = re.search(pattern, content)
+    if not match:
+        print(f"❌ Could not find 'const urls = [' in {template_path}")
+        return
+
+    prefix = match.group(1)
+    body = match.group(2)
+    suffix = match.group(3)
+
+    # Check if already patched
+    if 'reports' in body:
+        print(f"✅ Reports already in {template_path}, skipping.")
+        return
+
+    # New URLs to add
+    new_urls = [
+        "`/portal/${schema}/reports/`",
+        "`/portal/${schema}/reports/mobile/`"
+    ]
+
+    # Clean up body: remove trailing whitespace, add comma if needed
+    body_trim = body.rstrip()
+    if body_trim and not body_trim.endswith(','):
+        body_trim += ','
+    # Add new lines (indent 4 spaces)
+    body_trim += '\n    ' + ',\n    '.join(new_urls)
+
+    new_block = prefix + body_trim + suffix
+    content = content.replace(match.group(0), new_block)
+
+    with open(template_path, 'w') as f:
+        f.write(content)
+    print(f"✅ {template_path} patched.")
+
+
+# ----------------------------------------------------------------------
+# Main
+# ----------------------------------------------------------------------
+def main():
+    print("🚀 AXIS Reports Offline Patcher")
+    patch_sw_js()
+    patch_base_template('templates/tenant/base.html')
+    patch_base_template('templates/mobile/base.html')
+    print("\n✅ Done! Restart your server and clear browser cache.")
+    print("   Then visit the Reports page while online to cache it.")
+
 
 if __name__ == "__main__":
     main()
