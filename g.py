@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Single patcher to enable offline support for Reports page.
-Run: python3 patch_reports_offline.py
+Single patcher to enable offline support for Fee Structure page.
+Run: python3 patch_fee_structure_offline.py
 """
 
 import re
 import os
 
 # ----------------------------------------------------------------------
-# 1. Patch static/sw.js – add reports patterns to isCachedPage
+# 1. Patch static/sw.js – add fee_structure patterns to isCachedPage
 # ----------------------------------------------------------------------
 def patch_sw_js():
     path = 'static/sw.js'
@@ -31,18 +31,17 @@ def patch_sw_js():
     suffix = match.group(3)
 
     # Check if already patched
-    if 'reports' in body:
-        print("✅ Reports already present in sw.js, skipping.")
+    if 'fee/structure' in body:
+        print("✅ Fee Structure already present in sw.js, skipping.")
         return
 
     # New patterns to add
     new_patterns = [
-        "/^\\/portal\\/[^\\/]+\\/reports\\/?$/.test(url.pathname)",
-        "/^\\/portal\\/[^\\/]+\\/reports\\/mobile\\/?$/.test(url.pathname)"
+        "/^\\/portal\\/[^\\/]+\\/fee\\/structure\\/?$/.test(url.pathname)",
+        "/^\\/portal\\/[^\\/]+\\/fee\\/structure\\/mobile\\/?$/.test(url.pathname)"
     ]
 
     # Add them after the last existing pattern (before the closing semicolon)
-    # Remove trailing whitespace and add a separator if needed
     body_trim = body.rstrip()
     if body_trim and not body_trim.endswith('||'):
         body_trim += ' ||'
@@ -53,11 +52,11 @@ def patch_sw_js():
 
     with open(path, 'w') as f:
         f.write(content)
-    print("✅ static/sw.js patched.")
+    print("✅ static/sw.js patched (fee-structure).")
 
 
 # ----------------------------------------------------------------------
-# 2. Patch base templates – add reports URLs to pre‑caching array
+# 2. Patch base templates – add fee_structure URLs to pre‑caching array
 # ----------------------------------------------------------------------
 def patch_base_template(template_path):
     if not os.path.exists(template_path):
@@ -68,7 +67,6 @@ def patch_base_template(template_path):
         content = f.read()
 
     # Find the urls array definition
-    # Matches: const urls = [ ... ];
     pattern = r'(const urls = \[)([\s\S]*?)(\];)'
     match = re.search(pattern, content)
     if not match:
@@ -80,14 +78,14 @@ def patch_base_template(template_path):
     suffix = match.group(3)
 
     # Check if already patched
-    if 'reports' in body:
-        print(f"✅ Reports already in {template_path}, skipping.")
+    if 'fee/structure' in body:
+        print(f"✅ Fee Structure already in {template_path}, skipping.")
         return
 
     # New URLs to add
     new_urls = [
-        "`/portal/${schema}/reports/`",
-        "`/portal/${schema}/reports/mobile/`"
+        "`/portal/${schema}/fee/structure/`",
+        "`/portal/${schema}/fee/structure/mobile/`"
     ]
 
     # Clean up body: remove trailing whitespace, add comma if needed
@@ -102,19 +100,19 @@ def patch_base_template(template_path):
 
     with open(template_path, 'w') as f:
         f.write(content)
-    print(f"✅ {template_path} patched.")
+    print(f"✅ {template_path} patched (fee-structure).")
 
 
 # ----------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------
 def main():
-    print("🚀 AXIS Reports Offline Patcher")
+    print("🚀 AXIS Fee Structure Offline Patcher")
     patch_sw_js()
     patch_base_template('templates/tenant/base.html')
     patch_base_template('templates/mobile/base.html')
     print("\n✅ Done! Restart your server and clear browser cache.")
-    print("   Then visit the Reports page while online to cache it.")
+    print("   Then visit the Fee Structure page while online to cache it.")
 
 
 if __name__ == "__main__":
