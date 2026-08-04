@@ -636,5 +636,35 @@
     });
 })();
 </script>
+
+<script>
+// DYNAMIC_PRECACHE_FEE_COLLECTION – fetch and cache all fee collection pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/fee-collection/`;
+    const cacheName = 'axis-pwa-v4';
+
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all fee collection pages'));
+            })
+            .catch(() => {});
+    });
+})();
+</script>
 </body>
 </html>

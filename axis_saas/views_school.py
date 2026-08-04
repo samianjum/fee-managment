@@ -4081,3 +4081,20 @@ def receipt_list_api(request, schema_name):
             })
         return JsonResponse(data, safe=False)
 
+
+def fee_collection_list_api(request, schema_name):
+    """API: Return list of active students with their fee collection URLs for pre‑caching."""
+    from django.http import JsonResponse
+    from .models import Student
+    from django_tenants.utils import schema_context
+    with schema_context(schema_name):
+        students = Student.objects.filter(status='active').values('id', 'name')
+        data = []
+        for s in students:
+            data.append({
+                'id': s['id'],
+                'desktop_url': f'/portal/{schema_name}/fee/collection/{s["id"]}/',
+                'mobile_url': f'/portal/{schema_name}/fee/collection/mobile/{s["id"]}/',
+            })
+        return JsonResponse(data, safe=False)
+
