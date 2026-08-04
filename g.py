@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Single patcher to enable offline support for ALL Product Details pages.
-Run: python3 patch_product_offline_complete.py
+Single patcher to enable offline support for Student Profile pages.
+Usage: python3 patch_student_offline.py
 """
 
 import re
 import os
 
 # ----------------------------------------------------------------------
-# 1. Patch static/sw.js – add product detail patterns (if missing)
+# 1. Patch static/sw.js – add student profile patterns
 # ----------------------------------------------------------------------
 def patch_sw_js():
     path = 'static/sw.js'
@@ -29,26 +29,28 @@ def patch_sw_js():
     body = match.group(2)
     suffix = match.group(3)
 
-    if 'stock/product' not in body:
-        new_patterns = [
-            "/^\\/portal\\/[^\\/]+\\/stock\\/product\\/\\d+\\/?$/.test(url.pathname)",
-            "/^\\/portal\\/[^\\/]+\\/stock\\/product\\/\\d+\\/mobile\\/?$/.test(url.pathname)"
-        ]
-        body_trim = body.rstrip()
-        if body_trim and not body_trim.endswith('||'):
-            body_trim += ' ||'
-        body_trim += '\n                         ' + ' ||\n                         '.join(new_patterns)
-        new_line = prefix + body_trim + suffix
-        content = content.replace(match.group(0), new_line)
-        with open(path, 'w') as f:
-            f.write(content)
-        print("✅ static/sw.js patched (product-detail).")
-    else:
-        print("✅ Product details already in sw.js, skipping.")
+    # Check if already present
+    if '/students/\\d+' in body:
+        print("✅ Student profile patterns already in sw.js, skipping.")
+        return
 
+    new_patterns = [
+        "/^\\/portal\\/[^\\/]+\\/students\\/\\d+\\/?$/.test(url.pathname)",
+        "/^\\/portal\\/[^\\/]+\\/students\\/\\d+\\/mobile\\/?$/.test(url.pathname)"
+    ]
+    body_trim = body.rstrip()
+    if body_trim and not body_trim.endswith('||'):
+        body_trim += ' ||'
+    body_trim += '\n                         ' + ' ||\n                         '.join(new_patterns)
+    new_line = prefix + body_trim + suffix
+    content = content.replace(match.group(0), new_line)
+
+    with open(path, 'w') as f:
+        f.write(content)
+    print("✅ static/sw.js patched (student profile).")
 
 # ----------------------------------------------------------------------
-# 2. Add new API view to views_school.py
+# 2. Add student_list_api to views_school.py
 # ----------------------------------------------------------------------
 def patch_views_school():
     path = 'axis_saas/views_school.py'
@@ -59,24 +61,24 @@ def patch_views_school():
     with open(path, 'r') as f:
         content = f.read()
 
-    # Check if the function already exists
-    if 'def product_list_api' in content:
-        print("✅ product_list_api already exists in views_school.py, skipping.")
+    # Check if already exists
+    if 'def student_list_api' in content:
+        print("✅ student_list_api already exists in views_school.py, skipping.")
         return
 
-    # Find the end of the file, or insert after a known function like global_search_api
-    # We'll insert after the global_search_api function (or at the end)
-    # Look for "def global_search_api" and insert after its closing
-    marker = 'def global_search_api'
+    # Find a good insertion point after an existing API function, e.g., after product_list_api
+    marker = 'def product_list_api'
     if marker not in content:
-        print("❌ Could not find global_search_api function to anchor insertion.")
-        return
+        # Fallback: insert after global_search_api
+        marker = 'def global_search_api'
+        if marker not in content:
+            print("❌ Could not find product_list_api or global_search_api to anchor insertion.")
+            return
 
-    # Find the end of the global_search_api function (the next def or end of file)
     lines = content.splitlines(keepends=True)
     insertion_index = None
     for i, line in enumerate(lines):
-        if line.strip().startswith('def global_search_api'):
+        if line.strip().startswith(marker):
             # Find the next function definition or end of file
             for j in range(i+1, len(lines)):
                 if lines[j].strip().startswith('def '):
@@ -90,22 +92,21 @@ def patch_views_school():
         print("❌ Could not find insertion point.")
         return
 
-    # New function to insert
+    # New function
     new_function = '''
-def product_list_api(request, schema_name):
-    """API: Return list of products with their detail URLs for pre‑caching."""
+def student_list_api(request, schema_name):
+    """API: Return list of students with their profile URLs for pre‑caching."""
     from django.http import JsonResponse
-    from .models import Product
+    from .models import Student
     from django_tenants.utils import schema_context
     with schema_context(schema_name):
-        products = Product.objects.all().values('id', 'name')
-        # Build URLs for both desktop and mobile
+        students = Student.objects.filter(status='active').values('id', 'name')
         data = []
-        for p in products:
+        for s in students:
             data.append({
-                'id': p['id'],
-                'desktop_url': f'/portal/{schema_name}/stock/product/{p["id"]}/',
-                'mobile_url': f'/portal/{schema_name}/stock/product/{p["id"]}/mobile/',
+                'id': s['id'],
+                'desktop_url': f'/portal/{schema_name}/students/{s["id"]}/',
+                'mobile_url': f'/portal/{schema_name}/students/{s["id"]}/mobile/',
             })
         return JsonResponse(data, safe=False)
 
@@ -113,8 +114,7 @@ def product_list_api(request, schema_name):
     lines.insert(insertion_index, new_function)
     with open(path, 'w') as f:
         f.writelines(lines)
-    print("✅ product_list_api added to views_school.py.")
-
+    print("✅ student_list_api added to views_school.py.")
 
 # ----------------------------------------------------------------------
 # 3. Add URL pattern in public_urls.py
@@ -129,58 +129,30 @@ def patch_public_urls():
         content = f.read()
 
     # Check if already added
-    if 'product_list_api' in content:
-        print("✅ product_list_api URL already present, skipping.")
+    if 'student_list_api' in content:
+        print("✅ student_list_api URL already present, skipping.")
         return
 
-    # We need to import the new view and add the URL pattern
-    # Find the import section to add the view
-    import_line = 'from .views import'
-    if import_line not in content:
-        print("❌ Could not find import line for views.")
-        return
-
-    # Add the view to the import list
-    # Find the line and add ', product_list_api'
+    # Add import
     lines = content.splitlines(keepends=True)
     for i, line in enumerate(lines):
         if line.strip().startswith('from .views import'):
-            # Check if product_list_api already in the list (but we already checked)
-            # Add it if not present
-            if 'product_list_api' not in line:
-                # Add after the import (could be multiline, but simple)
-                # Replace the line with same plus , product_list_api
-                # But better to add in the line before the end of imports
-                # We'll insert a line after the import line
-                # Actually we can add it to the import list by appending to the line
-                # But it's safer to add a new line
-                # We'll insert a new import line after the from .views import ...
-                # Find the semicolon or end of line
+            if 'student_list_api' not in line:
                 if line.rstrip().endswith(','):
-                    new_line = line.rstrip() + ' product_list_api'
+                    new_line = line.rstrip() + ' student_list_api'
                 else:
-                    new_line = line.rstrip() + ', product_list_api'
+                    new_line = line.rstrip() + ', student_list_api'
                 lines[i] = new_line + '\n'
-                break
-    else:
-        # If the line is not found, we'll add a new import line near the top
-        # Find the first 'from' import
-        for i, line in enumerate(lines):
-            if line.strip().startswith('from .views import'):
-                # Insert after this line
-                lines.insert(i+1, 'from .views import product_list_api\n')
-                break
+            break
 
-    # Now add the URL pattern
-    url_pattern = "    path('portal/<slug:schema_name>/api/products/', portal_wrapper(login_required_for_schema(product_list_api)), name='product_list_api'),\n"
-    # Find the urlpatterns list
+    # Add URL pattern
+    url_pattern = "    path('portal/<slug:schema_name>/api/students/', portal_wrapper(login_required_for_schema(student_list_api)), name='student_list_api'),\n"
     urlpatterns_start = None
     for i, line in enumerate(lines):
         if line.strip() == 'urlpatterns = [':
             urlpatterns_start = i
             break
     if urlpatterns_start is not None:
-        # Insert the new URL pattern after the opening bracket
         lines.insert(urlpatterns_start+1, url_pattern)
     else:
         print("❌ Could not find urlpatterns list.")
@@ -188,11 +160,10 @@ def patch_public_urls():
 
     with open(path, 'w') as f:
         f.writelines(lines)
-    print("✅ product_list_api URL added to public_urls.py.")
-
+    print("✅ student_list_api URL added to public_urls.py.")
 
 # ----------------------------------------------------------------------
-# 4. Update base templates to pre‑cache all product details
+# 4. Update base templates to pre‑cache all student profiles
 # ----------------------------------------------------------------------
 def patch_base_template(template_path):
     if not os.path.exists(template_path):
@@ -202,86 +173,66 @@ def patch_base_template(template_path):
     with open(template_path, 'r') as f:
         content = f.read()
 
-    # We need to inject a script after the existing pre-caching script
-    # Find the existing pre-caching script block
-    # It starts with: // PRECACHE_PAGES – automatically cache dashboard, student list, and defaulters pages on every load
-    # We'll insert a new block after it, or modify it.
-
-    # Check if the dynamic product caching script already exists
-    if '// DYNAMIC_PRECACHE_PRODUCTS' in content:
-        print(f"✅ Dynamic product pre-caching already in {template_path}, skipping.")
+    # Check if already added
+    if '// DYNAMIC_PRECACHE_STUDENTS' in content:
+        print(f"✅ Dynamic student pre-caching already in {template_path}, skipping.")
         return
 
-    # Find the location after the existing pre-caching script
-    # Look for the closing </script> tag of the existing script
-    # We'll insert after it.
-    # But easier: we can add a new <script> block just before the closing </body> tag.
-    # Since base.html ends with </body>, we can insert right before that.
-
-    # Find the last </body> tag
+    # Insert before </body>
     body_end = content.rfind('</body>')
     if body_end == -1:
         print(f"❌ Could not find </body> tag in {template_path}")
         return
 
-    # New script to fetch and cache all product detail pages
     new_script = '''
 <script>
-// DYNAMIC_PRECACHE_PRODUCTS – fetch and cache all product detail pages
+// DYNAMIC_PRECACHE_STUDENTS – fetch and cache all student profile pages
 (function() {
     if (!('caches' in window)) return;
     const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/products/`;
+    const apiUrl = `/portal/${schema}/api/students/`;
     const cacheName = 'axis-pwa-v4';
 
-    // Wait for page to be fully loaded
     window.addEventListener('load', function() {
         fetch(apiUrl, { cache: 'reload' })
             .then(res => res.json())
-            .then(products => {
-                if (!products || products.length === 0) return;
-                const urls = products.flatMap(p => [p.desktop_url, p.mobile_url]);
-                // Fetch each URL with cache: 'reload' to ensure fresh data
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
                 Promise.all(urls.map(url =>
                     fetch(url, { cache: 'reload' })
                         .then(res => {
                             if (res.ok) {
-                                // Add to cache
                                 return caches.open(cacheName)
                                     .then(cache => cache.put(url, res));
                             }
                         })
-                        .catch(() => {}) // ignore offline errors
-                )).then(() => console.log('[AXIS] Pre‑cached all product detail pages'));
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all student profile pages'));
             })
-            .catch(() => {}); // ignore if API fails
+            .catch(() => {});
     });
 })();
 </script>
 '''
 
-    # Insert the script before </body>
     content = content[:body_end] + new_script + content[body_end:]
-
     with open(template_path, 'w') as f:
         f.write(content)
-    print(f"✅ Dynamic product pre-caching added to {template_path}.")
-
+    print(f"✅ Dynamic student pre-caching added to {template_path}.")
 
 # ----------------------------------------------------------------------
 # Main
 # ----------------------------------------------------------------------
 def main():
-    print("🚀 AXIS Product Details Offline Patcher (Complete)")
+    print("🚀 AXIS Student Profile Offline Patcher")
     patch_sw_js()
     patch_views_school()
     patch_public_urls()
     patch_base_template('templates/tenant/base.html')
     patch_base_template('templates/mobile/base.html')
     print("\n✅ Done! Restart your server and clear browser cache.")
-    print("   On the next page load, all product detail pages will be pre‑cached in the background.")
-    print("   Offline visits to any product detail page will then work.")
-
+    print("   All student profile pages will now be cached on first visit (or via background pre‑caching).")
 
 if __name__ == "__main__":
     main()
