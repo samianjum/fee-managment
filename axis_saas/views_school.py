@@ -4024,3 +4024,21 @@ def global_search_api(request, schema_name):
 
     return JsonResponse(results)
 
+
+def product_list_api(request, schema_name):
+    """API: Return list of products with their detail URLs for pre‑caching."""
+    from django.http import JsonResponse
+    from .models import Product
+    from django_tenants.utils import schema_context
+    with schema_context(schema_name):
+        products = Product.objects.all().values('id', 'name')
+        # Build URLs for both desktop and mobile
+        data = []
+        for p in products:
+            data.append({
+                'id': p['id'],
+                'desktop_url': f'/portal/{schema_name}/stock/product/{p["id"]}/',
+                'mobile_url': f'/portal/{schema_name}/stock/product/{p["id"]}/mobile/',
+            })
+        return JsonResponse(data, safe=False)
+

@@ -60,7 +60,11 @@ self.addEventListener('fetch', event => {
                          /^\/portal\/[^\/]+\/fee\/logs\/?$/.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/fee\/logs\/mobile\/?$/.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/stock\/?$/.test(url.pathname) ||
-                         /^\/portal\/[^\/]+\/stock\/mobile\/?$/.test(url.pathname); (serve from cache if available)
+                         /^\/portal\/[^\/]+\/stock\/mobile\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/stock\/product\/\d+\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/stock\/product\/\d+\/mobile\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/stock\/product\/\d+\/?$/.test(url.pathname) ||
+                         /^\/portal\/[^\/]+\/stock\/product\/\d+\/mobile\/?$/.test(url.pathname); (serve from cache if available)
     if (isCachedPage) {
         event.respondWith(
             caches.match(event.request)

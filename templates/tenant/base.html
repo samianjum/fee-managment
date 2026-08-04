@@ -1093,5 +1093,38 @@
         });
     })();
 </script>
+
+<script>
+// DYNAMIC_PRECACHE_PRODUCTS – fetch and cache all product detail pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/products/`;
+    const cacheName = 'axis-pwa-v4';
+
+    // Wait for page to be fully loaded
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(products => {
+                if (!products || products.length === 0) return;
+                const urls = products.flatMap(p => [p.desktop_url, p.mobile_url]);
+                // Fetch each URL with cache: 'reload' to ensure fresh data
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                // Add to cache
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {}) // ignore offline errors
+                )).then(() => console.log('[AXIS] Pre‑cached all product detail pages'));
+            })
+            .catch(() => {}); // ignore if API fails
+    });
+})();
+</script>
 </body>
 </html>
