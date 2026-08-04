@@ -496,5 +496,41 @@
     </script>
 
     {% include "tenant/voucher_modal.html" %}
+<script>
+    // Register service worker for offline support
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('[SW] Registered'))
+            .catch(err => console.warn('[SW] Registration failed:', err));
+    }
+</script>
+<script>
+    // PRECACHE_PAGES – automatically cache dashboard & student list pages on every load
+    (function() {
+        if (!('caches' in window)) return;
+        const schema = '{{ tenant.schema_name }}';
+        const urls = [
+            `/portal/${schema}/dashboard/`,
+            `/portal/${schema}/dashboard/mobile/`,
+            `/portal/${schema}/students/`,
+            `/portal/${schema}/students/mobile/`
+        ];
+        // Wait for page to be fully loaded
+        window.addEventListener('load', function() {
+            // Fetch each URL with cache: 'reload' to ensure fresh data
+            Promise.all(urls.map(url =>
+                fetch(url, { cache: 'reload' })
+                    .then(res => {
+                        if (res.ok) {
+                            // Add to cache
+                            return caches.open('axis-pwa-v4')
+                                .then(cache => cache.put(url, res));
+                        }
+                    })
+                    .catch(() => {}) // ignore offline errors
+            )).then(() => console.log('[AXIS] Pre‑cached dashboard & student list'));
+        });
+    })();
+</script>
 </body>
 </html>
