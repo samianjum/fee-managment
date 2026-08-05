@@ -87,7 +87,38 @@ self.addEventListener('fetch', event => {
                         fetch(event.request).then(response => {
                             caches.open(CACHE_NAME).then(cache => {
                                 cache.put(event.request, response);
-                            });
+                            }
+    // student-list-cache: when student list API is fetched, cache all student profile pages
+    if (url.pathname.endsWith('/api/students/')) {
+        event.respondWith(
+            fetch(event.request).then(response => {
+                const cloned = response.clone();
+                // Cache the API response itself
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, cloned);
+                });
+                // Also fetch and cache each student profile
+                response.json().then(students => {
+                    if (!students || students.length === 0) return;
+                    const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                    Promise.all(urls.map(url =>
+                        fetch(url, { cache: 'reload' })
+                            .then(res => {
+                                if (res.ok) {
+                                    return caches.open(CACHE_NAME)
+                                        .then(cache => cache.put(url, res));
+                                }
+                            })
+                            .catch(() => {})
+                    )).then(() => console.log('[SW] Pre‑cached student profiles from API'));
+                }).catch(() => {});
+                return response;
+            }).catch(() => {
+                return caches.match(event.request);
+            })
+        );
+    }
+    else );
                         }).catch(() => {});
                         return cached;
                     }
