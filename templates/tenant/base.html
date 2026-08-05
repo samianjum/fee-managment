@@ -1221,5 +1221,41 @@
     });
 })();
 </script>
+
+<script>
+// Periodic refresh for student profiles (every 30 min)
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/students/`;
+    const cacheName = 'axis-pwa-v4';
+
+    function refreshProfiles() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Periodic refresh: student profiles cached'));
+            })
+            .catch(() => {});
+    }
+
+    // Refresh on load and then every 30 minutes
+    window.addEventListener('load', refreshProfiles);
+    setInterval(() => {
+        if (!document.hidden) refreshProfiles();
+    }, 30 * 60 * 1000);
+})();
+</script>
 </body>
 </html>

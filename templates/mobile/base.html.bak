@@ -1,37 +1,63 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
+    <link rel="manifest" href="/portal/{{ tenant.schema_name }}/manifest.json">
+    <meta name="theme-color" content="#ffffff" id="themeColorMeta">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>{% block title %}AXIS Portal{% endblock %}</title>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
+
+        /* ---- Light Theme (Professional - Slate + Blue) ---- */
         :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --bg: #f1f5f9;
-            --surface: #ffffff;
-            --text: #1e293b;
-            --muted: #64748b;
-            --danger: #ef4444;
-            --success: #10b981;
-            --border: #e2e8f0;
-            --shadow: 0 2px 8px rgba(0,0,0,0.06);
-            --radius: 16px;
+            --bg: #F8FAFC;
+            --surface: #FFFFFF;
+            --surface-alt: #F1F5F9;
+            --text: #0F172A;
+            --text-secondary: #475569;
+            --muted: #94A3B8;
+            --border: #E2E8F0;
+            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --accent: #2563EB;
+            --accent-hover: #1D4ED8;
+            --accent-light: #EFF6FF;
+            --radius: 0.75rem;
             --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --transition: all 0.15s ease;
         }
+
+        /* ---- Dark Theme (Professional) ---- */
+        html.dark {
+            --bg: #0F172A;
+            --surface: #1E293B;
+            --surface-alt: #334155;
+            --text: #F1F5F9;
+            --text-secondary: #94A3B8;
+            --muted: #64748B;
+            --border: #334155;
+            --shadow: 0 1px 3px rgba(0,0,0,0.3);
+            --accent: #3B82F6;
+            --accent-hover: #60A5FA;
+            --accent-light: #1E293B;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             background: var(--bg);
             color: var(--text);
-            padding-bottom: 80px;
+            padding-bottom: 72px;
             overflow-x: hidden;
+            transition: background 0.25s, color 0.25s;
+            -webkit-font-smoothing: antialiased;
         }
-        /* Top Bar */
+
+        /* ---- Top Bar ---- */
         .top-bar {
             background: var(--surface);
-            padding: 16px 20px 12px;
+            padding: 12px 16px 10px;
             border-bottom: 1px solid var(--border);
             display: flex;
             align-items: center;
@@ -39,45 +65,58 @@
             position: sticky;
             top: 0;
             z-index: 20;
-            backdrop-filter: blur(6px);
+            transition: background 0.25s, border-color 0.25s;
         }
         .top-bar .left {
             display: flex;
             align-items: center;
             gap: 12px;
+            cursor: pointer;
+            user-select: none;
         }
         .top-bar .logo {
             width: 36px;
             height: 36px;
-            background: var(--primary);
-            border-radius: 12px;
+            background: var(--accent);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: 700;
+            font-weight: 600;
             font-size: 14px;
+            flex-shrink: 0;
+            transition: background 0.25s;
         }
         .top-bar .school-name {
-            font-weight: 700;
-            font-size: 16px;
+            font-weight: 600;
+            font-size: 15px;
             line-height: 1.2;
+            color: var(--text);
         }
         .top-bar .school-name small {
             display: block;
             font-weight: 400;
-            font-size: 11px;
+            font-size: 10px;
             color: var(--muted);
+            letter-spacing: 0.01em;
         }
-        .top-bar .greeting {
-            font-size: 13px;
-            color: var(--muted);
+        .top-bar .actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
-        /* Main content */
+
+        /* ---- Main Content ---- */
         .main-content {
-            padding: 16px 16px 20px;
+            padding: 16px;
+            position: relative;
+            z-index: 1;
+            max-width: 480px;
+            margin: 0 auto;
         }
-        /* Bottom Nav */
+
+        /* ---- Bottom Navigation ---- */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -87,10 +126,9 @@
             border-top: 1px solid var(--border);
             display: flex;
             justify-content: space-around;
-            padding: 8px 0 calc(8px + var(--safe-bottom));
+            padding: 4px 0 calc(4px + var(--safe-bottom));
             z-index: 30;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 -2px 12px rgba(0,0,0,0.04);
+            transition: background 0.25s, border-color 0.25s;
         }
         .bottom-nav .nav-item {
             display: flex;
@@ -99,42 +137,49 @@
             font-size: 10px;
             color: var(--muted);
             text-decoration: none;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: 0.2s;
+            padding: 4px 10px;
+            border-radius: 6px;
+            transition: var(--transition);
+            gap: 1px;
+            min-width: 48px;
         }
         .bottom-nav .nav-item.active {
-            color: var(--primary);
+            color: var(--accent);
         }
         .bottom-nav .nav-item svg {
-            width: 24px;
-            height: 24px;
-            margin-bottom: 2px;
+            width: 22px;
+            height: 22px;
             stroke: currentColor;
             fill: none;
-            stroke-width: 2;
+            stroke-width: 1.8;
         }
         .bottom-nav .nav-item span {
             font-weight: 500;
+            font-size: 9px;
+            letter-spacing: 0.02em;
         }
-        /* Messages */
+
+        /* ---- Messages ---- */
         .message {
-            margin: 8px 16px;
+            margin: 8px 0;
             padding: 10px 14px;
-            border-radius: 10px;
+            border-radius: 6px;
             background: var(--surface);
-            border-left: 4px solid var(--primary);
+            border-left: 3px solid var(--accent);
             font-size: 13px;
             box-shadow: var(--shadow);
+            transition: background 0.25s, border-color 0.25s;
         }
-        .message.success { border-left-color: var(--success); }
-        .message.error { border-left-color: var(--danger); }
-        /* Utilities */
+        .message.success { border-left-color: #22C55E; }
+        .message.error { border-left-color: #EF4444; }
+        .message.warning { border-left-color: #F59E0B; }
+
+        /* ---- Utilities ---- */
         .mt-2 { margin-top: 8px; }
         .mb-2 { margin-bottom: 8px; }
         .text-center { text-align: center; }
         .text-muted { color: var(--muted); }
-        /* Scrollable horizontal */
+        .text-secondary { color: var(--text-secondary); }
         .scroll-x {
             display: flex;
             flex-wrap: nowrap;
@@ -145,94 +190,172 @@
             scroll-snap-type: x mandatory;
         }
         .scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
+
+        /* ---- Cards ---- */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+        }
+
+        /* ---- Buttons ---- */
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        /* ---- Mobile Search ---- */
+        .mobile-search-wrapper {
+            margin: 0 0 0.75rem 0;
+            width: 100%;
+        }
+        .mobile-search-wrapper .global-search-wrapper {
+            width: 100%;
+        }
+        .mobile-search-wrapper .search-input-container {
+            background: var(--surface);
+            border-radius: 2rem;
+            padding: 0.15rem 0.6rem;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.25s;
+            display: flex;
+            align-items: center;
+        }
+        .mobile-search-wrapper .search-input-container:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+        }
+        .mobile-search-wrapper .search-input-container input {
+            font-size: 0.9rem;
+            padding: 0.5rem 0.2rem;
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            color: var(--text);
+        }
+        .mobile-search-wrapper .search-input-container input::placeholder {
+            color: var(--muted);
+            font-weight: 400;
+        }
+        .mobile-search-wrapper .search-input-container .search-icon {
+            color: var(--muted);
+            margin-right: 0.3rem;
+            flex-shrink: 0;
+        }
+        .mobile-search-wrapper .search-dropdown {
+            position: absolute;
+            top: calc(100% + 0.3rem);
+            left: 0;
+            right: 0;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            max-height: 60vh;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            width: 100%;
+        }
+        .mobile-search-wrapper .search-dropdown.open {
+            display: block;
+        }
+        .mobile-search-wrapper .search-result-item {
+            padding: 0.5rem 0.8rem;
+            font-size: 0.85rem;
+            min-height: 44px;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .mobile-search-wrapper .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .mobile-search-wrapper .search-result-item .item-title {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .mobile-search-wrapper .search-result-item .item-sub {
+            font-size: 0.7rem;
+            color: var(--muted);
+        }
+        .mobile-search-wrapper .search-result-item .item-badge {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.4rem;
+            background: var(--accent-light);
+            color: var(--accent);
+            border-radius: 4px;
+        }
+        .mobile-search-wrapper .search-dropdown .empty-message {
+            padding: 1rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        /* ---- PWA Install Button ---- */
+        #installAppBtn {
+            background: var(--accent) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 2rem !important;
+            padding: 0.5rem 1rem !important;
+            font-weight: 500 !important;
+            font-size: 0.8rem !important;
+            box-shadow: 0 2px 12px rgba(37,99,235,0.3) !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.4rem !important;
+            transition: background 0.15s, transform 0.15s !important;
+        }
+        #installAppBtn:hover {
+            background: var(--accent-hover) !important;
+            transform: scale(1.02) !important;
+        }
+        .fallback-modal-content {
+            background: var(--surface);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        /* ---- Utility: hidden toggle hint (optional, no icon) ---- */
+        .theme-toggle-hint {
+            display: none;
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-<script>
-    (function() {
-        let deferredPrompt = null;
-        const installBtn = document.getElementById('installAppBtn');
-        const container = document.getElementById('pwaInstallContainer');
-
-        // Hide button if already installed
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            if (container) container.style.display = 'none';
-            return;
-        }
-
-        // Listen for beforeinstallprompt as early as possible
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            console.log('Install prompt captured');
-            // Show the button (in case it was hidden)
-            if (container) container.style.display = 'flex';
-        });
-
-        // Also listen for appinstalled to hide button
-        window.addEventListener('appinstalled', () => {
-            if (container) container.style.display = 'none';
-            deferredPrompt = null;
-        });
-
-        // Click handler
-        if (installBtn) {
-            installBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const result = await deferredPrompt.userChoice;
-                    if (result.outcome === 'accepted') {
-                        console.log('User accepted install');
-                        if (container) container.style.display = 'none';
-                    } else {
-                        console.log('User dismissed install');
-                    }
-                    deferredPrompt = null;
-                } else {
-                    // No native prompt – show a brief toast instead of a modal
-                    showToast('Installation is not supported in this browser or already installed.');
-                }
-            });
-        }
-
-        // Simple toast function
-        function showToast(msg) {
-            const existing = document.getElementById('installToast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'installToast';
-            toast.style.cssText = `
-                position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                background: #333; color: white; padding: 12px 24px;
-                border-radius: 30px; font-size: 14px; z-index: 9999;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-                max-width: 90%; text-align: center;
-                transition: opacity 0.3s;
-            `;
-            toast.textContent = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                setTimeout(() => toast.remove(), 400);
-            }, 4000);
-        }
-    })();
-</script>
-
-
     <!-- Top Bar -->
     <div class="top-bar">
-        <div class="left">
+        <div class="left" id="themeToggle">
             <div class="logo">{{ tenant.name|slice:":2"|upper }}</div>
             <div class="school-name">
                 {{ tenant.name }}
-                <small>School Management</small>
+                <small>Management Portal</small>
             </div>
         </div>
-        <div class="greeting">👋</div>
-        <div style="margin-left: 0.5rem;">{% include "mobile/notification_bell.html" %}</div>
+        <div class="actions">
+            {% include "mobile/notification_bell.html" %}
+        </div>
     </div>
 
     <!-- Messages -->
@@ -240,23 +363,14 @@
 
     <!-- Main Content -->
     <div class="main-content">
+        <div class="mobile-search-wrapper">
+            {% include "tenant/global_search.html" %}
+        </div>
         {% block body %}{% endblock %}
     </div>
 
     <!-- Bottom Navigation -->
-    
-    <!-- Floating Install Button (mobile) -->
-    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 20px; z-index: 9999; display: flex;">
-        <button id="installAppBtn" style="background: var(--primary); color: white; border: none; border-radius: 2rem; padding: 0.6rem 1.2rem; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
-            </svg>
-            Install App
-        </button>
-    </div>
-
-
-<nav class="bottom-nav">
+    <nav class="bottom-nav">
         <a href="{% url 'mobile_dashboard' schema_name=tenant.schema_name %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'mobile_dashboard' %}active{% endif %}">
             <svg viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
             <span>Home</span>
@@ -270,7 +384,7 @@
             <span>Collect</span>
         </a>
         <a href="{% url 'mobile_stock_management' schema_name=tenant.schema_name %}" class="nav-item {% if 'stock' in request.resolver_match.url_name %}active{% endif %}">
-            <svg viewBox="0 0 24 24"><path d="M3 3h18v4H3V3zm0 7h18v11H3V10zm3 3v5h3v-5H6zm6 0v5h3v-5h-3z"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M20 7h-4.18A3 3 0 0016 5.18V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v1.18A3 3 0 008.18 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M12 12v4m-2-2h4"/></svg>
             <span>Stock</span>
         </a>
         <a href="{% url 'mobile_more' schema_name=tenant.schema_name %}" class="nav-item {% if request.resolver_match.url_name == 'mobile_more' %}active{% endif %}">
@@ -279,71 +393,283 @@
         </a>
     </nav>
 
+    <!-- PWA Install Button -->
+    <div id="pwaInstallContainer" style="position: fixed; bottom: 80px; right: 16px; z-index: 9999; display: flex;">
+        <button id="installAppBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/>
+            </svg>
+            Install App
+        </button>
+    </div>
+
+    <!-- Install Fallback Modal -->
+    <div id="installFallbackModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+        <div class="fallback-modal-content" style="border-radius: 0.75rem; padding: 1.5rem; max-width: 360px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.2);">
+            <h3 style="margin-top:0; font-size:1.1rem; color: var(--text);">Install AXIS App</h3>
+            <p style="color: var(--text-secondary); font-size:0.9rem; margin:0.5rem 0;">To install manually:</p>
+            <ul style="padding-left:1.2rem; margin:0.3rem 0; color: var(--text); font-size:0.85rem;">
+                <li><strong>Chrome/Edge:</strong> Tap the <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display:inline;vertical-align:middle;"><path d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4 4 4-4"/></svg> icon in address bar</li>
+                <li><strong>Firefox:</strong> Menu → "Add to Home screen"</li>
+                <li><strong>Safari:</strong> Share → "Add to Home Screen"</li>
+            </ul>
+            <button id="closeFallbackModal" style="background: var(--accent); color: white; border: none; border-radius: 2rem; padding: 0.4rem 1.2rem; font-weight: 500; cursor: pointer; font-size:0.85rem; margin-top:0.5rem;">Got it</button>
+        </div>
+    </div>
+
     <script>
-        // Close any open dropdowns etc.
-        console.log('Mobile mode active');
-    </script>
-    {% block scripts %}{% endblock %}
-    {% include "tenant/voucher_modal.html" %}
+        (function() {
+            // ---------- Theme Toggle (hidden on logo) ----------
+            const toggleElement = document.getElementById('themeToggle');
+            const html = document.documentElement;
+            const themeMeta = document.getElementById('themeColorMeta');
 
-<!-- Fallback Install Modal -->
-
-</div>
-
-
-<script>
-    (function() {
-        let deferredPrompt;
-        const floatingBtn = document.getElementById('installAppBtn');
-        const fallbackModal = document.getElementById('installFallbackModal');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            console.log('beforeinstallprompt fired');
-        });
-
-        async function triggerInstall() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const result = await deferredPrompt.userChoice;
-                if (result.outcome === 'accepted') {
-                    console.log('User accepted install');
-                    const container = document.getElementById('pwaInstallContainer');
-                    if (container) container.style.display = 'none';
+            function setTheme(dark) {
+                if (dark) {
+                    html.classList.add('dark');
+                    themeMeta.content = '#0F172A';
+                    localStorage.setItem('axisTheme', 'dark');
                 } else {
-                    console.log('User dismissed install');
+                    html.classList.remove('dark');
+                    themeMeta.content = '#ffffff';
+                    localStorage.setItem('axisTheme', 'light');
                 }
-                deferredPrompt = null;
-            } else {
-                // No native prompt – show fallback modal
-                if (fallbackModal) fallbackModal.style.display = 'flex';
             }
-        }
 
-        if (floatingBtn) {
-            floatingBtn.addEventListener('click', triggerInstall);
-        }
+            // Load saved theme
+            const savedTheme = localStorage.getItem('axisTheme');
+            if (savedTheme === 'dark') {
+                setTheme(true);
+            } else {
+                setTheme(false);
+            }
 
-        window.addEventListener('appinstalled', () => {
-            console.log('App installed');
+            // Toggle on click of the logo area
+            toggleElement.addEventListener('click', function(e) {
+                const isDark = html.classList.contains('dark');
+                setTheme(!isDark);
+            });
+
+            // ---------- PWA Install ----------
+            let deferredPrompt = null;
+            const installBtn = document.getElementById('installAppBtn');
             const container = document.getElementById('pwaInstallContainer');
-            if (container) container.style.display = 'none';
-        });
+            const fallbackModal = document.getElementById('installFallbackModal');
 
-        const closeFallback = document.getElementById('');
-        if (closeFallback) {
-            closeFallback.addEventListener('click', () => {
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                if (container) container.style.display = 'none';
+            }
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (container) container.style.display = 'flex';
+            });
+
+            window.addEventListener('appinstalled', () => {
+                if (container) container.style.display = 'none';
+                deferredPrompt = null;
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const result = await deferredPrompt.userChoice;
+                    if (result.outcome === 'accepted') {
+                        if (container) container.style.display = 'none';
+                    } else {
+                        if (fallbackModal) fallbackModal.style.display = 'flex';
+                    }
+                    deferredPrompt = null;
+                } else {
+                    if (fallbackModal) fallbackModal.style.display = 'flex';
+                }
+            });
+
+            document.getElementById('closeFallbackModal')?.addEventListener('click', () => {
                 if (fallbackModal) fallbackModal.style.display = 'none';
             });
-        }
-        if (fallbackModal) {
-            fallbackModal.addEventListener('click', (e) => {
+            fallbackModal?.addEventListener('click', (e) => {
                 if (e.target === fallbackModal) fallbackModal.style.display = 'none';
             });
-        }
+        })();
+    </script>
+
+    {% include "tenant/voucher_modal.html" %}
+<script>
+    // Register service worker for offline support
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(() => console.log('[SW] Registered'))
+            .catch(err => console.warn('[SW] Registration failed:', err));
+    }
+</script>
+<script>
+    // PRECACHE_PAGES – automatically cache dashboard, student list, and defaulters pages on every load
+    (function() {
+        if (!('caches' in window)) return;
+        const schema = '{{ tenant.schema_name }}';
+        const urls = [
+            `/portal/${schema}/dashboard/`,
+            `/portal/${schema}/dashboard/mobile/`,
+            `/portal/${schema}/students/`,
+            `/portal/${schema}/students/mobile/`,
+            `/portal/${schema}/defaulters/`,
+            `/portal/${schema}/defaulters/mobile/`,
+    `/portal/${schema}/reports/`,
+    `/portal/${schema}/reports/mobile/`,
+    `/portal/${schema}/fee/structure/`,
+    `/portal/${schema}/fee/structure/mobile/`,
+    `/portal/${schema}/vouchers/`,
+    `/portal/${schema}/vouchers/mobile/`,
+    `/portal/${schema}/fee/logs/`,
+    `/portal/${schema}/fee/logs/mobile/`,
+    `/portal/${schema}/stock/`,
+    `/portal/${schema}/stock/mobile/`,
+    `/portal/${schema}/fee/collection/`,
+    `/portal/${schema}/fee/collection/mobile/`,
+    `/portal/${schema}/fee/settings/`,
+    `/portal/${schema}/fee/settings/mobile/`,
+];
+        // Wait for page to be fully loaded
+        window.addEventListener('load', function() {
+            // Fetch each URL with cache: 'reload' to ensure fresh data
+            Promise.all(urls.map(url =>
+                fetch(url, { cache: 'reload' })
+                    .then(res => {
+                        if (res.ok) {
+                            // Add to cache
+                            return caches.open('axis-pwa-v4')
+                                .then(cache => cache.put(url, res));
+                        }
+                    })
+                    .catch(() => {}) // ignore offline errors
+            )).then(() => console.log('[AXIS] Pre‑cached dashboard & student list'));
+        });
     })();
 </script>
 
+<script>
+// DYNAMIC_PRECACHE_PRODUCTS – fetch and cache all product detail pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/products/`;
+    const cacheName = 'axis-pwa-v4';
+
+    // Wait for page to be fully loaded
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(products => {
+                if (!products || products.length === 0) return;
+                const urls = products.flatMap(p => [p.desktop_url, p.mobile_url]);
+                // Fetch each URL with cache: 'reload' to ensure fresh data
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                // Add to cache
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {}) // ignore offline errors
+                )).then(() => console.log('[AXIS] Pre‑cached all product detail pages'));
+            })
+            .catch(() => {}); // ignore if API fails
+    });
+})();
+</script>
+
+<script>
+// DYNAMIC_PRECACHE_STUDENTS – fetch and cache all student profile pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/students/`;
+    const cacheName = 'axis-pwa-v4';
+
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all student profile pages'));
+            })
+            .catch(() => {});
+    });
+})();
+</script>
+
+<script>
+// DYNAMIC_PRECACHE_RECEIPTS – fetch and cache all receipt pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/receipts/`;
+    const cacheName = 'axis-pwa-v4';
+
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(receipts => {
+                if (!receipts || receipts.length === 0) return;
+                const urls = receipts.flatMap(r => [r.desktop_url, r.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all receipt pages'));
+            })
+            .catch(() => {});
+    });
+})();
+</script>
+
+<script>
+// DYNAMIC_PRECACHE_FEE_COLLECTION – fetch and cache all fee collection pages
+(function() {
+    if (!('caches' in window)) return;
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/fee-collection/`;
+    const cacheName = 'axis-pwa-v4';
+
+    window.addEventListener('load', function() {
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => {
+                            if (res.ok) {
+                                return caches.open(cacheName)
+                                    .then(cache => cache.put(url, res));
+                            }
+                        })
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Pre‑cached all fee collection pages'));
+            })
+            .catch(() => {});
+    });
+})();
+</script>
 </body>
 </html>
