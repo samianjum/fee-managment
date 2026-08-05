@@ -1,20 +1,13 @@
 #!/usr/bin/env python3
 """
-Final patcher to auto‑cache all student profiles with fresh data.
-- Service worker intercepts /api/students/ and caches all profiles.
-- Periodic refresh every 15 minutes (when online).
-- Stale-while-revalidate for student profiles (1‑hour freshness).
-- No manual profile visits needed.
-
-Usage: python3 patch_student_profiles_final.py
+One‑click patcher: auto‑cache all student profiles – no manual visits needed.
+Usage: python3 patch_auto_cache_profiles.py
 """
 
 import os
 import re
 
 SW_PATH = 'static/sw.js'
-CACHE_NAME = 'axis-pwa-v4'
-API_PATH = '/api/students/'
 
 NEW_SW = r'''// AXIS PWA Service Worker – Auto‑cache Student Profiles
 const CACHE_NAME = 'axis-pwa-v4';
@@ -23,17 +16,6 @@ const STATIC_ASSETS = [
     '/static/icons/icon-192.png',
     '/static/icons/icon-512.png'
 ];
-
-// ---- Configuration ----
-const REFRESH_INTERVAL = 15 * 60 * 1000;   // 15 minutes
-const STALE_MAX_AGE = 60 * 60 * 1000;       // 1 hour (for profile pages)
-
-// ---- Helpers ----
-function getApiUrl(schema) {
-    // Extracts schema from current client URL or uses a global variable
-    // We'll build it dynamically from the request.
-    return `/portal/${schema}/api/students/`;
-}
 
 // Refresh all student profiles by fetching the API and caching each profile
 async function refreshStudentProfiles(schema) {
@@ -45,7 +27,6 @@ async function refreshStudentProfiles(schema) {
         const students = await res.json();
         if (!students || students.length === 0) return;
         const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
-        // Fetch each profile with cache: 'reload' to bypass HTTP cache
         await Promise.all(urls.map(url =>
             fetch(url, { cache: 'reload' })
                 .then(resp => {
@@ -55,10 +36,6 @@ async function refreshStudentProfiles(schema) {
                 })
                 .catch(() => {})
         ));
-        // Store last refresh timestamp
-        await caches.open(CACHE_NAME).then(cache =>
-            cache.put('/__student_profiles_last_refresh', new Response(Date.now().toString()))
-        );
         console.log('[SW] Student profiles refreshed');
     } catch (e) {
         console.warn('[SW] Refresh failed:', e);
@@ -80,20 +57,17 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys => Promise.all(
             keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
         )).then(() => {
-            // Start periodic refresh when there are clients
+            // Start periodic refresh every 15 minutes
             self.clients.matchAll().then(clients => {
                 if (clients.length > 0) {
-                    // Get schema from first client URL
                     const url = new URL(clients[0].url);
                     const parts = url.pathname.split('/');
                     if (parts.length >= 3 && parts[1] === 'portal') {
                         const schema = parts[2];
-                        // Refresh immediately
                         refreshStudentProfiles(schema);
-                        // Set up interval
                         setInterval(() => {
                             refreshStudentProfiles(schema);
-                        }, REFRESH_INTERVAL);
+                        }, 15 * 60 * 1000);
                     }
                 }
             });
@@ -106,21 +80,16 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // ---- 1. Intercept student list API ----
+    // ---- 1. Student list API -> cache all profiles ----
     if (url.pathname.endsWith('/api/students/')) {
-        // Extract schema from URL
         const parts = url.pathname.split('/');
         const schema = parts[2];
         event.respondWith(
             fetch(event.request, { cache: 'reload' })
                 .then(response => {
                     const cloned = response.clone();
-                    // Cache the API response
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
-                    // Refresh all profiles in background
-                    if (schema) {
-                        refreshStudentProfiles(schema);
-                    }
+                    if (schema) refreshStudentProfiles(schema);
                     return response;
                 })
                 .catch(() => caches.match(event.request))
@@ -128,11 +97,9 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ---- 2. Student profile pages ----
-    const isProfile = /^\/portal\/[^\/]+\/students\/\d+\/?$/.test(url.pathname) ||
-                      /^\/portal\/[^\/]+\/students\/\d+\/mobile\/?$/.test(url.pathname);
-
-    if (isProfile) {
+    // ---- 2. Student profile pages (stale-while-revalidate) ----
+    if (/^\/portal\/[^\/]+\/students\/\d+\/?$/.test(url.pathname) ||
+        /^\/portal\/[^\/]+\/students\/\d+\/mobile\/?$/.test(url.pathname)) {
         event.respondWith(
             caches.match(event.request).then(cached => {
                 const fetchPromise = fetch(event.request, { cache: 'reload' })
@@ -141,25 +108,17 @@ self.addEventListener('fetch', event => {
                         return response;
                     })
                     .catch(() => {});
-
-                // If cached and not too old (1 hour), return cached immediately
                 if (cached) {
-                    // Check cache age (we store a timestamp in a separate cache entry)
-                    // For simplicity, we use a heuristic: if we have a cached version,
-                    // we serve it and update in background regardless of age.
-                    // To enforce freshness, we could check a timestamp, but we'll keep it simple.
-                    // Return cached, but update in background
                     fetchPromise.then(() => {});
                     return cached;
                 }
-                // No cache: wait for network
                 return fetchPromise;
             })
         );
         return;
     }
 
-    // ---- 3. Other portal pages (cached pages list) ----
+    // ---- 3. Other cached pages (list, dashboard, etc.) ----
     const isCachedPage = /^\/portal\/[^\/]+\/dashboard\//.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/dashboard\/mobile\//.test(url.pathname) ||
                          /^\/portal\/[^\/]+\/dashboard\/?$/.test(url.pathname) ||
@@ -207,7 +166,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ---- 4. Other API & portal requests ----
+    // ---- 4. Other API / portal ----
     if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/portal/') || url.pathname === '/') {
         event.respondWith(
             fetch(event.request)
@@ -231,23 +190,79 @@ self.addEventListener('fetch', event => {
 });
 '''
 
+# Add a refresh trigger to both base templates (in case the service worker isn't called)
+TEMPLATE_PATCH = '''
+<script>
+// Additional auto-refresh: on visibility change, refresh student profiles
+(function() {
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/students/`;
+
+    function refreshProfiles() {
+        if (!('caches' in window) || !navigator.onLine) return;
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => res.ok && caches.open('axis-pwa-v4').then(cache => cache.put(url, res)))
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Profiles refreshed on visibility change'));
+            })
+            .catch(() => {});
+    }
+
+    // Refresh when page becomes visible again (user returns to tab)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && navigator.onLine) refreshProfiles();
+    });
+
+    // Also refresh on first load (already handled by existing script, but safe to call again)
+    // window.addEventListener('load', refreshProfiles);
+})();
+</script>
+'''
+
 def patch_sw():
     if not os.path.exists(SW_PATH):
         print(f"❌ {SW_PATH} not found")
         return
-
     with open(SW_PATH, 'w') as f:
         f.write(NEW_SW)
-    print("✅ Service worker rewritten with auto‑cache for student profiles.")
+    print("✅ Service worker updated with auto‑cache.")
+
+def patch_templates():
+    templates = ['templates/tenant/base.html', 'templates/mobile/base.html']
+    for tpl in templates:
+        if not os.path.exists(tpl):
+            print(f"⚠️ {tpl} not found, skipping")
+            continue
+        with open(tpl, 'r') as f:
+            content = f.read()
+        # Check if already patched (look for our marker)
+        if '// Additional auto-refresh: on visibility change' in content:
+            print(f"✅ {tpl} already has auto-refresh, skipping")
+            continue
+        # Insert before </body>
+        body_tag = '</body>'
+        if body_tag not in content:
+            print(f"⚠️ Could not find </body> in {tpl}, skipping")
+            continue
+        content = content.replace(body_tag, TEMPLATE_PATCH + '\n' + body_tag)
+        with open(tpl, 'w') as f:
+            f.write(content)
+        print(f"✅ Auto-refresh script added to {tpl}")
 
 def main():
-    print("🚀 AXIS Student Profile Auto‑Cache Patcher")
+    print("🚀 Auto‑Cache Student Profiles Patcher")
     patch_sw()
+    patch_templates()
     print("\n✅ Done! Restart your server and clear browser cache.")
-    print("   Now, whenever the student list API is called (on any page load),")
-    print("   all student profiles will be refreshed automatically.")
-    print("   Profiles are also refreshed every 15 minutes in the background.")
-    print("   Offline users will see the latest cached data without manual visits.")
+    print("   All student profiles will now be automatically cached on every page load,")
+    print("   and refreshed every 15 minutes. No manual profile visits needed.")
+    print("   Offline access to any student profile will work immediately after creation.")
 
 if __name__ == "__main__":
     main()

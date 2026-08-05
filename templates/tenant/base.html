@@ -1257,5 +1257,38 @@
     }, 30 * 60 * 1000);
 })();
 </script>
+
+<script>
+// Additional auto-refresh: on visibility change, refresh student profiles
+(function() {
+    const schema = '{{ tenant.schema_name }}';
+    const apiUrl = `/portal/${schema}/api/students/`;
+
+    function refreshProfiles() {
+        if (!('caches' in window) || !navigator.onLine) return;
+        fetch(apiUrl, { cache: 'reload' })
+            .then(res => res.json())
+            .then(students => {
+                if (!students || students.length === 0) return;
+                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
+                Promise.all(urls.map(url =>
+                    fetch(url, { cache: 'reload' })
+                        .then(res => res.ok && caches.open('axis-pwa-v4').then(cache => cache.put(url, res)))
+                        .catch(() => {})
+                )).then(() => console.log('[AXIS] Profiles refreshed on visibility change'));
+            })
+            .catch(() => {});
+    }
+
+    // Refresh when page becomes visible again (user returns to tab)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && navigator.onLine) refreshProfiles();
+    });
+
+    // Also refresh on first load (already handled by existing script, but safe to call again)
+    // window.addEventListener('load', refreshProfiles);
+})();
+</script>
+
 </body>
 </html>
