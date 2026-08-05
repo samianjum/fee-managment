@@ -1282,7 +1282,7 @@ def add_student(request, schema_name):
                         student.custom_fee = fee_struct.monthly_fee
                 student.save()
                 messages.success(request, f"Student {student.name} added successfully. Roll No: {student.roll_number}")
-                return redirect("student_list", schema_name=schema_name)
+                return redirect("student_profile", schema_name=schema_name, student_id=student.id)
         else:
             form = StudentForm()
         grades = FeeStructure.objects.values_list("grade", flat=True).distinct()
@@ -1310,7 +1310,7 @@ def add_student_mobile(request, schema_name):
                         student.custom_fee = fee_struct.monthly_fee
                 student.save()
                 messages.success(request, f"Student {student.name} added successfully. Roll No: {student.roll_number}")
-                return redirect("mobile_student_list", schema_name=schema_name)
+                return redirect("mobile_student_profile", schema_name=schema_name, student_id=student.id)
         else:
             form = StudentForm()
         grades = FeeStructure.objects.values_list("grade", flat=True).distinct()
@@ -1339,7 +1339,7 @@ def edit_student(request, schema_name, student_id):
                 # Redirect to mobile profile if mobile user agent
                 if is_mobile_user_agent(request):
                     return redirect('mobile_student_profile', schema_name=schema_name, student_id=student.id)
-                return redirect("student_list", schema_name=schema_name)
+                return redirect("student_profile", schema_name=schema_name, student_id=student.id)
         else:
             form = StudentForm(instance=student)
         grades = FeeStructure.objects.values_list("grade", flat=True).distinct()
