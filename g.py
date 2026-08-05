@@ -1,121 +1,72 @@
 #!/usr/bin/env python3
 """
-Patcher to enhance service worker: when student list API is fetched,
-automatically cache all student profile pages.
-Run: python3 patch_student_offline_sw.py
+AXIS Student Offline Caching Patcher
+------------------------------------
+Modifies add_student and add_student_mobile views to redirect to the new
+student's profile page. This forces the service worker to cache the profile
+immediately after creation, making it available offline.
 """
 
-import re
 import os
+import re
+import shutil
+from pathlib import Path
 
-SW_PATH = 'static/sw.js'
+VIEWS_FILE = Path("axis_saas/views_school.py")
+BACKUP_SUFFIX = ".backup"
 
-# ----------------------------------------------------------------------
-# Patch service worker to intercept student list API and cache profiles
-# ----------------------------------------------------------------------
-def patch_sw():
-    if not os.path.exists(SW_PATH):
-        print(f"❌ {SW_PATH} not found")
-        return
+def patch_views():
+    if not VIEWS_FILE.exists():
+        print(f"❌ Error: {VIEWS_FILE} not found.")
+        print("   Please run this script from the project root directory.")
+        return False
 
-    with open(SW_PATH, 'r') as f:
+    # Create a backup
+    backup_path = VIEWS_FILE.with_suffix(VIEWS_FILE.suffix + BACKUP_SUFFIX)
+    shutil.copy2(VIEWS_FILE, backup_path)
+    print(f"✅ Backup created: {backup_path}")
+
+    with open(VIEWS_FILE, "r") as f:
         content = f.read()
 
-    # Check if already patched
-    if 'student-list-cache' in content:
-        print("✅ Service worker already patched for student list API, skipping.")
-        return
+    # ----- Patch add_student -----
+    # Find the redirect line in add_student
+    pattern_add = r'(return redirect\("student_list",\s*schema_name=schema_name\))'
+    replacement_add = r'return redirect("student_profile", schema_name=schema_name, student_id=student.id)'
+    new_content, count_add = re.subn(pattern_add, replacement_add, content)
 
-    # Find the fetch event handler's API/portal branch
-    # We'll insert a check for /api/students/ and cache profile pages.
-    # Look for the line: else if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/portal/') || url.pathname === '/') {
-    pattern = r'(else if \(url\.pathname\.startsWith\(\'\/api\/\'\) \|\| url\.pathname\.startsWith\(\'\/portal\/\'\) \|\| url\.pathname === \'\/\'\) \{)'
-    match = re.search(pattern, content, re.DOTALL)
-    if not match:
-        print("❌ Could not find the API/portal fetch branch in sw.js")
-        return
+    if count_add == 0:
+        print("⚠️  Could not find redirect('student_list') in add_student. Skipping.")
+    else:
+        print(f"✅ add_student: replaced redirect (found {count_add} occurrence).")
 
-    # We'll insert our custom logic inside that branch, before the existing fetch/respondWith.
-    # We need to locate the exact fetch call and add a .then that caches profiles.
-    # But we can also add a separate condition before that block, but to keep it clean, we'll add a new branch before it.
+    # ----- Patch add_student_mobile -----
+    pattern_mobile = r'(return redirect\("mobile_student_list",\s*schema_name=schema_name\))'
+    replacement_mobile = r'return redirect("mobile_student_profile", schema_name=schema_name, student_id=student.id)'
+    new_content, count_mobile = re.subn(pattern_mobile, replacement_mobile, new_content)
 
-    # Actually we can add a new condition specifically for the student list API.
-    # Find the start of the fetch event listener.
-    fetch_listener = 'self.addEventListener(\'fetch\', event => {'
-    if fetch_listener not in content:
-        print("❌ Could not find fetch event listener")
-        return
+    if count_mobile == 0:
+        print("⚠️  Could not find redirect('mobile_student_list') in add_student_mobile. Skipping.")
+    else:
+        print(f"✅ add_student_mobile: replaced redirect (found {count_mobile} occurrence).")
 
-    # We'll add a new conditional block inside the fetch listener, before the existing isCachedPage check.
-    # But to avoid messing up, we'll insert after the isCachedPage block, before the else-if for API.
-    # Let's find the line where isCachedPage ends and the else-if begins.
-    # The existing code has:
-    # if (isCachedPage) { ... }
-    # else if (url.pathname.startsWith('/api/') || ... ) { ... }
-    # We'll insert a new 'if' after the isCachedPage block.
+    if count_add == 0 and count_mobile == 0:
+        print("❌ No changes were made. The file may already be patched or the patterns differ.")
+        return False
 
-    # We'll find the position after the closing brace of the isCachedPage if statement.
-    # It's easier to append our logic after the isCachedPage block but before the next else-if.
-    # We'll search for the end of the isCachedPage block: the line with the closing brace before the next else.
-    # Pattern: if (isCachedPage) { ... } (the block may span multiple lines)
-    # We'll use a regex to find the entire isCachedPage block and insert after it.
+    # Write the updated content
+    with open(VIEWS_FILE, "w") as f:
+        f.write(new_content)
 
-    is_cached_block = r'(if \(isCachedPage\) \{.*?\n\s*\})'
-    match_block = re.search(is_cached_block, content, re.DOTALL)
-    if not match_block:
-        print("❌ Could not find isCachedPage block")
-        return
-
-    # Build the new block to insert after it
-    new_block = '''
-    // student-list-cache: when student list API is fetched, cache all student profile pages
-    if (url.pathname.endsWith('/api/students/')) {
-        event.respondWith(
-            fetch(event.request).then(response => {
-                const cloned = response.clone();
-                // Cache the API response itself
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, cloned);
-                });
-                // Also fetch and cache each student profile
-                response.json().then(students => {
-                    if (!students || students.length === 0) return;
-                    const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
-                    Promise.all(urls.map(url =>
-                        fetch(url, { cache: 'reload' })
-                            .then(res => {
-                                if (res.ok) {
-                                    return caches.open(CACHE_NAME)
-                                        .then(cache => cache.put(url, res));
-                                }
-                            })
-                            .catch(() => {})
-                    )).then(() => console.log('[SW] Pre‑cached student profiles from API'));
-                }).catch(() => {});
-                return response;
-            }).catch(() => {
-                return caches.match(event.request);
-            })
-        );
-    }
-    else '''
-    # Insert after the isCachedPage block
-    insert_pos = match_block.end()
-    content = content[:insert_pos] + new_block + content[insert_pos:]
-
-    with open(SW_PATH, 'w') as f:
-        f.write(content)
-    print("✅ Service worker patched with student list API caching.")
-
-# ----------------------------------------------------------------------
-# Main
-# ----------------------------------------------------------------------
-def main():
-    print("🚀 AXIS Student Profile Offline SW Patcher")
-    patch_sw()
-    print("\n✅ Done! Restart your server and clear browser cache.")
-    print("   Now, whenever the student list API is called (on any page load),")
-    print("   all student profile pages will be cached automatically.")
+    print(f"✅ {VIEWS_FILE} updated successfully.")
+    return True
 
 if __name__ == "__main__":
-    main()
+    print("🚀 AXIS Student Offline Caching Patcher")
+    print("   This script modifies the views to redirect to student profile after creation.")
+    success = patch_views()
+    if success:
+        print("\n✅ Done! Restart your server and test adding a new student.")
+        print("   The new student's profile will now be cached automatically.")
+    else:
+        print("\n❌ Patching failed. Please check the file paths and try again.")
