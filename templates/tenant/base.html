@@ -1,3 +1,4 @@
+{% load static %}
 {% load fee_extras %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
@@ -1290,5 +1291,9 @@
 })();
 </script>
 
+    <script src="{% static 'js/offline_student.js' %}"></script>
+    <script>
+        window.AXIS_SCHEMA = '{{ tenant.schema_name }}';
+    </script>
 </body>
 </html>
