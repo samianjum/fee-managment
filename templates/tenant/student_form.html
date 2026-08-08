@@ -146,12 +146,50 @@
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
-            if (!window.offlineStudent?.submitForm) {
-                alert('Offline mode is unavailable on this device.');
+            const redirectUrl = '{% url "student_list" schema_name=tenant.schema_name %}';
+            const payload = Object.fromEntries(new FormData(form).entries());
+            const fallbackMessage = 'Student saved offline. It will sync automatically when the connection returns.';
+
+            if (window.offlineStudent?.submitForm) {
+                window.offlineStudent.submitForm(form, redirectUrl);
                 return;
             }
 
-            window.offlineStudent.submitForm(form, '{% url "student_list" schema_name=tenant.schema_name %}');
+            try {
+                const dbName = 'AxisOfflineDB';
+                const storeName = 'offlineStudents';
+                const request = indexedDB.open(dbName, 1);
+                request.onupgradeneeded = function (evt) {
+                    const db = evt.target.result;
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+                request.onsuccess = function (evt) {
+                    const db = evt.target.result;
+                    const transaction = db.transaction(storeName, 'readwrite');
+                    const store = transaction.objectStore(storeName);
+                    const saveRequest = store.add({
+                        data: payload,
+                        submitted_at: new Date().toISOString(),
+                        redirect_to: redirectUrl
+                    });
+                    saveRequest.onsuccess = function () {
+                        alert(fallbackMessage);
+                        form.reset();
+                        window.location.assign(redirectUrl);
+                    };
+                    saveRequest.onerror = function () {
+                        alert('Could not save student offline. Please try again.');
+                    };
+                };
+                request.onerror = function () {
+                    alert('Could not save student offline. Please try again.');
+                };
+            } catch (error) {
+                console.error(error);
+                alert('Could not save student offline. Please try again.');
+            }
         });
     });
 </script>
