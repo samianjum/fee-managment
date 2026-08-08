@@ -115,11 +115,26 @@
         }
     }
 
+    function isStudentListPage() {
+        if (typeof window === 'undefined') return false;
+        const path = window.location.pathname || '';
+        return /\/portal\/[^/]+\/students\/(?:mobile\/)?$/.test(path);
+    }
+
+    function refreshStudentListPage() {
+        if (!isStudentListPage()) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('__offline_sync', Date.now().toString());
+        window.location.replace(url.toString());
+    }
+
     // Sync function: send all offline students to server
     async function syncOfflineStudents() {
         if (!navigator.onLine) return;
         const students = await getOfflineStudents();
         if (students.length === 0) return;
+
+        let shouldRefreshList = false;
 
         // Get schema from window variable or from URL
         let schema = window.AXIS_SCHEMA || '';
@@ -147,6 +162,7 @@
                 });
                 if (resp.ok) {
                     await deleteOfflineStudent(student.id);
+                    shouldRefreshList = true;
                     showToast('✅ Student synced: ' + student.data.name);
                 } else {
                     const errorText = await resp.text();
@@ -155,6 +171,10 @@
             } catch (e) {
                 console.error('Sync error:', e);
             }
+        }
+
+        if (shouldRefreshList) {
+            setTimeout(refreshStudentListPage, 800);
         }
     }
 
