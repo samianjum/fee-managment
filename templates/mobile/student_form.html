@@ -1,4 +1,5 @@
 {% extends 'mobile/base.html' %}
+{% load static %}
 {% load fee_extras %}
 {% block title %}{% if student %}Edit{% else %}Add{% endif %} Student | {{ tenant.name }}{% endblock %}
 
@@ -115,9 +116,44 @@
   </form>
 </div>
 
+<script src="{% static 'js/offline_student.js' %}"></script>
 <script>
-  // Auto-format CNIC field
+  window.AXIS_SCHEMA = '{{ tenant.schema_name }}';
+
   document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('studentForm');
+    if (form) {
+      form.addEventListener('submit', function (event) {
+        if (navigator.onLine) return;
+
+        event.preventDefault();
+        const payload = Object.fromEntries(new FormData(form).entries());
+
+        if (!window.offlineStudent?.save) {
+          alert('Offline mode is unavailable on this device.');
+          return;
+        }
+
+        window.offlineStudent.save({
+          data: payload,
+          submitted_at: new Date().toISOString()
+        }).then(() => {
+          const message = 'Student saved offline. It will sync automatically when the connection returns.';
+          if (window.offlineStudent?.notify) {
+            window.offlineStudent.notify(message);
+          } else {
+            alert(message);
+          }
+          form.reset();
+          window.location.href = '{% url "mobile_student_list" schema_name=tenant.schema_name %}';
+        }).catch((error) => {
+          console.error('Could not save student offline', error);
+          alert('Could not save student offline. Please try again.');
+        });
+      });
+    }
+
+    // Auto-format CNIC field
     const cnicField = document.querySelector('input[name="father_cnic"]');
     if (cnicField) {
       cnicField.addEventListener('input', function(e) {

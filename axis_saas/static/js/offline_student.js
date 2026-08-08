@@ -147,7 +147,8 @@
     window.offlineStudent = {
         save: saveOfflineStudent,
         sync: syncOfflineStudents,
-        getPending: getOfflineStudents
+        getPending: getOfflineStudents,
+        notify: showToast
     };
 
     // Auto-sync when online

@@ -113,6 +113,22 @@ def get_tenant(request, schema_name):
     with schema_context('public'):
         return get_object_or_404(SchoolClient, schema_name=schema_name)
 
+
+def create_student_from_payload(schema_name, payload):
+    with schema_context(schema_name):
+        form = StudentForm(payload)
+        if not form.is_valid():
+            return None, form
+
+        student = form.save(commit=False)
+        if not student.custom_fee:
+            fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
+            if fee_struct:
+                student.custom_fee = fee_struct.monthly_fee
+        student.save()
+        return student, form
+
+
 MOBILE_AGENT_RE = re.compile(r"Mobile|Android|iP(hone|od|ad)|Opera Mini|IEMobile|BlackBerry|webOS|Fennec|Silk", re.I)
 
 
@@ -1273,14 +1289,8 @@ def add_student(request, schema_name):
     tenant = get_tenant(request, schema_name)
     with schema_context(schema_name):
         if request.method == "POST":
-            form = StudentForm(request.POST)
-            if form.is_valid():
-                student = form.save(commit=False)
-                if student.custom_fee == 0:
-                    fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
-                    if fee_struct:
-                        student.custom_fee = fee_struct.monthly_fee
-                student.save()
+            student, form = create_student_from_payload(schema_name, request.POST)
+            if student:
                 messages.success(request, f"Student {student.name} added successfully. Roll No: {student.roll_number}")
                 return redirect("student_list", schema_name=schema_name)
         else:
@@ -1293,6 +1303,25 @@ def add_student(request, schema_name):
     return render(request, "tenant/student_form.html", context)
 
 
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_tenant_type(['school'])
+@require_school_feature('students')
+def sync_offline_student_api(request, schema_name):
+    get_tenant(request, schema_name)
+    try:
+        if request.content_type and 'application/json' in request.content_type:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'errors': ['Invalid JSON payload']}, status=400)
+
+    student, form = create_student_from_payload(schema_name, payload)
+    if student:
+        return JsonResponse({'ok': True, 'student_id': student.id, 'roll_number': student.roll_number})
+
+    return JsonResponse({'ok': False, 'errors': json.loads(form.errors.as_json())}, status=400)
 
 
 @require_tenant_type(['school'])
@@ -1301,14 +1330,8 @@ def add_student_mobile(request, schema_name):
     tenant = get_tenant(request, schema_name)
     with schema_context(schema_name):
         if request.method == "POST":
-            form = StudentForm(request.POST)
-            if form.is_valid():
-                student = form.save(commit=False)
-                if student.custom_fee == 0:
-                    fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
-                    if fee_struct:
-                        student.custom_fee = fee_struct.monthly_fee
-                student.save()
+            student, form = create_student_from_payload(schema_name, request.POST)
+            if student:
                 messages.success(request, f"Student {student.name} added successfully. Roll No: {student.roll_number}")
                 return redirect("mobile_student_list", schema_name=schema_name)
         else:
