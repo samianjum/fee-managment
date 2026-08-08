@@ -98,6 +98,9 @@
             if (typeof window !== 'undefined' && window.offlineStudent?.save) {
                 await queueStudentSubmission(payload, redirectUrl);
                 const message = 'Student saved offline. It will sync automatically when the connection returns.';
+                if (isStudentListPage()) {
+                    showPendingListState(payload.name || 'Student');
+                }
                 if (window.offlineStudent?.notify) {
                     window.offlineStudent.notify(message);
                 } else {
@@ -119,6 +122,36 @@
         if (typeof window === 'undefined') return false;
         const path = window.location.pathname || '';
         return /\/portal\/[^/]+\/students\/(?:mobile\/)?$/.test(path);
+    }
+
+    function showPendingListState(name) {
+        if (!isStudentListPage()) return;
+        const card = document.querySelector('.student-card[data-name]');
+        if (card) {
+            const badge = document.createElement('span');
+            badge.className = 'offline-pending-badge';
+            badge.textContent = 'Pending sync';
+            badge.style.cssText = 'display:inline-block;margin-top:0.4rem;padding:0.2rem 0.6rem;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.7rem;font-weight:700;';
+            card.appendChild(badge);
+        }
+
+        const existing = document.querySelector('.offline-sync-banner');
+        if (existing) existing.remove();
+
+        const banner = document.createElement('div');
+        banner.className = 'offline-sync-banner';
+        banner.style.cssText = 'margin-bottom:1rem;padding:0.75rem 1rem;border-radius:0.75rem;background:#fef3c7;color:#92400e;font-size:0.9rem;font-weight:600;border:1px solid #fde68a;';
+        banner.innerHTML = `Student <strong>${name}</strong> saved offline. It will appear here automatically once the connection is back.`;
+        const container = document.querySelector('.table-card, .student-list');
+        if (container && container.firstChild) {
+            container.insertBefore(banner, container.firstChild);
+        }
+    }
+
+    function clearPendingListState() {
+        document.querySelectorAll('.offline-pending-badge').forEach(el => el.remove());
+        const banner = document.querySelector('.offline-sync-banner');
+        if (banner) banner.remove();
     }
 
     function refreshStudentListPage() {
@@ -163,6 +196,7 @@
                 if (resp.ok) {
                     await deleteOfflineStudent(student.id);
                     shouldRefreshList = true;
+                    clearPendingListState();
                     showToast('✅ Student synced: ' + student.data.name);
                 } else {
                     const errorText = await resp.text();
