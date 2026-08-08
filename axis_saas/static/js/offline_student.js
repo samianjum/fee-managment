@@ -62,6 +62,59 @@
         });
     }
 
+    async function queueStudentSubmission(payload, redirectUrl = '') {
+        return saveOfflineStudent({
+            data: payload,
+            submitted_at: new Date().toISOString(),
+            redirect_to: redirectUrl
+        });
+    }
+
+    async function submitStudentForm(form, redirectUrl = '') {
+        if (!form) return false;
+
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const actionUrl = form.getAttribute('action') || window.location.href;
+
+        try {
+            const response = await fetch(actionUrl, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                credentials: 'same-origin'
+            });
+
+            if (response.ok || response.redirected) {
+                const targetUrl = response.url || redirectUrl || actionUrl;
+                window.location.assign(targetUrl);
+                return true;
+            }
+
+            throw new Error(`Server returned ${response.status}`);
+        } catch (error) {
+            if (typeof window !== 'undefined' && window.offlineStudent?.save) {
+                await queueStudentSubmission(payload, redirectUrl);
+                const message = 'Student saved offline. It will sync automatically when the connection returns.';
+                if (window.offlineStudent?.notify) {
+                    window.offlineStudent.notify(message);
+                } else {
+                    alert(message);
+                }
+                if (redirectUrl) {
+                    window.location.assign(redirectUrl);
+                }
+                return true;
+            }
+
+            console.error('Could not save student offline', error);
+            alert('Could not save student offline. Please try again.');
+            return false;
+        }
+    }
+
     // Sync function: send all offline students to server
     async function syncOfflineStudents() {
         if (!navigator.onLine) return;
@@ -148,7 +201,9 @@
         save: saveOfflineStudent,
         sync: syncOfflineStudents,
         getPending: getOfflineStudents,
-        notify: showToast
+        notify: showToast,
+        queue: queueStudentSubmission,
+        submitForm: submitStudentForm
     };
 
     // Auto-sync when online

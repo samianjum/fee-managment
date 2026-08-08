@@ -124,32 +124,14 @@
     const form = document.getElementById('studentForm');
     if (form) {
       form.addEventListener('submit', function (event) {
-        if (navigator.onLine) return;
-
         event.preventDefault();
-        const payload = Object.fromEntries(new FormData(form).entries());
 
-        if (!window.offlineStudent?.save) {
+        if (!window.offlineStudent?.submitForm) {
           alert('Offline mode is unavailable on this device.');
           return;
         }
 
-        window.offlineStudent.save({
-          data: payload,
-          submitted_at: new Date().toISOString()
-        }).then(() => {
-          const message = 'Student saved offline. It will sync automatically when the connection returns.';
-          if (window.offlineStudent?.notify) {
-            window.offlineStudent.notify(message);
-          } else {
-            alert(message);
-          }
-          form.reset();
-          window.location.href = '{% url "mobile_student_list" schema_name=tenant.schema_name %}';
-        }).catch((error) => {
-          console.error('Could not save student offline', error);
-          alert('Could not save student offline. Please try again.');
-        });
+        window.offlineStudent.submitForm(form, '{% url "mobile_student_list" schema_name=tenant.schema_name %}');
       });
     }
 

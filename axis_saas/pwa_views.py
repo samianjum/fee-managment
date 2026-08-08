@@ -39,7 +39,7 @@ def manifest(request, schema_name):
 
 def service_worker(request):
     sw_js = """// AXIS PWA Service Worker
-const CACHE_NAME = 'axis-pwa-v3';
+const CACHE_NAME = 'axis-pwa-v5';
 const STATIC_EXTENSIONS = ['css', 'js', 'png', 'jpg', 'svg', 'ico', 'json', 'woff2'];
 const STATIC_URLS = [
     '/static/pwa/icon-192x192.png',
@@ -69,25 +69,35 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    const url = new URL(event.request.url);
+    const request = event.request;
+    const url = new URL(request.url);
+
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return;
+    }
+
+    if (url.origin !== self.location.origin) {
+        return;
+    }
+
     const isStatic = STATIC_EXTENSIONS.some(ext => url.pathname.endsWith('.' + ext));
     if (isStatic || url.pathname.startsWith('/static/')) {
         event.respondWith(
-            caches.match(event.request)
-                .then(response => response || fetch(event.request))
+            caches.match(request)
+                .then(response => response || fetch(request))
                 .catch(() => {
                     return new Response('Offline', { status: 503 });
                 })
         );
     } else {
         event.respondWith(
-            fetch(event.request)
+            fetch(request)
                 .then(response => {
                     const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
                     return response;
                 })
-                .catch(() => caches.match(event.request))
+                .catch(() => caches.match(request))
         );
     }
 });
