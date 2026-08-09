@@ -199,17 +199,23 @@
     async function renderPendingQueue() {
         try {
             const queue = await getOfflineStudents();
-            console.log('[Offline] Pending queue:', queue.length, 'items');
-            if (!queue.length) return;
+            console.log('[Offline] renderPendingQueue called, items:', queue.length);
+            if (!queue.length) {
+                console.log('[Offline] No pending items to render');
+                return;
+            }
             
             renderOfflineBanner(queue.length);
 
             if (isStudentListPage()) {
-                console.log('[Offline] On student list page, rendering pending students');
+                console.log('[Offline] On student list page, attempting to render', queue.length, 'pending students');
                 
                 // Desktop table
                 const tableBody = document.querySelector('.data-table tbody');
+                console.log('[Offline] .data-table tbody:', tableBody ? '✓ FOUND' : '✗ NOT FOUND');
+                
                 if (tableBody) {
+                    let addedCount = 0;
                     queue.forEach(item => {
                         const action = item.action || 'create';
                         if (action === 'create') {
@@ -217,15 +223,20 @@
                             if (!existing) {
                                 const row = buildPendingRow(item);
                                 tableBody.prepend(row);
-                                console.log('[Offline] Prepended pending student to desktop table:', item.data.name);
+                                addedCount++;
+                                console.log('[Offline] ✓ Prepended to desktop:', item.data.name);
                             }
                         }
                     });
+                    console.log('[Offline] Desktop: Added', addedCount, 'pending students');
                 }
                 
                 // Mobile list
                 const mobileContainer = document.getElementById('studentContainer');
+                console.log('[Offline] #studentContainer:', mobileContainer ? '✓ FOUND' : '✗ NOT FOUND');
+                
                 if (mobileContainer) {
+                    let addedCount = 0;
                     queue.forEach(item => {
                         const action = item.action || 'create';
                         if (action === 'create') {
@@ -233,10 +244,19 @@
                             if (!existing) {
                                 const card = buildPendingCard(item);
                                 mobileContainer.prepend(card);
-                                console.log('[Offline] Prepended pending student to mobile list:', item.data.name);
+                                addedCount++;
+                                console.log('[Offline] ✓ Prepended to mobile:', item.data.name);
                             }
                         }
                     });
+                    console.log('[Offline] Mobile: Added', addedCount, 'pending students');
+                }
+                
+                if (!tableBody && !mobileContainer) {
+                    console.warn('[Offline] ⚠️  Neither .data-table tbody nor #studentContainer found!');
+                    console.warn('[Offline] Possible causes: (1) Service worker not serving cached list page, (2) offline_student.js loaded before DOM ready, (3) This is not a list page');
+                    console.warn('[Offline] URL:', window.location.href);
+                    console.warn('[Offline] Page body available:', !!document.body);
                 }
                 
                 // Handle edits
@@ -246,6 +266,7 @@
                         const desktopRow = document.querySelector(`tr[data-student-id='${item.student_id}']`);
                         if (desktopRow) {
                             desktopRow.querySelector('td:nth-child(2)').innerHTML = `<strong>${item.data.name || desktopRow.querySelector('td:nth-child(2)').textContent}</strong> <span style="display:inline-block;margin-left:0.5rem;padding:0.15rem 0.55rem;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.7rem;font-weight:700;">Edit pending</span>`;
+                            console.log('[Offline] ✓ Marked edit pending on:', item.data.name);
                         }
                     }
                 });
@@ -264,6 +285,7 @@
                     banner.textContent = message;
                     const header = document.querySelector('.profile-header');
                     if (header) header.parentNode.insertBefore(banner, header.nextSibling);
+                    console.log('[Offline] ✓ Showed profile edit pending banner');
                 }
             }
         } catch (err) {
