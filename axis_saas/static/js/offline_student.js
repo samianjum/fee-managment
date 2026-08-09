@@ -197,57 +197,77 @@
     }
 
     async function renderPendingQueue() {
-        const queue = await getOfflineStudents();
-        if (!queue.length) return;
-        renderOfflineBanner(queue.length);
+        try {
+            const queue = await getOfflineStudents();
+            console.log('[Offline] Pending queue:', queue.length, 'items');
+            if (!queue.length) return;
+            
+            renderOfflineBanner(queue.length);
 
-        if (isStudentListPage()) {
-            const tableBody = document.querySelector('.data-table tbody');
-            const mobileContainer = document.getElementById('studentContainer');
-            queue.forEach(item => {
-                const action = item.action || 'create';
-                if (action === 'create') {
-                    if (tableBody) {
-                        const existing = document.querySelector(`tr[data-offline-id='${item.id}']`);
-                        if (!existing) tableBody.prepend(buildPendingRow(item));
-                    }
-                    if (mobileContainer) {
-                        const existing = document.querySelector(`.student-card[data-offline-id='${item.id}']`);
-                        if (!existing) mobileContainer.prepend(buildPendingCard(item));
-                    }
+            if (isStudentListPage()) {
+                console.log('[Offline] On student list page, rendering pending students');
+                
+                // Desktop table
+                const tableBody = document.querySelector('.data-table tbody');
+                if (tableBody) {
+                    queue.forEach(item => {
+                        const action = item.action || 'create';
+                        if (action === 'create') {
+                            const existing = document.querySelector(`tr[data-offline-id='${item.id}']`);
+                            if (!existing) {
+                                const row = buildPendingRow(item);
+                                tableBody.prepend(row);
+                                console.log('[Offline] Prepended pending student to desktop table:', item.data.name);
+                            }
+                        }
+                    });
                 }
-                if (action === 'edit' && item.student_id) {
-                    const desktopRow = document.querySelector(`tr[data-student-id='${item.student_id}']`);
-                    if (desktopRow) {
-                        desktopRow.querySelector('td:nth-child(2)').innerHTML = `<strong>${item.data.name || desktopRow.querySelector('td:nth-child(2)').textContent}</strong> <span class="offline-pill">Edit pending</span>`;
-                    }
-                    const mobileCard = document.querySelector(`.student-card[data-student-id='${item.student_id}']`);
-                    if (mobileCard) {
-                        const nameEl = mobileCard.querySelector('.student-name');
-                        if (nameEl) nameEl.textContent = item.data.name || nameEl.textContent;
-                        const pendingDot = document.createElement('span');
-                        pendingDot.className = 'offline-pill';
-                        pendingDot.textContent = 'Edit pending';
-                        if (!mobileCard.querySelector('.offline-pill')) mobileCard.querySelector('.card-top').appendChild(pendingDot);
-                    }
+                
+                // Mobile list
+                const mobileContainer = document.getElementById('studentContainer');
+                if (mobileContainer) {
+                    queue.forEach(item => {
+                        const action = item.action || 'create';
+                        if (action === 'create') {
+                            const existing = document.querySelector(`.student-card[data-offline-id='${item.id}']`);
+                            if (!existing) {
+                                const card = buildPendingCard(item);
+                                mobileContainer.prepend(card);
+                                console.log('[Offline] Prepended pending student to mobile list:', item.data.name);
+                            }
+                        }
+                    });
                 }
-            });
-        }
-
-        if (isStudentProfilePage()) {
-            const studentId = getCurrentStudentId();
-            const pendingEdits = queue.filter(item => item.action === 'edit' && String(item.student_id) === String(studentId));
-            if (pendingEdits.length) {
-                const message = pendingEdits.length === 1
-                    ? 'This student has an offline edit pending sync.'
-                    : `This student has ${pendingEdits.length} offline changes pending sync.`;
-                const banner = document.createElement('div');
-                banner.className = 'offline-sync-banner';
-                banner.style.cssText = 'margin-bottom:1rem;padding:0.9rem 1rem;border-radius:0.75rem;background:#fef3c7;color:#92400e;font-size:0.95rem;font-weight:600;border:1px solid #fde68a;';
-                banner.textContent = message;
-                const header = document.querySelector('.profile-header');
-                if (header) header.parentNode.insertBefore(banner, header.nextSibling);
+                
+                // Handle edits
+                queue.forEach(item => {
+                    const action = item.action || 'create';
+                    if (action === 'edit' && item.student_id) {
+                        const desktopRow = document.querySelector(`tr[data-student-id='${item.student_id}']`);
+                        if (desktopRow) {
+                            desktopRow.querySelector('td:nth-child(2)').innerHTML = `<strong>${item.data.name || desktopRow.querySelector('td:nth-child(2)').textContent}</strong> <span style="display:inline-block;margin-left:0.5rem;padding:0.15rem 0.55rem;border-radius:999px;background:#fef3c7;color:#92400e;font-size:0.7rem;font-weight:700;">Edit pending</span>`;
+                        }
+                    }
+                });
             }
+
+            if (isStudentProfilePage()) {
+                const studentId = getCurrentStudentId();
+                const pendingEdits = queue.filter(item => item.action === 'edit' && String(item.student_id) === String(studentId));
+                if (pendingEdits.length) {
+                    const message = pendingEdits.length === 1
+                        ? 'This student has an offline edit pending sync.'
+                        : `This student has ${pendingEdits.length} offline changes pending sync.`;
+                    const banner = document.createElement('div');
+                    banner.className = 'offline-sync-banner';
+                    banner.style.cssText = 'margin-bottom:1rem;padding:0.9rem 1rem;border-radius:0.75rem;background:#fef3c7;color:#92400e;font-size:0.95rem;font-weight:600;border:1px solid #fde68a;';
+                    banner.textContent = message;
+                    const header = document.querySelector('.profile-header');
+                    if (header) header.parentNode.insertBefore(banner, header.nextSibling);
+                }
+            }
+        } catch (err) {
+            console.error('[Offline] Error rendering pending queue:', err);
         }
     }
 
@@ -363,10 +383,14 @@
     });
 
     // Also sync on page load if online or if there are pending offline items
-    document.addEventListener('DOMContentLoaded', () => {
-        renderPendingQueue();
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('[Offline] DOMContentLoaded fired');
+        await renderPendingQueue();
         if (navigator.onLine) {
+            console.log('[Offline] Online, starting sync in 3 seconds');
             setTimeout(syncOfflineStudents, 3000);
+        } else {
+            console.log('[Offline] Offline mode detected');
         }
     });
 
