@@ -137,6 +137,10 @@
         try {
           const dbName = 'AxisOfflineDB';
           const storeName = 'offlineStudents';
+          const actionUrl = form.getAttribute('action') || window.location.href;
+          const editMatch = actionUrl.match(/\/students\/edit\/(\d+)\/?$/);
+          const offlineAction = editMatch ? 'edit' : 'create';
+          const studentId = editMatch ? editMatch[1] : null;
           const request = indexedDB.open(dbName, 1);
           request.onupgradeneeded = function (evt) {
             const db = evt.target.result;
@@ -149,9 +153,12 @@
             const transaction = db.transaction(storeName, 'readwrite');
             const store = transaction.objectStore(storeName);
             const saveRequest = store.add({
+              action: offlineAction,
+              student_id: studentId,
               data: payload,
               submitted_at: new Date().toISOString(),
-              redirect_to: redirectUrl
+              redirect_to: redirectUrl,
+              action_url: actionUrl
             });
             saveRequest.onsuccess = function () {
               alert(fallbackMessage);

@@ -205,7 +205,8 @@
             const tableBody = document.querySelector('.data-table tbody');
             const mobileContainer = document.getElementById('studentContainer');
             queue.forEach(item => {
-                if (item.action === 'create') {
+                const action = item.action || 'create';
+                if (action === 'create') {
                     if (tableBody) {
                         const existing = document.querySelector(`tr[data-offline-id='${item.id}']`);
                         if (!existing) tableBody.prepend(buildPendingRow(item));
@@ -215,7 +216,7 @@
                         if (!existing) mobileContainer.prepend(buildPendingCard(item));
                     }
                 }
-                if (item.action === 'edit' && item.student_id) {
+                if (action === 'edit' && item.student_id) {
                     const desktopRow = document.querySelector(`tr[data-student-id='${item.student_id}']`);
                     if (desktopRow) {
                         desktopRow.querySelector('td:nth-child(2)').innerHTML = `<strong>${item.data.name || desktopRow.querySelector('td:nth-child(2)').textContent}</strong> <span class="offline-pill">Edit pending</span>`;
