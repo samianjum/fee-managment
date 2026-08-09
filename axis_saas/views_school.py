@@ -129,6 +129,22 @@ def create_student_from_payload(schema_name, payload):
         return student, form
 
 
+def update_student_from_payload(schema_name, student_id, payload):
+    with schema_context(schema_name):
+        student = get_object_or_404(Student, id=student_id)
+        form = StudentForm(payload, instance=student)
+        if not form.is_valid():
+            return None, form
+
+        student = form.save(commit=False)
+        if not student.custom_fee:
+            fee_struct = FeeStructure.objects.filter(grade=student.grade).first()
+            if fee_struct:
+                student.custom_fee = fee_struct.monthly_fee
+        student.save()
+        return student, form
+
+
 MOBILE_AGENT_RE = re.compile(r"Mobile|Android|iP(hone|od|ad)|Opera Mini|IEMobile|BlackBerry|webOS|Fennec|Silk", re.I)
 
 
@@ -1317,7 +1333,18 @@ def sync_offline_student_api(request, schema_name):
     except json.JSONDecodeError:
         return JsonResponse({'ok': False, 'errors': ['Invalid JSON payload']}, status=400)
 
-    student, form = create_student_from_payload(schema_name, payload)
+    action = payload.get('action', 'create')
+    student = None
+    form = None
+
+    if action == 'edit':
+        student_id = payload.get('student_id')
+        if not student_id:
+            return JsonResponse({'ok': False, 'errors': ['Missing student_id for edit action']}, status=400)
+        student, form = update_student_from_payload(schema_name, student_id, payload)
+    else:
+        student, form = create_student_from_payload(schema_name, payload)
+
     if student:
         return JsonResponse({'ok': True, 'student_id': student.id, 'roll_number': student.roll_number})
 

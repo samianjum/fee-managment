@@ -72,7 +72,7 @@
             </thead>
             <tbody>
                 {% for s in students %}
-                <tr>
+                <tr data-student-id="{{ s.id }}">
                     <td><span class="roll-badge">{{ s.roll_number }}</span></td>
                     <td><strong>{{ s.name }}</strong></td>
                     <td>{{ s.father_name }}</td>
