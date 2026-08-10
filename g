@@ -1,91 +1,88 @@
 #!/usr/bin/env python3
 """
-AXIS Voucher Double-Count Patcher
-Fixes generation of fee records so that extra charges are NOT added to amount.
-Modifies manual_generate_api and auto_generate_fees command.
-Run once and restart server.
+AXIS Fix Migration Duplicate Column
+Run once to resolve migration conflicts on Railway.
 """
 
 import os
-import re
+import sys
 
-# ----- 1. Patch views.py – manual_generate_api -----
-VIEWS_FILE = "axis_saas/views.py"
+# Setup Django environment
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'axis_saas.settings')
+sys.path.append(os.getcwd())
 
-def patch_manual_generate_api():
-    if not os.path.exists(VIEWS_FILE):
-        print(f"❌ Views file not found: {VIEWS_FILE}")
-        return False
+import django
+django.setup()
 
-    with open(VIEWS_FILE, "r") as f:
-        content = f.read()
+from django.db import connection
+from django_tenants.utils import schema_context
+from axis_saas.models import SchoolClient
+from django.db.migrations.recorder import MigrationRecorder
 
-    # Find the block that sets total_fee = base_fee + total_extra
-    # We want to replace it with total_fee = base_fee (and keep extra_charges separate)
-    # Look for the line: total_fee = base_fee + total_extra
-    old_pattern = r'total_fee\s*=\s*base_fee\s*\+\s*total_extra'
-    replacement = 'total_fee = base_fee  # extra charges stored separately in extra_charges field'
+# List of migrations to fix (app_label, migration_name, column_name)
+MIGRATIONS = [
+    ('axis_saas', '0015_feerecord_due_date_offset', 'due_date_offset'),
+    ('axis_saas', '0016_feerecord_late_fee_per_day', 'late_fee_per_day'),
+]
 
-    if re.search(old_pattern, content):
-        content = re.sub(old_pattern, replacement, content)
-        with open(VIEWS_FILE, "w") as f:
-            f.write(content)
-        print("✅ Patched views.py: manual_generate_api now stores only base fee in amount.")
-        return True
-    else:
-        print("⚠️ Could not find total_fee = base_fee + total_extra in views.py – maybe already patched?")
-        # Check if the line already has no addition
-        if re.search(r'total_fee\s*=\s*base_fee\s*#', content):
-            print("   It seems already patched.")
-            return True
-        return False
+def fix_schema(schema_name):
+    """Apply fixes for a single schema."""
+    print(f"Processing schema: {schema_name}")
+    with schema_context(schema_name):
+        recorder = MigrationRecorder(connection)
+        with connection.cursor() as cursor:
+            for app_label, migration_name, column in MIGRATIONS:
+                # Check if column already exists
+                cursor.execute("""
+                    SELECT column_name FROM information_schema.columns
+                    WHERE table_name = 'axis_saas_feerecord' AND column_name = %s
+                """, [column])
+                exists = cursor.fetchone() is not None
 
-# ----- 2. Patch auto_generate_fees.py -----
-AUTO_GEN_FILE = "axis_saas/management/commands/auto_generate_fees.py"
+                if exists:
+                    # Column already present → just mark migration as applied
+                    if not recorder.migration_qs.filter(app=app_label, name=migration_name).exists():
+                        recorder.record_applied(app_label, migration_name)
+                        print(f"  ✅ Recorded {migration_name} as applied (column already exists)")
+                    else:
+                        print(f"  ℹ️ {migration_name} already recorded")
+                else:
+                    # Column missing → add it with default, then record
+                    if column == 'due_date_offset':
+                        sql = "ALTER TABLE axis_saas_feerecord ADD COLUMN due_date_offset integer DEFAULT 15 NOT NULL"
+                    elif column == 'late_fee_per_day':
+                        sql = "ALTER TABLE axis_saas_feerecord ADD COLUMN late_fee_per_day numeric(6,2) DEFAULT 0.00 NOT NULL"
+                    else:
+                        continue
 
-def patch_auto_generate():
-    if not os.path.exists(AUTO_GEN_FILE):
-        print(f"❌ Auto-generate command file not found: {AUTO_GEN_FILE}")
-        return False
+                    cursor.execute(sql)
+                    print(f"  ➕ Added column {column} (schema {schema_name})")
 
-    with open(AUTO_GEN_FILE, "r") as f:
-        content = f.read()
-
-    # Look for the line where total_fee is computed: total_fee = base_fee + total_extra
-    old_pattern = r'total_fee\s*=\s*base_fee\s*\+\s*total_extra'
-    replacement = 'total_fee = base_fee  # extra charges stored separately in extra_charges field'
-
-    if re.search(old_pattern, content):
-        content = re.sub(old_pattern, replacement, content)
-        with open(AUTO_GEN_FILE, "w") as f:
-            f.write(content)
-        print("✅ Patched auto_generate_fees.py: now stores only base fee in amount.")
-        return True
-    else:
-        print("⚠️ Could not find total_fee = base_fee + total_extra in auto_generate_fees.py – maybe already patched?")
-        if re.search(r'total_fee\s*=\s*base_fee\s*#', content):
-            print("   It seems already patched.")
-            return True
-        return False
-
-# ----- 3. Also ensure manual_generate_single_api (already correct) but we can skip -----
+                    # Record migration as applied
+                    recorder.record_applied(app_label, migration_name)
+                    print(f"  ✅ Recorded {migration_name} as applied")
 
 def main():
-    print("🚀 AXIS Voucher Double-Count Patcher")
-    print("-------------------------------------")
-    print("This script fixes the generation of fee records to avoid double-counting extra charges in vouchers.\n")
+    print("🚀 AXIS Migration Fixer")
+    print("This script will fix duplicate column issues for migrations 0015 and 0016.\n")
 
-    success_views = patch_manual_generate_api()
-    success_auto = patch_auto_generate()
+    # Get list of all schemas: public + all tenants
+    schemas = ['public']
+    try:
+        tenants = SchoolClient.objects.values_list('schema_name', flat=True)
+        schemas.extend(list(tenants))
+    except Exception as e:
+        print(f"⚠️ Could not fetch tenant list: {e}")
+        print("   Will only process public schema.")
 
-    if success_views and success_auto:
-        print("\n✅ All patches applied successfully.")
-        print("   Restart your server: python manage.py runserver")
-        print("   Newly generated fee records will now have the correct base fee and separate extra charges.")
-        print("   Existing records are not modified; you may need to regenerate them if they are incorrect.")
-    else:
-        print("\n⚠️ Some patches may have failed. Check the output above.")
-        print("   If the files are already patched, you can ignore this.")
+    for schema in schemas:
+        try:
+            fix_schema(schema)
+        except Exception as e:
+            print(f"❌ Error processing schema {schema}: {e}")
 
-if __name__ == "__main__":
+    print("\n✅ All fixes applied.")
+    print("Now restart your server (or let Railway redeploy) and the dashboard should work.")
+
+if __name__ == '__main__':
     main()
