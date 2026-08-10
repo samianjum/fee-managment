@@ -10,11 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="feerecord",
-            name="due_date_offset",
-            field=models.PositiveSmallIntegerField(
-                default=15, help_text="Days after generation when fee is due"
-            ),
-        ),
+            migrations.RunSQL('ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS due_date_offset integer DEFAULT 15 NOT NULL;', reverse_sql=''),
     ]

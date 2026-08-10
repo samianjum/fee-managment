@@ -10,14 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="feerecord",
-            name="late_fee_per_day",
-            field=models.DecimalField(
-                decimal_places=2,
-                default=0.0,
-                help_text="Late fee amount applied per day",
-                max_digits=6,
-            ),
-        ),
+            migrations.RunSQL('ALTER TABLE axis_saas_feerecord ADD COLUMN IF NOT EXISTS late_fee_per_day numeric(6,2) DEFAULT 0.00 NOT NULL;', reverse_sql=''),
     ]
