@@ -79,6 +79,13 @@ class SchoolClientForm(forms.ModelForm):
         widgets = {
             'admin_password': forms.PasswordInput(render_value=True),
         }
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        if self.cleaned_data.get("admin_password"):
+            instance._raw_password = self.cleaned_data["admin_password"]
+        if commit:
+            instance.save()
+        return instance
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

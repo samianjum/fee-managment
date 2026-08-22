@@ -3,6 +3,7 @@ from django.db import models
 from django_tenants.models import TenantMixin, DomainMixin
 from decimal import Decimal
 from datetime import date, timedelta
+from django.contrib.auth.hashers import make_password, check_password
 
 SCHOOL_FEATURE_CHOICES = [
     ('dashboard', 'Dashboard'),
@@ -29,6 +30,39 @@ class SchoolClient(TenantMixin):
     enabled_features = models.JSONField(default=list, blank=True, help_text="Select the school modules enabled for this tenant.")
     
     auto_create_schema = True
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._raw_password = None
+
+    def set_password(self, raw_password):
+        """Hash and store password, keeping raw for signals."""
+        self._raw_password = raw_password
+        self.admin_password = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        """Verify raw password against stored hash."""
+        return check_password(raw_password, self.admin_password)
+
+    def is_password_hashed(self):
+        """Return True if admin_password looks like a Django hash."""
+        return self.admin_password.startswith(('pbkdf2_sha256', 'bcrypt', 'argon2'))
+
+    def save(self, *args, **kwargs):
+        """Auto-hash plaintext passwords before saving."""
+        if self.admin_password and not self.is_password_hashed():
+            if not self._raw_password:
+                self._raw_password = self.admin_password
+            self.admin_password = make_password(self.admin_password)
+        is_new = self.pk is None
+        if self.tenant_type == 'school' and not self.enabled_features:
+            self.enabled_features = [choice[0] for choice in SCHOOL_FEATURE_CHOICES]
+        if is_new and self.schema_name != 'public':
+            SchoolDomain.objects.get_or_create(
+                domain=f"{self.schema_name}.localhost",
+                tenant=self,
+                is_primary=True
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.name}"
@@ -43,17 +77,7 @@ class SchoolClient(TenantMixin):
             return False
         return feature_key in self.enabled_features
 
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        if self.tenant_type == 'school' and not self.enabled_features:
-            self.enabled_features = [choice[0] for choice in SCHOOL_FEATURE_CHOICES]
-        super().save(*args, **kwargs)
-        if is_new and self.schema_name != 'public':
-            SchoolDomain.objects.get_or_create(
-                domain=f"{self.schema_name}.localhost",
-                tenant=self,
-                is_primary=True
-            )
+    
 class SchoolDomain(DomainMixin):
     pass
 

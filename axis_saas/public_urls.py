@@ -88,7 +88,7 @@ def school_login(request, schema_name):
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
-        if username == tenant.admin_username and password == tenant.admin_password:
+        if username == tenant.admin_username and tenant.check_password(password):
             request.session['school_admin_authenticated'] = True
             request.session['school_admin_schema'] = tenant.schema_name
             request.session['school_admin_username'] = username
