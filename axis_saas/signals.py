@@ -49,3 +49,35 @@ def sync_tenant_admin_password(sender, instance, created, **kwargs):
                 print(f"🔄 [AXIS AUTH] Password safely synchronized for '{u_name}' in schema '{instance.schema_name}'.")
     elif u_name and not raw_pw:
         print(f"⚠️ Raw password not available for {instance.schema_name}, cannot sync password.")
+
+# ========== CACHE INVALIDATION SIGNALS ==========
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from .models import Student, PaymentTransaction, FeeRecord
+from .views.helpers import invalidate_tenant_cache
+from django.db import connection
+
+@receiver(post_save, sender=PaymentTransaction)
+@receiver(post_delete, sender=PaymentTransaction)
+def clear_cache_on_payment(sender, instance, **kwargs):
+    schema_name = connection.schema_name
+    if schema_name != 'public':
+        invalidate_tenant_cache(schema_name, 'dashboard_stats')
+        invalidate_tenant_cache(schema_name, 'defaulters_stats')
+
+@receiver(post_save, sender=Student)
+@receiver(post_delete, sender=Student)
+def clear_cache_on_student(sender, instance, **kwargs):
+    schema_name = connection.schema_name
+    if schema_name != 'public':
+        invalidate_tenant_cache(schema_name, 'dashboard_stats')
+        invalidate_tenant_cache(schema_name, 'student_list_stats')
+
+@receiver(post_save, sender=FeeRecord)
+@receiver(post_delete, sender=FeeRecord)
+def clear_cache_on_feerecord(sender, instance, **kwargs):
+    schema_name = connection.schema_name
+    if schema_name != 'public':
+        invalidate_tenant_cache(schema_name, 'dashboard_stats')
+        invalidate_tenant_cache(schema_name, 'defaulters_stats')
+        invalidate_tenant_cache(schema_name, 'vouchers_stats')

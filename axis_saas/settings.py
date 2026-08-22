@@ -75,6 +75,10 @@ if os.environ.get('DATABASE_URL'):
         DATABASES = {
             'default': dj_database_url.parse(database_url, conn_max_age=600)
         }
+
+
+
+
     else:
         DATABASES = {
             'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
@@ -155,3 +159,23 @@ SESSION_SAVE_EVERY_REQUEST = False
 CSRF_TRUSTED_ORIGINS = get_csrf_trusted_origins()
 SESSION_COOKIE_PATH = '/'
 SESSION_FILE_PATH = '/tmp/django_sessions/'
+
+# ---------- REDIS CACHE ----------
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+            'CONNECTION_POOL_CLASS_KWARGS': {
+                'max_connections': 50,
+                'timeout': 20,
+            },
+            'MAX_CONNECTIONS': 1000,
+            'PICKLE_VERSION': -1,
+        },
+        'KEY_PREFIX': 'axis'
+    }
+}
+
