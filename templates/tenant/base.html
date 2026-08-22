@@ -1055,173 +1055,15 @@
             .catch(err => console.warn('[SW] Registration failed:', err));
     }
 </script>
-<script>
-    // PRECACHE_PAGES – automatically cache dashboard, student list, and defaulters pages on every load
-    (function() {
-        if (!('caches' in window)) return;
-        const schema = '{{ tenant.schema_name }}';
-        const urls = [
-            `/portal/${schema}/dashboard/`,
-            `/portal/${schema}/dashboard/mobile/`,
-            `/portal/${schema}/students/`,
-            `/portal/${schema}/students/mobile/`,
-            `/portal/${schema}/defaulters/`,
-            `/portal/${schema}/defaulters/mobile/`,
-    `/portal/${schema}/reports/`,
-    `/portal/${schema}/reports/mobile/`,
-    `/portal/${schema}/fee/structure/`,
-    `/portal/${schema}/fee/structure/mobile/`,
-    `/portal/${schema}/vouchers/`,
-    `/portal/${schema}/vouchers/mobile/`,
-    `/portal/${schema}/fee/logs/`,
-    `/portal/${schema}/fee/logs/mobile/`,
-    `/portal/${schema}/stock/`,
-    `/portal/${schema}/stock/mobile/`,
-    `/portal/${schema}/fee/collection/`,
-    `/portal/${schema}/fee/collection/mobile/`,
-    `/portal/${schema}/fee/settings/`,
-    `/portal/${schema}/fee/settings/mobile/`,
-];
-        // Wait for page to be fully loaded
-        window.addEventListener('load', function() {
-            // Fetch each URL with cache: 'reload' to ensure fresh data
-            Promise.all(urls.map(url =>
-                fetch(url, { cache: 'reload' })
-                    .then(res => {
-                        if (res.ok) {
-                            // Add to cache
-                            return caches.open('axis-pwa-v4')
-                                .then(cache => cache.put(url, res));
-                        }
-                    })
-                    .catch(() => {}) // ignore offline errors
-            )).then(() => console.log('[AXIS] Pre‑cached dashboard & student list'));
-        });
-    })();
-</script>
 
-<script>
-// DYNAMIC_PRECACHE_PRODUCTS – fetch and cache all product detail pages
-(function() {
-    if (!('caches' in window)) return;
-    const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/products/`;
-    const cacheName = 'axis-pwa-v4';
 
-    // Wait for page to be fully loaded
-    window.addEventListener('load', function() {
-        fetch(apiUrl, { cache: 'reload' })
-            .then(res => res.json())
-            .then(products => {
-                if (!products || products.length === 0) return;
-                const urls = products.flatMap(p => [p.desktop_url, p.mobile_url]);
-                // Fetch each URL with cache: 'reload' to ensure fresh data
-                Promise.all(urls.map(url =>
-                    fetch(url, { cache: 'reload' })
-                        .then(res => {
-                            if (res.ok) {
-                                // Add to cache
-                                return caches.open(cacheName)
-                                    .then(cache => cache.put(url, res));
-                            }
-                        })
-                        .catch(() => {}) // ignore offline errors
-                )).then(() => console.log('[AXIS] Pre‑cached all product detail pages'));
-            })
-            .catch(() => {}); // ignore if API fails
-    });
-})();
-</script>
 
-<script>
-// DYNAMIC_PRECACHE_STUDENTS – fetch and cache all student profile pages
-(function() {
-    if (!('caches' in window)) return;
-    const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/students/`;
-    const cacheName = 'axis-pwa-v4';
 
-    window.addEventListener('load', function() {
-        fetch(apiUrl, { cache: 'reload' })
-            .then(res => res.json())
-            .then(students => {
-                if (!students || students.length === 0) return;
-                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
-                Promise.all(urls.map(url =>
-                    fetch(url, { cache: 'reload' })
-                        .then(res => {
-                            if (res.ok) {
-                                return caches.open(cacheName)
-                                    .then(cache => cache.put(url, res));
-                            }
-                        })
-                        .catch(() => {})
-                )).then(() => console.log('[AXIS] Pre‑cached all student profile pages'));
-            })
-            .catch(() => {});
-    });
-})();
-</script>
 
-<script>
-// DYNAMIC_PRECACHE_RECEIPTS – fetch and cache all receipt pages
-(function() {
-    if (!('caches' in window)) return;
-    const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/receipts/`;
-    const cacheName = 'axis-pwa-v4';
 
-    window.addEventListener('load', function() {
-        fetch(apiUrl, { cache: 'reload' })
-            .then(res => res.json())
-            .then(receipts => {
-                if (!receipts || receipts.length === 0) return;
-                const urls = receipts.flatMap(r => [r.desktop_url, r.mobile_url]);
-                Promise.all(urls.map(url =>
-                    fetch(url, { cache: 'reload' })
-                        .then(res => {
-                            if (res.ok) {
-                                return caches.open(cacheName)
-                                    .then(cache => cache.put(url, res));
-                            }
-                        })
-                        .catch(() => {})
-                )).then(() => console.log('[AXIS] Pre‑cached all receipt pages'));
-            })
-            .catch(() => {});
-    });
-})();
-</script>
 
-<script>
-// DYNAMIC_PRECACHE_FEE_COLLECTION – fetch and cache all fee collection pages
-(function() {
-    if (!('caches' in window)) return;
-    const schema = '{{ tenant.schema_name }}';
-    const apiUrl = `/portal/${schema}/api/fee-collection/`;
-    const cacheName = 'axis-pwa-v4';
 
-    window.addEventListener('load', function() {
-        fetch(apiUrl, { cache: 'reload' })
-            .then(res => res.json())
-            .then(students => {
-                if (!students || students.length === 0) return;
-                const urls = students.flatMap(s => [s.desktop_url, s.mobile_url]);
-                Promise.all(urls.map(url =>
-                    fetch(url, { cache: 'reload' })
-                        .then(res => {
-                            if (res.ok) {
-                                return caches.open(cacheName)
-                                    .then(cache => cache.put(url, res));
-                            }
-                        })
-                        .catch(() => {})
-                )).then(() => console.log('[AXIS] Pre‑cached all fee collection pages'));
-            })
-            .catch(() => {});
-    });
-})();
-</script>
+
 
 <script>
 // Periodic refresh for student profiles (every 30 min)
@@ -1295,5 +1137,162 @@
     <script>
         window.AXIS_SCHEMA = '{{ tenant.schema_name }}';
     </script>
+
+<!-- One-time initial caching overlay -->
+<div id="initialCacheOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; align-items:center; justify-content:center; flex-direction:column; color:white; font-family:system-ui, sans-serif; backdrop-filter:blur(4px);">
+    <div style="text-align:center; padding:1.5rem; max-width:400px;">
+        <div style="display:inline-block; width:48px; height:48px; border:4px solid rgba(255,255,255,0.2); border-top:4px solid #ffffff; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:1rem;"></div>
+        <h2 style="font-weight:600; margin:0 0 0.5rem 0; font-size:1.4rem;">Preparing your offline experience</h2>
+        <p style="color:rgba(255,255,255,0.8); font-size:0.95rem; margin:0 0 0.3rem 0;">Caching data for <strong>{{ tenant.name }}</strong> …</p>
+        <p style="color:rgba(255,255,255,0.6); font-size:0.8rem; margin:0;">Please keep the app open. This happens only once.</p>
+        <div style="margin-top:1.5rem; width:100%; height:4px; background:rgba(255,255,255,0.15); border-radius:4px; overflow:hidden;">
+            <div id="cacheProgressBar" style="width:0%; height:100%; background:white; border-radius:4px; transition:width 0.3s;"></div>
+        </div>
+        <div id="cacheStatus" style="margin-top:0.5rem; font-size:0.75rem; color:rgba(255,255,255,0.5);">0%</div>
+    </div>
+</div>
+<style>
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #initialCacheOverlay { display: flex; } /* hidden by default, shown via JS */
+</style>
+
+
+<script>
+(function() {
+    // ===== INITIAL CACHE FLAG =====
+    const STORAGE_KEY = 'axis_initial_cache_done_v1';
+    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+        console.log('[AXIS] Initial caching already done. Skipping pre-cache.');
+        return;
+    }
+
+    // Show overlay
+    const overlay = document.getElementById('initialCacheOverlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    // Helper to update progress
+    function updateProgress(percent, message) {
+        const bar = document.getElementById('cacheProgressBar');
+        const status = document.getElementById('cacheStatus');
+        if (bar) bar.style.width = Math.min(percent, 100) + '%';
+        if (status) status.textContent = Math.min(percent, 100) + '% ' + (message || '');
+    }
+
+    // ===== CACHE ALL RESOURCES =====
+    const schema = '{{ tenant.schema_name }}';
+    const cacheName = 'axis-pwa-v4';
+
+    // List of API endpoints that return lists of URLs to cache
+    const apiEndpoints = [
+        { url: `/portal/${schema}/api/students/`, type: 'students' },
+        { url: `/portal/${schema}/api/products/`, type: 'products' },
+        { url: `/portal/${schema}/api/receipts/`, type: 'receipts' },
+        { url: `/portal/${schema}/api/fee-collection/`, type: 'fee-collection' }
+    ];
+
+    // Also cache the main pages statically (defined in the original script)
+    const mainPageUrls = [
+        `/portal/${schema}/dashboard/`,
+        `/portal/${schema}/dashboard/mobile/`,
+        `/portal/${schema}/students/`,
+        `/portal/${schema}/students/mobile/`,
+        `/portal/${schema}/defaulters/`,
+        `/portal/${schema}/defaulters/mobile/`,
+        `/portal/${schema}/reports/`,
+        `/portal/${schema}/reports/mobile/`,
+        `/portal/${schema}/fee/structure/`,
+        `/portal/${schema}/fee/structure/mobile/`,
+        `/portal/${schema}/vouchers/`,
+        `/portal/${schema}/vouchers/mobile/`,
+        `/portal/${schema}/fee/logs/`,
+        `/portal/${schema}/fee/logs/mobile/`,
+        `/portal/${schema}/stock/`,
+        `/portal/${schema}/stock/mobile/`,
+        `/portal/${schema}/fee/collection/`,
+        `/portal/${schema}/fee/collection/mobile/`,
+        `/portal/${schema}/fee/settings/`,
+        `/portal/${schema}/fee/settings/mobile/`,
+    ];
+
+    // Combine all URLs to fetch
+    let allUrls = [...mainPageUrls];
+
+    async function fetchAndCacheUrls(urlList, progressBase, progressRange) {
+        let total = urlList.length;
+        let completed = 0;
+        for (let i = 0; i < total; i++) {
+            const url = urlList[i];
+            try {
+                const resp = await fetch(url, { cache: 'reload' });
+                if (resp.ok) {
+                    const cache = await caches.open(cacheName);
+                    await cache.put(url, resp);
+                }
+            } catch (e) {
+                // ignore errors (offline, etc.)
+            }
+            completed++;
+            const percent = progressBase + (completed / total) * progressRange;
+            updateProgress(percent, `Caching ${Math.round(percent)}%`);
+        }
+    }
+
+    async function performInitialCache() {
+        try {
+            updateProgress(0, 'Starting cache...');
+
+            // Step 1: Cache main pages (static)
+            await fetchAndCacheUrls(mainPageUrls, 0, 20);
+            updateProgress(20, 'Main pages cached');
+
+            // Step 2: Fetch dynamic lists and cache those pages
+            let totalItems = 0;
+            let dynamicUrls = [];
+            for (const endpoint of apiEndpoints) {
+                try {
+                    const resp = await fetch(endpoint.url, { cache: 'reload' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (Array.isArray(data)) {
+                            // Each item has desktop_url and mobile_url (or similar)
+                            for (const item of data) {
+                                if (item.desktop_url) dynamicUrls.push(item.desktop_url);
+                                if (item.mobile_url) dynamicUrls.push(item.mobile_url);
+                            }
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // Cache dynamic URLs (from 20% to 90%)
+            if (dynamicUrls.length > 0) {
+                await fetchAndCacheUrls(dynamicUrls, 20, 70);
+            } else {
+                updateProgress(90, 'No dynamic pages to cache');
+            }
+
+            // Step 3: Mark as done
+            localStorage.setItem(STORAGE_KEY, 'true');
+            updateProgress(100, 'All cached!');
+
+            // Hide overlay after a short delay
+            setTimeout(() => {
+                if (overlay) overlay.style.display = 'none';
+            }, 800);
+
+            console.log('[AXIS] Initial caching completed.');
+        } catch (err) {
+            console.error('[AXIS] Caching error:', err);
+            // Even on error, hide overlay so user can use the app
+            if (overlay) overlay.style.display = 'none';
+            // But do NOT set the flag, so they can retry on next visit.
+        }
+    }
+
+    // Run the caching process
+    performInitialCache();
+})();
+</script>
+
 </body>
 </html>

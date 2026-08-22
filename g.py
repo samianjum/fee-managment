@@ -1,232 +1,247 @@
 #!/usr/bin/env python3
 """
-Add missing student context functions to axis_saas/views/helpers.py.
-Run once: python3 fix_student_context.py
+Single patcher to fix offline caching:
+- Show a loading overlay during the initial cache population.
+- Run pre-caching scripts only once per device.
+- Prevent repeated re-caching of unchanged data.
 """
 
+import os
 import re
 from pathlib import Path
 
-HELPERS_PATH = Path("axis_saas/views/helpers.py")
+# File paths relative to project root
+BASE_TEMPLATE = Path("templates/tenant/base.html")
+MOBILE_TEMPLATE = Path("templates/mobile/base.html")
 
-# Functions to add (copied from views_school.py with correct naming)
-MISSING_FUNCTIONS = """
-
-# ========== STUDENT CONTEXT HELPERS (added by patcher) ==========
-
-def extract_item_sales_from_remarks(remarks):
-    \"\"\"Extract item sale chunks from payment remarks for analytics and detail pages.\"\"\"
-    import re
-    from decimal import Decimal
-
-    text = remarks or ''
-    marker_match = re.search(r'items sold\\s*:\\s*(.*)', text, flags=re.IGNORECASE)
-    if not marker_match:
-        marker_match = re.search(r'items sold\\s+(.*)', text, flags=re.IGNORECASE)
-
-    candidate_text = marker_match.group(1) if marker_match else text
-    pattern = re.compile(
-        r'(?P<name>.+?)\\s*x\\s*(?P<qty>\\d+)\\s*@\\s*₹\\s*(?P<price>\\d+(?:\\.\\d+)?)\\s*=\\s*₹\\s*(?P<total>\\d+(?:\\.\\d+)?)',
-        flags=re.IGNORECASE,
-    )
-
-    items = []
-    for chunk in re.split(r';\\s*', candidate_text):
-        chunk = chunk.strip().strip('.').strip()
-        if not chunk:
-            continue
-        match = pattern.search(chunk)
-        if not match:
-            continue
-        items.append({
-            'name': match.group('name').strip(),
-            'quantity': int(match.group('qty')),
-            'unit_price': Decimal(match.group('price')),
-            'line_total': Decimal(match.group('total')),
-            'raw': chunk,
-        })
-    return items
-
-
-def get_student_list_context(request, schema_name):
-    tenant = get_tenant(request, schema_name)
-    query = request.GET.get('q', '')
-    grade = request.GET.get('grade', '')
-    section = request.GET.get('section', '')
-    status = request.GET.get('status', '')
-    pending_only = request.GET.get('pending_only') == '1'
-    page_number = request.GET.get('page', 1)
-    with schema_context(schema_name):
-        students = Student.objects.all()
-        if query:
-            students = students.filter(
-                Q(name__icontains=query) | Q(roll_number__icontains=query) |
-                Q(father_name__icontains=query) | Q(father_cnic__icontains=query) |
-                Q(parent_mobile__icontains=query) | Q(grade__icontains=query)
-            )
-        if grade:
-            students = students.filter(grade=grade)
-        if section:
-            students = students.filter(section=section)
-        if status:
-            students = students.filter(status=status)
-        students = students.order_by('-enrolled_on')
-        
-        student_list = []
-        for s in students:
-            s.pending_amount = get_overall_pending(s)
-            student_list.append(s)
-        
-        if pending_only:
-            student_list = [s for s in student_list if s.pending_amount > 0]
-        
-        total_pending_all = sum(s.pending_amount for s in student_list)
-        paginator = Paginator(student_list, 20)
-        page_obj = paginator.get_page(page_number)
-        
-        grades = list(Student.objects.values_list('grade', flat=True).distinct().order_by('grade'))
-        sections = list(Student.objects.values_list('section', flat=True).distinct().order_by('section'))
-        status_choices = Student.STATUS_CHOICES
-        total_active = Student.objects.filter(status='active').count()
-        
-    return {
-        'tenant': tenant,
-        'students': page_obj,
-        'grades': grades,
-        'sections': sections,
-        'status_choices': status_choices,
-        'search_query': query,
-        'total_pending_all': total_pending_all,
-        'total_active': total_active,
-        'logo_url': tenant.school_logo.url if tenant.school_logo else None,
-    }
-
-
-def get_student_profile_context(request, schema_name, student_id):
-    tenant = get_tenant(request, schema_name)
-    page = request.GET.get('page', 1)
-    search_date = request.GET.get('date', '').strip()
-    with schema_context(schema_name):
-        student = get_object_or_404(Student, id=student_id)
-        today = date.today()
-        current_month = today.month
-        current_year = today.year
-
-        fee_records_qs = student.fee_records.all().order_by('-year', '-month')
-        total_fee = Decimal('0')
-        for fr in fee_records_qs:
-            total_fee += fr.total_amount
-        fee_records = list(fee_records_qs)
-
-        payments_qs_all = student.payments.all().order_by('payment_date')
-        if search_date:
-            try:
-                parsed = datetime.strptime(search_date, '%Y-%m-%d').date()
-                payments_qs_all = payments_qs_all.filter(payment_date=parsed)
-            except ValueError:
-                pass
-
-        total_items_cost_all = Decimal('0')
-        items_cost_per_payment = {}
-        for p in payments_qs_all:
-            items = extract_item_sales_from_remarks(p.remarks or '')
-            cost = sum(item['line_total'] for item in items)
-            items_cost_per_payment[p.id] = cost
-            total_items_cost_all += cost
-
-        cumulative_fee_paid = Decimal('0')
-        cumulative_items_paid = Decimal('0')
-        payment_list = []
-
-        for p in payments_qs_all:
-            fee_paid = sum(fr.paid_amount for fr in p.fee_records.all())
-            items_cost = items_cost_per_payment.get(p.id, Decimal('0'))
-            total_due_before = (total_fee - cumulative_fee_paid) + (total_items_cost_all - cumulative_items_paid)
-
-            cumulative_fee_paid += fee_paid
-            cumulative_items_paid += (p.amount - fee_paid)
-
-            remaining_balance = (total_fee - cumulative_fee_paid) + (total_items_cost_all - cumulative_items_paid)
-            if remaining_balance < 0:
-                remaining_balance = Decimal('0')
-
-            has_fee = p.fee_records.exists()
-            remarks = (p.remarks or '').lower()
-            has_items = 'items sold' in remarks
-            if has_fee and has_items:
-                p_type = 'Fee & Items'
-            elif has_fee:
-                p_type = 'Fee'
-            elif has_items:
-                p_type = 'Items'
-            else:
-                p_type = 'Unknown'
-            p.payment_type_display = p_type
-
-            payment_list.append({
-                'payment': p,
-                'fee_paid': fee_paid,
-                'total_due_before': total_due_before,
-                'remaining_balance': remaining_balance,
-            })
-
-        payment_list.reverse()
-        paginator = Paginator(payment_list, 10)
-        page_obj = paginator.get_page(page)
-
-        total_paid = student.payments.aggregate(Sum('amount'))['amount__sum'] or 0
-        fee_paid_total = sum(fr.paid_amount for fr in fee_records)
-        item_purchase_total = total_paid - fee_paid_total
-        pending_total = total_fee + total_items_cost_all - total_paid
-
-        return {
-            'tenant': tenant,
-            'student': student,
-            'fee_records': fee_records,
-            'payments': page_obj,
-            'total_fee': total_fee,
-            'total_paid': total_paid,
-            'pending_total': pending_total,
-            'item_purchase_total': item_purchase_total,
-            'current_month': current_month,
-            'current_year': current_year,
-            'logo_url': tenant.school_logo.url if tenant.school_logo else None,
-            'search_date': search_date,
-        }
+# The loading overlay HTML (will be inserted before </body>)
+LOADING_OVERLAY = """
+<!-- One-time initial caching overlay -->
+<div id="initialCacheOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:99999; align-items:center; justify-content:center; flex-direction:column; color:white; font-family:system-ui, sans-serif; backdrop-filter:blur(4px);">
+    <div style="text-align:center; padding:1.5rem; max-width:400px;">
+        <div style="display:inline-block; width:48px; height:48px; border:4px solid rgba(255,255,255,0.2); border-top:4px solid #ffffff; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:1rem;"></div>
+        <h2 style="font-weight:600; margin:0 0 0.5rem 0; font-size:1.4rem;">Preparing your offline experience</h2>
+        <p style="color:rgba(255,255,255,0.8); font-size:0.95rem; margin:0 0 0.3rem 0;">Caching data for <strong>{{ tenant.name }}</strong> …</p>
+        <p style="color:rgba(255,255,255,0.6); font-size:0.8rem; margin:0;">Please keep the app open. This happens only once.</p>
+        <div style="margin-top:1.5rem; width:100%; height:4px; background:rgba(255,255,255,0.15); border-radius:4px; overflow:hidden;">
+            <div id="cacheProgressBar" style="width:0%; height:100%; background:white; border-radius:4px; transition:width 0.3s;"></div>
+        </div>
+        <div id="cacheStatus" style="margin-top:0.5rem; font-size:0.75rem; color:rgba(255,255,255,0.5);">0%</div>
+    </div>
+</div>
+<style>
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #initialCacheOverlay { display: flex; } /* hidden by default, shown via JS */
+</style>
 """
 
-def main():
-    if not HELPERS_PATH.exists():
-        print(f"❌ {HELPERS_PATH} not found. Are you in the project root?")
+# The modified pre-caching script (to replace the existing ones in base.html)
+# We'll wrap the existing logic inside a function that checks localStorage.
+CACHING_SCRIPT = """
+<script>
+(function() {
+    // ===== INITIAL CACHE FLAG =====
+    const STORAGE_KEY = 'axis_initial_cache_done_v1';
+    if (localStorage.getItem(STORAGE_KEY) === 'true') {
+        console.log('[AXIS] Initial caching already done. Skipping pre-cache.');
+        return;
+    }
+
+    // Show overlay
+    const overlay = document.getElementById('initialCacheOverlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    // Helper to update progress
+    function updateProgress(percent, message) {
+        const bar = document.getElementById('cacheProgressBar');
+        const status = document.getElementById('cacheStatus');
+        if (bar) bar.style.width = Math.min(percent, 100) + '%';
+        if (status) status.textContent = Math.min(percent, 100) + '% ' + (message || '');
+    }
+
+    // ===== CACHE ALL RESOURCES =====
+    const schema = '{{ tenant.schema_name }}';
+    const cacheName = 'axis-pwa-v4';
+
+    // List of API endpoints that return lists of URLs to cache
+    const apiEndpoints = [
+        { url: `/portal/${schema}/api/students/`, type: 'students' },
+        { url: `/portal/${schema}/api/products/`, type: 'products' },
+        { url: `/portal/${schema}/api/receipts/`, type: 'receipts' },
+        { url: `/portal/${schema}/api/fee-collection/`, type: 'fee-collection' }
+    ];
+
+    // Also cache the main pages statically (defined in the original script)
+    const mainPageUrls = [
+        `/portal/${schema}/dashboard/`,
+        `/portal/${schema}/dashboard/mobile/`,
+        `/portal/${schema}/students/`,
+        `/portal/${schema}/students/mobile/`,
+        `/portal/${schema}/defaulters/`,
+        `/portal/${schema}/defaulters/mobile/`,
+        `/portal/${schema}/reports/`,
+        `/portal/${schema}/reports/mobile/`,
+        `/portal/${schema}/fee/structure/`,
+        `/portal/${schema}/fee/structure/mobile/`,
+        `/portal/${schema}/vouchers/`,
+        `/portal/${schema}/vouchers/mobile/`,
+        `/portal/${schema}/fee/logs/`,
+        `/portal/${schema}/fee/logs/mobile/`,
+        `/portal/${schema}/stock/`,
+        `/portal/${schema}/stock/mobile/`,
+        `/portal/${schema}/fee/collection/`,
+        `/portal/${schema}/fee/collection/mobile/`,
+        `/portal/${schema}/fee/settings/`,
+        `/portal/${schema}/fee/settings/mobile/`,
+    ];
+
+    // Combine all URLs to fetch
+    let allUrls = [...mainPageUrls];
+
+    async function fetchAndCacheUrls(urlList, progressBase, progressRange) {
+        let total = urlList.length;
+        let completed = 0;
+        for (let i = 0; i < total; i++) {
+            const url = urlList[i];
+            try {
+                const resp = await fetch(url, { cache: 'reload' });
+                if (resp.ok) {
+                    const cache = await caches.open(cacheName);
+                    await cache.put(url, resp);
+                }
+            } catch (e) {
+                // ignore errors (offline, etc.)
+            }
+            completed++;
+            const percent = progressBase + (completed / total) * progressRange;
+            updateProgress(percent, `Caching ${Math.round(percent)}%`);
+        }
+    }
+
+    async function performInitialCache() {
+        try {
+            updateProgress(0, 'Starting cache...');
+
+            // Step 1: Cache main pages (static)
+            await fetchAndCacheUrls(mainPageUrls, 0, 20);
+            updateProgress(20, 'Main pages cached');
+
+            // Step 2: Fetch dynamic lists and cache those pages
+            let totalItems = 0;
+            let dynamicUrls = [];
+            for (const endpoint of apiEndpoints) {
+                try {
+                    const resp = await fetch(endpoint.url, { cache: 'reload' });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (Array.isArray(data)) {
+                            // Each item has desktop_url and mobile_url (or similar)
+                            for (const item of data) {
+                                if (item.desktop_url) dynamicUrls.push(item.desktop_url);
+                                if (item.mobile_url) dynamicUrls.push(item.mobile_url);
+                            }
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // Cache dynamic URLs (from 20% to 90%)
+            if (dynamicUrls.length > 0) {
+                await fetchAndCacheUrls(dynamicUrls, 20, 70);
+            } else {
+                updateProgress(90, 'No dynamic pages to cache');
+            }
+
+            // Step 3: Mark as done
+            localStorage.setItem(STORAGE_KEY, 'true');
+            updateProgress(100, 'All cached!');
+
+            // Hide overlay after a short delay
+            setTimeout(() => {
+                if (overlay) overlay.style.display = 'none';
+            }, 800);
+
+            console.log('[AXIS] Initial caching completed.');
+        } catch (err) {
+            console.error('[AXIS] Caching error:', err);
+            // Even on error, hide overlay so user can use the app
+            if (overlay) overlay.style.display = 'none';
+            // But do NOT set the flag, so they can retry on next visit.
+        }
+    }
+
+    // Run the caching process
+    performInitialCache();
+})();
+</script>
+"""
+
+def patch_file(filepath):
+    """Add loading overlay and replace pre-caching scripts with the one-time version."""
+    if not filepath.exists():
+        print(f"⚠️ {filepath} not found, skipping.")
         return
 
-    with open(HELPERS_PATH, "r") as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Check if already patched
-    if "def get_student_list_context" in content:
-        print("✅ Student context functions already present. No changes needed.")
-        return
+    # 1. Inject loading overlay before </body>
+    if 'id="initialCacheOverlay"' in content:
+        print(f"✅ {filepath} already has loading overlay. Skipping injection.")
+    else:
+        # Insert before </body>
+        content = content.replace('</body>', LOADING_OVERLAY + '\n</body>')
+        print(f"✅ Injected loading overlay into {filepath}")
 
-    # Find a good insertion point: after the last function definition or before the final 'def'?
-    # We'll insert before the last line (usually the final newline) or after the existing functions.
-    # We'll find the end of the file and append.
-    # But we should import necessary modules if they are not already imported.
-    # The helpers.py already has imports for most things, but we need to ensure
-    # that Q, Paginator, get_object_or_404, datetime, Sum, etc. are imported.
-    # However, helpers.py already has many imports (from django.shortcuts import get_object_or_404 etc.)
-    # We'll add them if missing, but we can just add the functions and assume imports are present.
-    # Actually helpers.py imports get_object_or_404? It imports from django.shortcuts import ... yes.
-    # It also has Q, Paginator, Sum, etc. So it should be fine.
+    # 2. Replace the old pre-caching scripts with the new one-time version
+    # The old scripts are inside <script> tags that do the pre-caching.
+    # We'll find and remove them, then add our new script.
+    # We'll look for the markers: "// PRECACHE_PAGES" and "// DYNAMIC_PRECACHE_PRODUCTS" etc.
+    # But easier: we can remove everything between the first <script> that contains "PRECACHE_PAGES"
+    # and the last related script. However, simpler: we'll just remove all <script> blocks that contain
+    # "PRECACHE_PAGES" or "DYNAMIC_PRECACHE" and add our new script.
+    # We'll use regex to remove those specific script blocks.
 
-    # Append the missing functions
-    new_content = content + "\n" + MISSING_FUNCTIONS
-    with open(HELPERS_PATH, "w") as f:
-        f.write(new_content)
+    # Pattern to match script blocks that contain PRECACHE_PAGES, DYNAMIC_PRECACHE_PRODUCTS, etc.
+    pattern = r'<script>\s*//\s*PRECACHE_PAGES.*?</script>'
+    content = re.sub(pattern, '', content, flags=re.DOTALL)
 
-    print("✅ Successfully added student context functions to helpers.py")
-    print("📌 Restart your Django server: python3 manage.py runserver")
-    print("   The student pages should now work.")
+    pattern = r'<script>\s*//\s*DYNAMIC_PRECACHE_PRODUCTS.*?</script>'
+    content = re.sub(pattern, '', content, flags=re.DOTALL)
+
+    pattern = r'<script>\s*//\s*DYNAMIC_PRECACHE_STUDENTS.*?</script>'
+    content = re.sub(pattern, '', content, flags=re.DOTALL)
+
+    pattern = r'<script>\s*//\s*DYNAMIC_PRECACHE_RECEIPTS.*?</script>'
+    content = re.sub(pattern, '', content, flags=re.DOTALL)
+
+    pattern = r'<script>\s*//\s*DYNAMIC_PRECACHE_FEE_COLLECTION.*?</script>'
+    content = re.sub(pattern, '', content, flags=re.DOTALL)
+
+    # Also remove the periodic refresh scripts (they are separate)
+    # But we want to keep the periodic refresh? The user didn't ask to remove; we can keep them.
+    # They are useful for updating caches when data changes. So we keep them.
+
+    # Now add our new script before the closing </body>
+    # But we must ensure we don't add it multiple times.
+    if 'axis_initial_cache_done_v1' in content:
+        print(f"✅ {filepath} already has the one-time caching script. Skipping.")
+    else:
+        # Insert before </body> after the loading overlay
+        content = content.replace('</body>', CACHING_SCRIPT + '\n</body>')
+        print(f"✅ Added one-time caching script to {filepath}")
+
+    # Write back
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def main():
+    print("🛠️  Patching offline caching system...")
+    patch_file(BASE_TEMPLATE)
+    patch_file(MOBILE_TEMPLATE)
+    print("✅ Patcher completed. Restart your Django server.")
+    print("   The first visit will show a loading overlay and cache all data once.")
+    print("   Subsequent visits will be lightning fast and will not re-fetch unchanged data.")
 
 if __name__ == "__main__":
     main()
