@@ -545,10 +545,10 @@
     }
 
     // Refresh on load and then every 30 minutes
-    window.addEventListener('load', refreshProfiles);
-    setInterval(() => {
+    // window.addEventListener('load', refreshProfiles);  // disabled to reduce load
+    // setInterval(() => {
         if (!document.hidden) refreshProfiles();
-    }, 30 * 60 * 1000);
+    }, 30 * 60 * 1000);  // disabled to reduce load
 })();
 </script>
 
@@ -575,12 +575,12 @@
     }
 
     // Refresh when page becomes visible again (user returns to tab)
-    document.addEventListener('visibilitychange', () => {
+    // document.addEventListener('visibilitychange', () => {
         if (!document.hidden && navigator.onLine) refreshProfiles();
-    });
+    });  // disabled to reduce load
 
     // Also refresh on first load (already handled by existing script, but safe to call again)
-    // window.addEventListener('load', refreshProfiles);
+    // // window.addEventListener('load', refreshProfiles);  // disabled to reduce load
 })();
 </script>
 

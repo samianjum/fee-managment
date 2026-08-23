@@ -97,19 +97,8 @@ self.addEventListener('activate', event => {
             keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
         )).then(() => {
             // Start periodic refresh every 15 minutes
-            self.clients.matchAll().then(clients => {
-                if (clients.length > 0) {
-                    const url = new URL(clients[0].url);
-                    const parts = url.pathname.split('/');
-                    if (parts.length >= 3 && parts[1] === 'portal') {
-                        const schema = parts[2];
-                        refreshStudentProfiles(schema);
-                        setInterval(() => {
-                            refreshStudentProfiles(schema);
-                        }, 15 * 60 * 1000);
-                    }
-                }
-            });
+            // Disabled background refresh to reduce load
+// self.clients.matchAll().then(clients => { ... })  // removed;
             return self.clients.claim();
         })
     );
