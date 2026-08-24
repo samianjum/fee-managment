@@ -28,6 +28,7 @@ from django.db import transaction
 from ..models import ManualGenerationLog
 
 from .helpers import *
+from django.urls import reverse   # ✅ Added for reverse redirects
 
 def student_list(request, schema_name):
     if is_mobile_user_agent(request):
@@ -134,9 +135,10 @@ def edit_student(request, schema_name, student_id):
             if form.is_valid():
                 form.save()
                 messages.success(request, f'Student {student.name} updated successfully.')
+                # ✅ Fixed: redirect to profile with ?updated=1
                 if is_mobile_user_agent(request):
-                    return redirect('mobile_student_profile', schema_name=schema_name, student_id=student.id)
-                return redirect('student_list', schema_name=schema_name)
+                    return redirect(reverse('mobile_student_profile', kwargs={'schema_name': schema_name, 'student_id': student.id}) + '?updated=1')
+                return redirect(reverse('student_profile', kwargs={'schema_name': schema_name, 'student_id': student.id}) + '?updated=1')
         else:
             form = StudentForm(instance=student)
         grades = FeeStructure.objects.values_list('grade', flat=True).distinct()

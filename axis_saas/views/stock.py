@@ -28,6 +28,7 @@ from django.db import transaction
 from ..models import ManualGenerationLog
 
 from .helpers import *
+from django.urls import reverse   # ✅ Added for reverse redirects
 
 @require_tenant_type(['school'])
 def stock_management(request, schema_name, force_mobile=False):
@@ -42,12 +43,18 @@ def stock_management(request, schema_name, force_mobile=False):
             cursor.execute('SELECT id, name, description FROM axis_saas_productcategory ORDER BY name')
             raw_cats = cursor.fetchall()
         with connection.cursor() as cursor:
-            cursor.execute('\n                SELECT p.id, p.name, p.sku, p.selling_price, p.quantity, p.notes,\n                       c.id as category_id, c.name as category_name\n                FROM axis_saas_product p\n                JOIN axis_saas_productcategory c ON p.category_id = c.id\n                ORDER BY c.name, p.name\n            ')
+            cursor.execute('''
+                SELECT p.id, p.name, p.sku, p.selling_price, p.quantity, p.notes,
+                       c.id as category_id, c.name as category_name
+                FROM axis_saas_product p
+                JOIN axis_saas_productcategory c ON p.category_id = c.id
+                ORDER BY c.name, p.name
+            ''')
             raw_products = cursor.fetchall()
         products_qs = Product.objects.select_related('category').all().order_by('category__name', 'name')
         total_products = products_qs.count()
         total_categories = ProductCategory.objects.count()
-        total_stock_value = sum((p.selling_price * p.quantity for p in products_qs))
+        total_stock_value = sum((p.selling_price * p.quantity) for p in products_qs)
         low_stock_count = products_qs.filter(quantity__lt=10).count()
         item_sales = []
         total_units_sold = 0
@@ -180,6 +187,7 @@ def add_product(request, schema_name):
     from decimal import Decimal
     from ..models import ProductCategory, Product
     from django_tenants.utils import schema_context
+
     if request.method == 'POST':
         product_id = request.POST.get('product_id')
         category_id = request.POST.get('category')
@@ -187,6 +195,7 @@ def add_product(request, schema_name):
         selling_price = request.POST.get('selling_price')
         quantity = request.POST.get('quantity')
         notes = request.POST.get('notes', '')
+
         if not name or not category_id or (not selling_price):
             messages.error(request, 'Category, Name, and Selling Price are required.')
             if is_mobile_user_agent(request):
@@ -194,6 +203,7 @@ def add_product(request, schema_name):
             if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
                 return redirect('mobile_stock_management', schema_name=schema_name)
             return redirect('stock_management', schema_name=schema_name)
+
         try:
             price = Decimal(selling_price)
             qty = int(quantity) if quantity else 0
@@ -202,6 +212,7 @@ def add_product(request, schema_name):
             if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
                 return redirect('mobile_stock_management', schema_name=schema_name)
             return redirect('stock_management', schema_name=schema_name)
+
         with schema_context(schema_name):
             category = get_object_or_404(ProductCategory, id=category_id)
             if product_id:
@@ -214,10 +225,21 @@ def add_product(request, schema_name):
                 product.save()
                 messages.success(request, f"Product '{name}' updated.")
             else:
-                product = Product.objects.create(category=category, name=name, selling_price=price, quantity=qty, notes=notes)
+                product = Product.objects.create(
+                    category=category,
+                    name=name,
+                    selling_price=price,
+                    quantity=qty,
+                    notes=notes
+                )
                 messages.success(request, f"Product '{name}' added. SKU: {product.sku}")
-    if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-        return redirect('mobile_stock_management', schema_name=schema_name)
+
+        # ✅ Fixed: redirect to product detail with ?updated=1 (only after successful POST)
+        if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
+            return redirect(reverse('mobile_product_detail', kwargs={'schema_name': schema_name, 'product_id': product.id}) + '?updated=1')
+        return redirect(reverse('product_detail', kwargs={'schema_name': schema_name, 'product_id': product.id}) + '?updated=1')
+
+    # For GET requests, redirect to stock management (since form is in modal)
     return redirect('stock_management', schema_name=schema_name)
 
 @require_tenant_type(['school'])
