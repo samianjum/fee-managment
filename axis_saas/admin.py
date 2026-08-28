@@ -229,6 +229,17 @@ class StudentAdmin(TenantOnlyAdminMixin, admin.ModelAdmin):
 # --- AXIS Fee Structure Registry Injection ---
 from .models import FeeStructure
 
+
+# Staff admin registration
+from .models import Staff
+
+@admin.register(Staff)
+class StaffAdmin(admin.ModelAdmin):
+    list_display = ('staff_id', 'full_name', 'job_title', 'department', 'status', 'email')
+    list_filter = ('department', 'status')
+    search_fields = ('staff_id', 'full_name', 'email', 'phone')
+    readonly_fields = ('staff_id',)
+
 @admin.register(FeeStructure)
 class FeeStructureAdmin(TenantOnlyAdminMixin, admin.ModelAdmin):
     list_display = ('grade', 'monthly_fee', 'updated_at')

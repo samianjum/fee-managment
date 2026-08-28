@@ -1,0 +1,116 @@
+{% extends 'mobile/base.html' %}
+{% load static %}
+{% block title %}{% if staff %}Edit{% else %}Add{% endif %} Staff | {{ tenant.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+    .page-header {
+        margin-bottom: 0.5rem;
+    }
+    .page-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text);
+        margin: 0;
+    }
+    .form-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 1rem;
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+    }
+    .form-field {
+        margin-bottom: 1rem;
+    }
+    .form-field label {
+        display: block;
+        font-weight: 600;
+        font-size: 0.8rem;
+        margin-bottom: 0.2rem;
+        color: var(--text);
+    }
+    .form-field input,
+    .form-field select,
+    .form-field textarea {
+        width: 100%;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.5rem;
+        border: 1px solid var(--border);
+        background: var(--surface-alt);
+        font-size: 0.9rem;
+        color: var(--text);
+        transition: border-color 0.2s;
+    }
+    .form-field input:focus,
+    .form-field select:focus,
+    .form-field textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .form-field .error {
+        color: var(--danger);
+        font-size: 0.75rem;
+        margin-top: 0.15rem;
+    }
+    .form-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+    }
+    .form-actions button,
+    .form-actions a {
+        flex: 1;
+        padding: 0.6rem;
+        border-radius: 2rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+    }
+    .btn-primary:hover {
+        background: var(--accent-hover);
+    }
+    .btn-secondary {
+        background: var(--surface-alt);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+        background: var(--surface);
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="page-header">
+    <h1 class="page-title">{% if staff %}Edit Staff{% else %}Add Staff{% endif %}</h1>
+</div>
+
+<div class="form-card">
+    <form method="post" enctype="multipart/form-data" id="staffForm">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-field">
+            <label>{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="error">{{ field.errors|striptags }}</div>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{% if staff %}Update{% else %}Save{% endif %}</button>
+            <a href="{% url 'mobile_staff_list' schema_name=tenant.schema_name %}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

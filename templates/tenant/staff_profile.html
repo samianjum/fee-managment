@@ -1,0 +1,110 @@
+{% extends 'tenant/base.html' %}
+{% block title %}{{ staff.full_name }} | Staff Profile{% endblock %}
+
+{% block body %}
+<div class="profile-header">
+    <div>
+        <h1 class="page-title">{{ staff.full_name }}</h1>
+        <p class="page-desc">Staff ID: {{ staff.staff_id }} • {{ staff.job_title }}</p>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'staff_edit' schema_name=tenant.schema_name staff_id=staff.id %}" class="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg>
+            Edit
+        </a>
+        <a href="{% url 'staff_list' schema_name=tenant.schema_name %}" class="btn-secondary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            Back to List
+        </a>
+    </div>
+</div>
+
+<div class="profile-summary">
+    <div class="profile-avatar">
+        <span>{{ staff.full_name|slice:":1"|upper }}</span>
+    </div>
+    <div class="profile-meta">
+        <div class="meta-item"><span class="label">Staff ID</span><span class="value">{{ staff.staff_id }}</span></div>
+        <div class="meta-item"><span class="label">Job Title</span><span class="value">{{ staff.job_title }}</span></div>
+        <div class="meta-item"><span class="label">Department</span><span class="value">{{ staff.get_department_display }}</span></div>
+        <div class="meta-item"><span class="label">Status</span><span class="value"><span class="status-badge status-{{ staff.status }}">{{ staff.get_status_display }}</span></span></div>
+        <div class="meta-item"><span class="label">Hire Date</span><span class="value">{{ staff.hire_date|date:"Y-m-d" }}</span></div>
+    </div>
+</div>
+
+<div class="info-grid">
+    <div class="info-card"><div class="info-label">Email</div><div class="info-value">{{ staff.email|default:"—" }}</div></div>
+    <div class="info-card"><div class="info-label">Phone</div><div class="info-value">{{ staff.phone|default:"—" }}</div></div>
+    <div class="info-card"><div class="info-label">Gender</div><div class="info-value">{{ staff.get_gender_display|default:"—" }}</div></div>
+    <div class="info-card"><div class="info-label">Date of Birth</div><div class="info-value">{{ staff.date_of_birth|date:"Y-m-d"|default:"—" }}</div></div>
+    <div class="info-card"><div class="info-label">Address</div><div class="info-value">{{ staff.address|default:"—" }}</div></div>
+    <div class="info-card"><div class="info-label">Notes</div><div class="info-value">{{ staff.notes|default:"—" }}</div></div>
+</div>
+
+<style>
+.profile-summary {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.profile-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.5rem 1.5rem;
+    flex: 1;
+}
+.meta-item .label {
+    display: block;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+}
+.meta-item .value {
+    font-weight: 600;
+    color: var(--text);
+}
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+.info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+}
+.info-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+    font-weight: 600;
+}
+.info-value {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 0.15rem;
+    color: var(--text);
+}
+</style>
+{% endblock %}

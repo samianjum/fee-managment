@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from django.contrib.auth.hashers import make_password, check_password
 
 SCHOOL_FEATURE_CHOICES = [
+    ('class_management', 'Class & Subject Management'),
     ('dashboard', 'Dashboard'),
     ('students', 'Students'),
     ('fee_collection', 'Fee Collection'),
@@ -15,6 +16,7 @@ SCHOOL_FEATURE_CHOICES = [
     ('fee_structure', 'Fee Structure'),
     ('fee_settings', 'Fee Settings'),
     ('family_payment', 'Family Payment'),
+    ('staff_management', 'Staff Management'),
 ]
 
 # ------------------- Tenant Model -------------------
@@ -162,7 +164,6 @@ class FeeRecord(models.Model):
     remarks = models.TextField(blank=True, null=True)
     extra_charges = models.JSONField(default=list, blank=True, null=True)
 
-
     class Meta:
         unique_together = ['student', 'month', 'year']
         ordering = ['-year', '-month']
@@ -181,7 +182,6 @@ class FeeRecord(models.Model):
     def remaining_total(self):
         from decimal import Decimal
         return self.total_amount - Decimal(str(self.paid_amount))
-
 
     @property
     def is_fully_paid(self):
@@ -325,7 +325,6 @@ class GymSubscription(models.Model):
         from decimal import Decimal
         return self.total_amount - Decimal(str(self.paid_amount))
 
-
     @property
     def is_fully_paid(self):
         return self.paid_amount >= self.amount
@@ -382,21 +381,17 @@ class GymAttendance(models.Model):
     check_out = models.DateTimeField(blank=True, null=True)
     notes = models.TextField(blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)   # for edit window
-
-
-    def save(self, *args, **kwargs):
-        # Ensure date matches the check_in local date
-        if self.check_in and not self.date:
-            from django.utils import timezone
-            self.date = timezone.localdate(self.check_in)
-        super().save(*args, **kwargs)
-
-
     duration_minutes = models.PositiveIntegerField(null=True, blank=True, help_text="Duration in minutes")
 
     class Meta:
         unique_together = ['customer', 'date']
         ordering = ['-date', '-check_in']
+
+    def save(self, *args, **kwargs):
+        if self.check_in and not self.date:
+            from django.utils import timezone
+            self.date = timezone.localdate(self.check_in)
+        super().save(*args, **kwargs)
 
     def is_editable(self):
         """Allow editing only within 7 hours after check-in."""
@@ -405,6 +400,7 @@ class GymAttendance(models.Model):
 
     def __str__(self):
         return f"{self.customer.name} - {self.date} - IN:{self.check_in.strftime('%H:%M') if self.check_in else '--'}"
+
 class GymSettings(models.Model):
     default_monthly_fee = models.DecimalField(max_digits=10, decimal_places=2, default=500.00)
     subscription_generation_day = models.PositiveSmallIntegerField(default=1)
@@ -420,6 +416,34 @@ class GymSettings(models.Model):
         verbose_name_plural = "Gym Settings"
 
 # ------------------- Stock Management Models -------------------
+class ProductCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = "Product Categories"
+
+    def __str__(self):
+        return self.name
+
+class Product(models.Model):
+    category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name='products')
+    name = models.CharField(max_length=200)
+    sku = models.CharField(max_length=50, unique=True, blank=True)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
+    quantity = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.sku:
+            import time
+            self.sku = f"SKU-{int(time.time())}-{self.category.id if self.category else 0}"
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.sku})"
 
 # ------------------- Manual Generation Log -------------------
 class ManualGenerationLog(models.Model):
@@ -442,40 +466,6 @@ class ManualGenerationLog(models.Model):
     def __str__(self):
         return f"{self.month}/{self.year} - {self.get_log_type_display()} - {self.generated_at.strftime('%Y-%m-%d %H:%M')}"
 
-class ProductCategory(models.Model):
-    name = models.CharField(max_length=100, unique=True)
-    description = models.TextField(blank=True, null=True)
-
-    class Meta:
-        verbose_name_plural = "Product Categories"
-
-    def __str__(self):
-        return self.name
-
-
-class Product(models.Model):
-    category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, related_name='products')
-    name = models.CharField(max_length=200)
-    sku = models.CharField(max_length=50, unique=True, blank=True)
-    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    quantity = models.PositiveIntegerField(default=0)
-    notes = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def save(self, *args, **kwargs):
-        if not self.sku:
-            # Auto-generate SKU: CATEGORY-NAME-<random>? Use category prefix + timestamp
-            # Simpler: use category name first letters + id pattern (but id not yet)
-            # Use timestamp based: SKU-<timestamp>
-            import time
-            self.sku = f"SKU-{int(time.time())}-{self.category.id if self.category else 0}"
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"{self.name} ({self.sku})"
-
-
 # ------------------- Notification Model -------------------
 class Notification(models.Model):
     message = models.CharField(max_length=255)
@@ -489,3 +479,112 @@ class Notification(models.Model):
 
     def __str__(self):
         return self.message[:50]
+
+# ------------------- Staff Model -------------------
+class Staff(models.Model):
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+        ('other', 'Other'),
+    ]
+    DEPARTMENT_CHOICES = [
+        ('admin', 'Administration'),
+        ('teaching', 'Teaching'),
+        ('support', 'Support Staff'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+    ]
+
+    staff_id = models.CharField(max_length=20, unique=True, blank=True)
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    full_name = models.CharField(max_length=200, blank=True)  # computed
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    date_of_birth = models.DateField(blank=True, null=True)
+    email = models.EmailField(unique=True, blank=True, null=True)
+    job_title = models.CharField(max_length=100)
+    department = models.CharField(max_length=50, choices=DEPARTMENT_CHOICES, default='teaching')
+    hire_date = models.DateField(default=timezone.now)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    photo = models.ImageField(upload_to='staff_photos/', blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_on']
+
+    def save(self, *args, **kwargs):
+        if not self.staff_id:
+            last = Staff.objects.order_by('id').last()
+            if last and last.staff_id and last.staff_id.isdigit():
+                self.staff_id = str(int(last.staff_id) + 1)
+            else:
+                self.staff_id = "1001"
+        self.full_name = f"{self.first_name} {self.last_name}".strip()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.full_name} ({self.staff_id})"
+
+# ========== CLASS & SUBJECT MANAGEMENT ==========
+class SchoolClass(models.Model):
+    """Represents a class (e.g., Grade 5, Section A)."""
+    name = models.CharField(max_length=100, help_text="Class name, e.g., 'Grade 5'")
+    section = models.CharField(max_length=10, blank=True, help_text="Section, e.g., 'A'")
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name', 'section']
+        unique_together = ['name', 'section']
+
+    def __str__(self):
+        return f"{self.name} - {self.section}" if self.section else self.name
+
+class Subject(models.Model):
+    """Represents a subject (e.g., Mathematics)."""
+    name = models.CharField(max_length=100)
+    code = models.CharField(max_length=20, unique=True, blank=True)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.code:
+            import time
+            self.code = f"SUBJ-{int(time.time())}"
+        super().save(*args, **kwargs)
+
+class ClassSubject(models.Model):
+    """Links a subject to a class and assigns a teacher."""
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.CASCADE, related_name='class_subjects')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='class_subjects')
+    teacher = models.ForeignKey('Staff', on_delete=models.SET_NULL, null=True, blank=True, related_name='class_subjects', limit_choices_to={'status': 'active'})
+    academic_year = models.CharField(max_length=20, blank=True, help_text="e.g., 2024-2025")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ['school_class', 'subject']
+        ordering = ['school_class', 'subject']
+
+    def __str__(self):
+        teacher_name = self.teacher.full_name if self.teacher else "Unassigned"
+        return f"{self.school_class} - {self.subject} ({teacher_name})"
+

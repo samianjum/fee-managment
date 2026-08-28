@@ -12,6 +12,19 @@ class StudentForm(forms.ModelForm):
             'address': forms.Textarea(attrs={'rows': 2}),
         }
 
+
+# ------------------- Staff Form -------------------
+class StaffForm(forms.ModelForm):
+    class Meta:
+        from .models import Staff
+        model = Staff
+        fields = ['first_name', 'last_name', 'gender', 'date_of_birth', 'email', 'job_title', 'department', 'hire_date', 'status', 'phone', 'address', 'notes']
+        widgets = {
+            'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+            'hire_date': forms.DateInput(attrs={'type': 'date'}),
+            'address': forms.Textarea(attrs={'rows': 2}),
+        }
+
 class FeeCollectionForm(forms.Form):
     student = forms.ModelChoiceField(queryset=Student.objects.none(), label="Student")
     amount = forms.DecimalField(max_digits=10, decimal_places=2, label="Amount (₹)")
@@ -105,3 +118,29 @@ class AttendanceEditForm(forms.ModelForm):
             'check_out': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
             'notes': forms.Textarea(attrs={'rows': 2}),
         }
+
+# ------------------- Class & Subject Forms -------------------
+class ClassForm(forms.ModelForm):
+    class Meta:
+        from .models import SchoolClass
+        model = SchoolClass
+        fields = ['name', 'section', 'description', 'is_active']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 2}),
+        }
+
+class SubjectForm(forms.ModelForm):
+    class Meta:
+        from .models import Subject
+        model = Subject
+        fields = ['name', 'code', 'description', 'is_active']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 2}),
+        }
+
+class ClassSubjectForm(forms.ModelForm):
+    class Meta:
+        from .models import ClassSubject, Staff, SchoolClass, Subject
+        model = ClassSubject
+        fields = ['school_class', 'subject', 'teacher', 'academic_year', 'is_active']
+

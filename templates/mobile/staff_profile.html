@@ -1,0 +1,141 @@
+{% extends 'mobile/base.html' %}
+{% block title %}{{ staff.full_name }} | Staff Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-hero {
+        background: var(--accent);
+        border-radius: var(--radius);
+        padding: 1.5rem 1rem;
+        color: white;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .profile-hero::after {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -10%;
+        width: 200px;
+        height: 200px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .profile-hero h1 {
+        margin: 0;
+        font-size: 1.4rem;
+        font-weight: 700;
+        position: relative;
+        z-index: 1;
+    }
+    .profile-hero .sub {
+        opacity: 0.85;
+        font-size: 0.9rem;
+        margin-top: 0.2rem;
+        position: relative;
+        z-index: 1;
+    }
+    .profile-hero .badge {
+        display: inline-block;
+        padding: 0.1rem 0.6rem;
+        border-radius: 999px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        background: rgba(255,255,255,0.15);
+        margin-top: 0.3rem;
+        position: relative;
+        z-index: 1;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+    }
+    .info-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.7rem;
+    }
+    .info-card .label {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+    }
+    .info-card .value {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-top: 0.15rem;
+        color: var(--text);
+        word-break: break-word;
+    }
+    .action-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        justify-content: center;
+    }
+    .action-row a {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        text-decoration: none;
+        color: var(--text);
+        font-weight: 500;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .action-row a:hover {
+        background: var(--accent);
+        color: white;
+        border-color: var(--accent);
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        font-size: 0.65rem;
+        font-weight: 600;
+    }
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-inactive { background: #fee2e2; color: #991b1b; }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="profile-hero">
+    <h1>{{ staff.full_name }}</h1>
+    <div class="sub">{{ staff.staff_id }} • {{ staff.job_title }}</div>
+    <div class="sub">{{ staff.get_department_display }}</div>
+    <span class="badge">{{ staff.get_status_display }}</span>
+</div>
+
+<div class="info-grid">
+    <div class="info-card"><div class="label">Email</div><div class="value">{{ staff.email|default:"—" }}</div></div>
+    <div class="info-card"><div class="label">Phone</div><div class="value">{{ staff.phone|default:"—" }}</div></div>
+    <div class="info-card"><div class="label">Gender</div><div class="value">{{ staff.get_gender_display|default:"—" }}</div></div>
+    <div class="info-card"><div class="label">DOB</div><div class="value">{{ staff.date_of_birth|date:"Y-m-d"|default:"—" }}</div></div>
+    <div class="info-card"><div class="label">Hire Date</div><div class="value">{{ staff.hire_date|date:"Y-m-d"|default:"—" }}</div></div>
+    <div class="info-card"><div class="label">Status</div><div class="value"><span class="status-badge status-{{ staff.status }}">{{ staff.get_status_display }}</span></div></div>
+    <div class="info-card" style="grid-column: 1 / -1;"><div class="label">Address</div><div class="value">{{ staff.address|default:"—" }}</div></div>
+    <div class="info-card" style="grid-column: 1 / -1;"><div class="label">Notes</div><div class="value">{{ staff.notes|default:"—" }}</div></div>
+</div>
+
+<div class="action-row">
+    <a href="{% url 'staff_edit' schema_name=tenant.schema_name staff_id=staff.id %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4Z"/></svg>
+        Edit
+    </a>
+    <a href="{% url 'mobile_staff_list' schema_name=tenant.schema_name %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+    </a>
+</div>
+{% endblock %}
