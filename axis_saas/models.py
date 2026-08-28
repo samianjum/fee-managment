@@ -532,6 +532,7 @@ class Staff(models.Model):
     def __str__(self):
         return f"{self.full_name} ({self.staff_id})"
 
+
 # ========== CLASS & SUBJECT MANAGEMENT ==========
 class SchoolClass(models.Model):
     """Represents a class (e.g., Grade 5, Section A)."""
@@ -549,6 +550,35 @@ class SchoolClass(models.Model):
     def __str__(self):
         return f"{self.name} - {self.section}" if self.section else self.name
 
+    def normalize_fields(self):
+        """Normalize name to title case and section to uppercase."""
+        if self.name:
+            self.name = self.name.strip().title()
+        if self.section:
+            self.section = self.section.strip().upper()
+
+    def clean(self):
+        self.normalize_fields()
+        # Case-insensitive uniqueness check
+        if self.pk:
+            existing = SchoolClass.objects.filter(
+                name__iexact=self.name,
+                section__iexact=self.section
+            ).exclude(pk=self.pk)
+        else:
+            existing = SchoolClass.objects.filter(
+                name__iexact=self.name,
+                section__iexact=self.section
+            )
+        if existing.exists():
+            from django.core.exceptions import ValidationError
+            raise ValidationError(f"A class with name '{self.name}' and section '{self.section}' already exists (case-insensitive).")
+
+    def save(self, *args, **kwargs):
+        self.normalize_fields()
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 class Subject(models.Model):
     """Represents a subject (e.g., Mathematics)."""
     name = models.CharField(max_length=100)
@@ -564,10 +594,26 @@ class Subject(models.Model):
     def __str__(self):
         return self.name
 
+    def normalize_fields(self):
+        if self.name:
+            self.name = self.name.strip().title()
+
+    def clean(self):
+        self.normalize_fields()
+        if self.pk:
+            existing = Subject.objects.filter(name__iexact=self.name).exclude(pk=self.pk)
+        else:
+            existing = Subject.objects.filter(name__iexact=self.name)
+        if existing.exists():
+            from django.core.exceptions import ValidationError
+            raise ValidationError(f"A subject with name '{self.name}' already exists (case-insensitive).")
+
     def save(self, *args, **kwargs):
+        self.normalize_fields()
         if not self.code:
             import time
             self.code = f"SUBJ-{int(time.time())}"
+        self.full_clean()
         super().save(*args, **kwargs)
 
 class ClassSubject(models.Model):
@@ -587,4 +633,3 @@ class ClassSubject(models.Model):
     def __str__(self):
         teacher_name = self.teacher.full_name if self.teacher else "Unassigned"
         return f"{self.school_class} - {self.subject} ({teacher_name})"
-

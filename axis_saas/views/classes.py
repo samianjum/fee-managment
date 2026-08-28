@@ -3,6 +3,7 @@ AXIS views – class & subject management.
 """
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponseRedirect
 from django.db.models import Q
@@ -17,6 +18,19 @@ from ..models import SchoolClass, Subject, ClassSubject, Staff
 from ..forms import ClassForm, SubjectForm, ClassSubjectForm
 from .helpers import get_tenant, is_mobile_user_agent, require_tenant_type, require_school_feature
 
+def redirect_with_cache_bust(url_name, schema_name, **kwargs):
+    """Return a HttpResponseRedirect with cache-control headers and a timestamp."""
+    from django.shortcuts import redirect
+    from django.urls import reverse
+    import time
+    url = reverse(url_name, kwargs={'schema_name': schema_name}) + '?updated=' + str(int(time.time()))
+    response = redirect(url)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+
 # ========== CLASS MANAGEMENT ==========
 
 @require_tenant_type(['school'])
@@ -25,17 +39,25 @@ def class_management(request, schema_name):
     """Main page for class & subject management."""
     tenant = get_tenant(request, schema_name)
     if is_mobile_user_agent(request):
-        return redirect('mobile_class_management', schema_name=schema_name)
+        return redirect_with_cache_bust('mobile_class_management', schema_name)
 
     context = get_class_management_context(request, schema_name)
-    return render(request, 'tenant/class_management.html', context)
+    response = render(request, 'tenant/class_management.html', context)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 @require_tenant_type(['school'])
 @require_school_feature('class_management')
 def mobile_class_management(request, schema_name):
     """Mobile version of class management."""
     context = get_class_management_context(request, schema_name)
-    return render(request, 'mobile/class_management.html', context)
+    response = render(request, 'mobile/class_management.html', context)
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
 
 def get_class_management_context(request, schema_name):
     tenant = get_tenant(request, schema_name)
@@ -120,8 +142,8 @@ def add_class(request, schema_name):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -140,8 +162,8 @@ def edit_class(request, schema_name, class_id):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -155,8 +177,8 @@ def delete_class(request, schema_name, class_id):
         cls.save()
         messages.success(request, f"Class '{cls}' deactivated.")
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-        return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+        return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 # ========== CRUD FOR SUBJECT ==========
 
@@ -178,8 +200,8 @@ def add_subject(request, schema_name):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -198,8 +220,8 @@ def edit_subject(request, schema_name, subject_id):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -213,8 +235,8 @@ def delete_subject(request, schema_name, subject_id):
         subj.save()
         messages.success(request, f"Subject '{subj}' deactivated.")
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-        return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+        return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 # ========== ASSIGNMENT (ClassSubject) ==========
 
@@ -236,8 +258,8 @@ def assign_subject(request, schema_name):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -256,8 +278,8 @@ def edit_assignment(request, schema_name, assignment_id):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
         if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-            return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+            return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -271,5 +293,5 @@ def delete_assignment(request, schema_name, assignment_id):
         assignment.save()
         messages.success(request, f"Assignment deactivated.")
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
-        return redirect('mobile_class_management', schema_name=schema_name)
-        return redirect('class_management', schema_name=schema_name)
+        return redirect_with_cache_bust('mobile_class_management', schema_name)
+        return redirect_with_cache_bust('class_management', schema_name)
