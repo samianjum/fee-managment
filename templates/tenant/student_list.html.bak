@@ -59,26 +59,35 @@
 </form>
 
 <!-- Dynamic section dropdown script -->
-
 <script>
+(function() {
+    // Auto-submit form on any filter change
+    const filterForm = document.getElementById('studentFilterForm');
+    if (filterForm) {
+        const selects = filterForm.querySelectorAll('select');
+        selects.forEach(sel => {
+            sel.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
 
     // Dynamic section dropdown based on class selection
-    const classSelect = document.getElementById('classSelect') || document.querySelector('select[name="class_id"]');
-    const sectionSelect = document.getElementById('sectionSelect') || document.querySelector('select[name="section"]');
+    const classSelect = document.getElementById('classSelect');
+    const sectionSelect = document.getElementById('sectionSelect');
     if (classSelect && sectionSelect) {
         // Build classData from server-side classes
         const classData = {};
         {% for cls in classes %}
-            if (!classData[{{ cls.id }}]) {
-                classData[{{ cls.id }}] = [];
+            const clsId = {{ cls.id }};
+            const sec = '{{ cls.section|default:"" }}';
+            if (!classData[clsId]) {
+                classData[clsId] = [];
             }
-            var sec = '{{ cls.section|default:"" }}';
-            if (sec && classData[{{ cls.id }}].indexOf(sec) === -1) {
-                classData[{{ cls.id }}].push(sec);
+            if (sec && !classData[clsId].includes(sec)) {
+                classData[clsId].push(sec);
             }
         {% endfor %}
-        console.log('[DEBUG] classData:', classData);
-        
         // Also collect all sections for "All Classes"
         const allSections = [];
         for (const clsId in classData) {
@@ -87,17 +96,14 @@
             });
         }
         allSections.sort();
-        console.log('[DEBUG] allSections:', allSections);
 
         function updateSectionOptions() {
             const selectedClass = classSelect.value;
             let sections = [];
             if (selectedClass && classData[selectedClass]) {
                 sections = classData[selectedClass];
-                console.log('[DEBUG] Sections for class ' + selectedClass + ':', sections);
             } else {
                 sections = allSections;
-                console.log('[DEBUG] No class selected, showing all sections:', sections);
             }
             const currentSection = sectionSelect.value;
             sectionSelect.innerHTML = '';
@@ -105,33 +111,19 @@
             emptyOpt.value = '';
             emptyOpt.textContent = 'All Sections';
             sectionSelect.appendChild(emptyOpt);
-            if (sections.length === 0) {
-                // If no sections, add a disabled option to indicate none
-                const noOpt = document.createElement('option');
-                noOpt.value = '';
-                noOpt.textContent = 'No sections';
-                noOpt.disabled = true;
-                sectionSelect.appendChild(noOpt);
-            } else {
-                sections.forEach(sec => {
-                    const opt = document.createElement('option');
-                    opt.value = sec;
-                    opt.textContent = sec || '—';
-                    if (sec === currentSection) {
-                        opt.selected = true;
-                    }
-                    sectionSelect.appendChild(opt);
-                });
-            }
-            // Keep "All Sections" selected if currentSection is empty
-            if (!currentSection) {
-                sectionSelect.value = '';
-            }
+            sections.forEach(sec => {
+                const opt = document.createElement('option');
+                opt.value = sec;
+                opt.textContent = sec || '—';
+                if (sec === currentSection) {
+                    opt.selected = true;
+                }
+                sectionSelect.appendChild(opt);
+            });
         }
 
         classSelect.addEventListener('change', function() {
             updateSectionOptions();
-            const filterForm = document.getElementById('studentFilterForm') || document.querySelector('.filter-form');
             if (filterForm) {
                 filterForm.submit();
             }
@@ -139,13 +131,9 @@
 
         // Initial update on page load
         updateSectionOptions();
-        console.log('[DEBUG] Initial section dropdown updated.');
-    } else {
-        console.warn('[DEBUG] classSelect or sectionSelect not found.');
     }
-
+})();
 </script>
-
 
 
 </div>

@@ -7,8 +7,7 @@ class StudentForm(forms.ModelForm):
 
     class Meta:
         model = Student
-        fields = ['name', 'father_name', 'father_cnic', 'parent_mobile', 'school_class',
-                  'admission_date', 'status', 'gender', 'date_of_birth', 'address', 'notes', 'custom_fee']
+        fields = ['name', 'father_name', 'father_cnic', 'parent_mobile', 'school_class', 'admission_date', 'status', 'gender', 'date_of_birth', 'address', 'notes', 'custom_fee']
         widgets = {
             'admission_date': forms.DateInput(attrs={'type': 'date'}),
             'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
@@ -18,29 +17,22 @@ class StudentForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         from .models import SchoolClass
-        from django.db.models import Count
-        # Annotate each class with student count and display it in the label
-        classes = SchoolClass.objects.filter(is_active=True).order_by('name', 'section').annotate(
-            student_count=Count('students')
-        )
-        self.fields['school_class'].queryset = classes
-        # Override label_from_instance to show strength
-        def label_from_instance(obj):
-            return f"{obj.name} – {obj.section} ({obj.student_count} students)" if obj.section else f"{obj.name} ({obj.student_count} students)"
-        self.fields['school_class'].label_from_instance = label_from_instance
-
+        self.fields['school_class'].queryset = SchoolClass.objects.filter(is_active=True).order_by('name', 'section')
+        # If editing, set the initial value
         if self.instance and self.instance.pk and self.instance.school_class:
             self.fields['school_class'].initial = self.instance.school_class
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # Populate grade & section from the selected school_class
-        if instance.school_class:
-            instance.grade = instance.school_class.name
-            instance.section = instance.school_class.section
         if commit:
             instance.save()
-        return instance
+        return instance),
+            'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+            'address': forms.Textarea(attrs={'rows': 2}),
+        }
+
+
+# ------------------- Staff Form -------------------
 class StaffForm(forms.ModelForm):
     class Meta:
         from .models import Staff

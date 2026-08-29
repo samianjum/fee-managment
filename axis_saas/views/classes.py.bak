@@ -300,20 +300,3 @@ def delete_assignment(request, schema_name, assignment_id):
     if is_mobile_user_agent(request) or request.POST.get('mobile_redirect') == '1':
         return redirect_with_cache_bust('mobile_class_management', schema_name)
         return redirect_with_cache_bust('class_management', schema_name)
-
-
-@require_tenant_type(['school'])
-def class_strength_api(request, schema_name):
-    """Return the number of students in a given class."""
-    from django.http import JsonResponse
-    from ..models import SchoolClass, Student
-    class_id = request.GET.get('class_id')
-    if not class_id:
-        return JsonResponse({'error': 'class_id required'}, status=400)
-    try:
-        cls = SchoolClass.objects.get(id=class_id)
-        count = Student.objects.filter(school_class=cls).count()
-        return JsonResponse({'strength': count})
-    except SchoolClass.DoesNotExist:
-        return JsonResponse({'error': 'Class not found'}, status=404)
-

@@ -57,16 +57,6 @@
                 <option value="{{ dept }}" {% if request.GET.department == dept %}selected{% endif %}>{{ dept|title }}</option>
                 {% endfor %}
             </select>
-        
-        <div class="filter-group">
-            <select name="class_id" class="filter-select">
-                <option value="">All Classes</option>
-                {% for cls in classes %}
-                <option value="{{ cls.id }}" {% if request.GET.class_id == cls.id|stringformat:"s" %}selected{% endif %}>{{ cls.name }} - {{ cls.section }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
         </div>
         <div class="filter-group">
             <select name="status" class="filter-select">

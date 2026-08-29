@@ -115,7 +115,7 @@ class Student(models.Model):
     enrolled_on = models.DateTimeField(auto_now_add=True)
     default_extra_charges = models.JSONField(default=list, blank=True, null=True)
     automation_enabled = models.BooleanField(default=False, help_text="Enable monthly auto‑generation of fees")
-    school_class = models.ForeignKey('SchoolClass', on_delete=models.SET_NULL, null=True, blank=True, related_name='students')
+    school_class = models.ForeignKey(\'SchoolClass\', on_delete=models.SET_NULL, null=True, blank=True, related_name=\'students\')
 
     def save(self, *args, **kwargs):
         # Ensure roll number

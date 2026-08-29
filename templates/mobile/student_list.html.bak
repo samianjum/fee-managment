@@ -780,7 +780,7 @@
       
         
         <div class="filter-group">
-            <select name="class_id" id="classSelect" class="filter-select">
+            <select name="class_id" class="filter-select">
                 <option value="">All Classes</option>
                 {% for cls in classes %}
                 <option value="{{ cls.id }}" {% if request.GET.class_id == cls.id|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>

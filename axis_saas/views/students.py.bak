@@ -204,33 +204,3 @@ def student_current_fee_status_api(request, schema_name, student_id):
                     default_fee = float(fee_struct.monthly_fee)
             data = {'exists': False, 'default_fee': default_fee, 'grade': student.grade}
         return JsonResponse(data)
-
-
-@require_tenant_type(['school'])
-@require_school_feature('students')
-def students_by_teacher(request, schema_name, teacher_id):
-    """List students of classes where the given teacher is class teacher or subject teacher."""
-    from ..models import Staff, Student, SchoolClass
-    from django.db.models import Q
-    from django.core.paginator import Paginator
-
-    tenant = get_tenant(request, schema_name)
-    teacher = get_object_or_404(Staff, id=teacher_id)
-    # Get class IDs where teacher is class teacher or subject teacher
-    class_ids = list(teacher.class_teacher_of.values_list('id', flat=True))
-    class_ids += list(teacher.class_subjects.values_list('school_class_id', flat=True))
-    class_ids = list(set(class_ids))
-
-    students = Student.objects.filter(school_class_id__in=class_ids).order_by('name')
-    paginator = Paginator(students, 20)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'tenant': tenant,
-        'teacher': teacher,
-        'students': page_obj,
-        'logo_url': tenant.school_logo.url if tenant.school_logo else None,
-    }
-    return render(request, 'tenant/students_by_teacher.html', context)
-
