@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-AXIS Patcher – Fix dynamic section dropdown in student list templates.
+axis_patcher.py
 
-This script corrects the JavaScript that populates the section dropdown
-based on the selected class. The original code used `const` inside a
-Django for loop, causing redeclaration errors. This patch replaces the
-entire dynamic section script block with a corrected version.
+Patcher script to fix staff_list.html:
+- Move {% extends 'tenant/base.html' %} to the very first line.
+- Optionally add CSS styles if not already present (but currently skipped).
 
 Usage:
-    python axis_patcher.py [--dry-run] [--verbose] [--target-dir /path/to/project]
+    python axis_patcher.py [--dry-run] [--verbose] [--target-dir PATH]
 
 Options:
     --dry-run      Preview changes without writing files.
@@ -19,225 +18,116 @@ Options:
 import os
 import re
 import sys
-import time
 from pathlib import Path
-from typing import Optional, List, Tuple
+from datetime import datetime
+import argparse
 
-# ----------------------------------------------------------------------
-# CONFIGURATION
-# ----------------------------------------------------------------------
-DRY_RUN = False
-VERBOSE = False
-TARGET_DIR = Path(os.getcwd())
 
-# ----------------------------------------------------------------------
-# LOGGING
-# ----------------------------------------------------------------------
-def log_info(msg: str) -> None:
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
+# -----------------------------------------------------------------------------
+# Utility functions
+# -----------------------------------------------------------------------------
 
-def log_verbose(msg: str) -> None:
-    if VERBOSE:
-        log_info(f"  {msg}")
+def log(msg, verbose=False):
+    """Print a log message with timestamp if verbose."""
+    if verbose:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[{timestamp}] {msg}")
 
-def log_error(msg: str) -> None:
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: {msg}")
 
-def log_warning(msg: str) -> None:
-    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] WARNING: {msg}")
-
-# ----------------------------------------------------------------------
-# FILE HELPERS
-# ----------------------------------------------------------------------
-def read_file(path: Path) -> Optional[str]:
-    if not path.exists():
-        log_error(f"File not found: {path}")
-        return None
-    with open(path, 'r', encoding='utf-8') as f:
-        return f.read()
-
-def write_file(path: Path, content: str) -> None:
-    if DRY_RUN:
-        log_info(f"[DRY-RUN] Would write: {path}")
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    log_info(f"Written: {path}")
-
-# ----------------------------------------------------------------------
-# PATCH LOGIC
-# ----------------------------------------------------------------------
-
-# The corrected JavaScript block for student_list.html and mobile_student_list.html
-CORRECTED_SCRIPT = """
-    // Dynamic section dropdown based on class selection
-    const classSelect = document.getElementById('classSelect') || document.querySelector('select[name="class_id"]');
-    const sectionSelect = document.getElementById('sectionSelect') || document.querySelector('select[name="section"]');
-    if (classSelect && sectionSelect) {
-        // Build classData from server-side classes
-        const classData = {};
-        {% for cls in classes %}
-            if (!classData[{{ cls.id }}]) {
-                classData[{{ cls.id }}] = [];
-            }
-            var sec = '{{ cls.section|default:"" }}';
-            if (sec && classData[{{ cls.id }}].indexOf(sec) === -1) {
-                classData[{{ cls.id }}].push(sec);
-            }
-        {% endfor %}
-        console.log('[DEBUG] classData:', classData);
-        
-        // Also collect all sections for "All Classes"
-        const allSections = [];
-        for (const clsId in classData) {
-            classData[clsId].forEach(s => {
-                if (!allSections.includes(s)) allSections.push(s);
-            });
-        }
-        allSections.sort();
-        console.log('[DEBUG] allSections:', allSections);
-
-        function updateSectionOptions() {
-            const selectedClass = classSelect.value;
-            let sections = [];
-            if (selectedClass && classData[selectedClass]) {
-                sections = classData[selectedClass];
-                console.log('[DEBUG] Sections for class ' + selectedClass + ':', sections);
-            } else {
-                sections = allSections;
-                console.log('[DEBUG] No class selected, showing all sections:', sections);
-            }
-            const currentSection = sectionSelect.value;
-            sectionSelect.innerHTML = '';
-            const emptyOpt = document.createElement('option');
-            emptyOpt.value = '';
-            emptyOpt.textContent = 'All Sections';
-            sectionSelect.appendChild(emptyOpt);
-            if (sections.length === 0) {
-                // If no sections, add a disabled option to indicate none
-                const noOpt = document.createElement('option');
-                noOpt.value = '';
-                noOpt.textContent = 'No sections';
-                noOpt.disabled = true;
-                sectionSelect.appendChild(noOpt);
-            } else {
-                sections.forEach(sec => {
-                    const opt = document.createElement('option');
-                    opt.value = sec;
-                    opt.textContent = sec || '—';
-                    if (sec === currentSection) {
-                        opt.selected = true;
-                    }
-                    sectionSelect.appendChild(opt);
-                });
-            }
-            // Keep "All Sections" selected if currentSection is empty
-            if (!currentSection) {
-                sectionSelect.value = '';
-            }
-        }
-
-        classSelect.addEventListener('change', function() {
-            updateSectionOptions();
-            const filterForm = document.getElementById('studentFilterForm') || document.querySelector('.filter-form');
-            if (filterForm) {
-                filterForm.submit();
-            }
-        });
-
-        // Initial update on page load
-        updateSectionOptions();
-        console.log('[DEBUG] Initial section dropdown updated.');
-    } else {
-        console.warn('[DEBUG] classSelect or sectionSelect not found.');
-    }
-"""
-
-def patch_student_list_template(file_path: Path) -> bool:
-    """Apply the section dropdown fix to the given template file."""
-    content = read_file(file_path)
-    if content is None:
+def fix_extends_order(file_path, dry_run, verbose):
+    """
+    Ensure that {% extends 'tenant/base.html' %} is the very first tag in the file.
+    If not, move it to the top.
+    Returns True if file was changed, False otherwise.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+    except Exception as e:
+        log(f"Error reading {file_path}: {e}", verbose)
         return False
 
-    # Find the script block that contains the dynamic section logic.
-    # We look for the comment "// Dynamic section dropdown based on class selection"
-    # and match everything until the closing </script> that follows.
-    # We'll use a non-greedy match to capture the whole script block.
-    pattern = re.compile(
-        r'(<script[^>]*>.*?// Dynamic section dropdown based on class selection.*?</script>)',
-        re.DOTALL | re.IGNORECASE
-    )
-    match = pattern.search(content)
-    if not match:
-        log_warning(f"No dynamic section dropdown script found in {file_path}. Skipping.")
+    # Find the extends line
+    extend_line = None
+    extend_idx = -1
+    for i, line in enumerate(lines):
+        if re.search(r"{%\s*extends\s+['\"]tenant/base\.html['\"]\s*%}", line):
+            extend_line = line
+            extend_idx = i
+            break
+
+    if extend_line is None:
+        log(f"No extends tag found in {file_path}", verbose)
         return False
 
-    old_script_block = match.group(1)
-
-    # Extract the opening <script> tag (with any attributes) and the closing </script>
-    # We need to keep the same tag attributes.
-    script_tag_match = re.match(r'(<script[^>]*>)', old_script_block, re.IGNORECASE)
-    if not script_tag_match:
-        log_error(f"Could not parse script tag in {file_path}. Skipping.")
-        return False
-    opening_tag = script_tag_match.group(1)
-
-    # Build the new script block with the same opening tag and our corrected content.
-    new_script_block = opening_tag + '\n' + CORRECTED_SCRIPT + '\n</script>'
-
-    # Replace the old block with the new one.
-    new_content = content.replace(old_script_block, new_script_block)
-
-    if new_content == content:
-        log_info(f"No changes needed for {file_path}")
+    # If extend is already at the very beginning (first non-whitespace line), skip
+    first_non_empty = 0
+    for i, line in enumerate(lines):
+        if line.strip():
+            first_non_empty = i
+            break
+    if first_non_empty == extend_idx:
+        log(f"extends already at top in {file_path}", verbose)
         return False
 
-    write_file(file_path, new_content)
-    return True
+    # Remove the extend line from its current position
+    lines.pop(extend_idx)
+    # Insert at the very beginning
+    lines.insert(0, extend_line)
 
-# ----------------------------------------------------------------------
-# MAIN
-# ----------------------------------------------------------------------
-def main() -> None:
-    global DRY_RUN, VERBOSE, TARGET_DIR
+    if dry_run:
+        log(f"[DRY RUN] Would reorder extends to top in {file_path}", verbose)
+        return True
 
-    args = sys.argv[1:]
-    for arg in args:
-        if arg == '--dry-run':
-            DRY_RUN = True
-        elif arg == '--verbose':
-            VERBOSE = True
-        elif arg.startswith('--target-dir='):
-            TARGET_DIR = Path(arg.split('=', 1)[1])
-        else:
-            log_error(f"Unknown argument: {arg}")
-            sys.exit(1)
+    try:
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        log(f"Fixed extends order in {file_path}", verbose)
+        return True
+    except Exception as e:
+        log(f"Error writing {file_path}: {e}", verbose)
+        return False
 
-    log_info("AXIS Patcher – Fix dynamic section dropdown in student list templates")
-    log_info(f"Target directory: {TARGET_DIR}")
-    log_info(f"Dry run: {DRY_RUN}")
-    log_info(f"Verbose: {VERBOSE}")
 
-    # Define template files to patch.
-    template_files = [
-        TARGET_DIR / "templates" / "tenant" / "student_list.html",
-        TARGET_DIR / "templates" / "mobile" / "student_list.html",
-    ]
+# -----------------------------------------------------------------------------
+# Main patcher
+# -----------------------------------------------------------------------------
 
-    patched = 0
-    for file_path in template_files:
-        if file_path.exists():
-            log_info(f"Processing: {file_path}")
-            if patch_student_list_template(file_path):
-                patched += 1
-        else:
-            log_verbose(f"File not found: {file_path} (skipping)")
+def main():
+    parser = argparse.ArgumentParser(description="AXIS Patcher - fix staff_list.html")
+    parser.add_argument('--dry-run', action='store_true', help="Preview changes without applying")
+    parser.add_argument('--verbose', action='store_true', help="Show detailed output")
+    parser.add_argument('--target-dir', default='.', help="Project root directory (default: current)")
+    args = parser.parse_args()
 
-    if patched > 0:
-        log_info(f"✅ Successfully patched {patched} file(s).")
+    target_dir = Path(args.target_dir).resolve()
+    if not target_dir.is_dir():
+        print(f"Error: target directory '{target_dir}' does not exist.")
+        sys.exit(1)
+
+    log(f"Target directory: {target_dir}", args.verbose)
+
+    staff_list_path = target_dir / "templates" / "tenant" / "staff_list.html"
+    if not staff_list_path.exists():
+        print(f"Error: {staff_list_path} not found.")
+        sys.exit(1)
+
+    success = True
+
+    # Step 1: Fix extends order
+    if not fix_extends_order(staff_list_path, args.dry_run, args.verbose):
+        success = False
+
+    if args.dry_run:
+        print("Dry-run completed. No files were changed.")
     else:
-        log_info("No files were patched. Ensure the templates exist and contain the dynamic section dropdown script.")
+        if success:
+            print("Patcher completed successfully.")
+        else:
+            print("Patcher completed with errors. See log above.")
+
+    sys.exit(0 if success else 1)
+
 
 if __name__ == "__main__":
     main()
